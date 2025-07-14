@@ -1,2 +1,2 @@
 # Nova
-C++ GameEngine
+A game engine developed in C++
