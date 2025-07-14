@@ -17,6 +17,10 @@ set(SDL_DIR ${CMAKE_SOURCE_DIR}/vendors/SDL)
 add_subdirectory(${SDL_DIR})
 include_directories(${SDL_DIR}/include)
 
+# Dear ImGui
+set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/vendors/imgui)
+include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
+
 # --- Compiler-specific flags ---
 if (MSVC)
     # MSVC uses cl.exe
@@ -61,7 +65,10 @@ file(GLOB_RECURSE HEADERS include/**.hpp include/**.h)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Add executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS}
+    ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_draw.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
 
 # Linking vendors
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
