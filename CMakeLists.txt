@@ -56,7 +56,9 @@ else()
 endif()
 
 # Source files
-file(GLOB SOURCES src/**.cpp src/**.h)
+file(GLOB_RECURSE SOURCES src/**.cpp src/**.h)
+file(GLOB_RECURSE HEADERS include/**.hpp include/**.h)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Add executable
 add_executable(${PROJECT_NAME} ${SOURCES})
