@@ -26,8 +26,8 @@ namespace Nova {
         private:
             bool m_IsRunning;
 
-            bool m_ShowDemoWindow = true;
-            bool m_ShowAnotherWindow = true;
+            bool m_ShowDemoWindow       = true;
+            bool m_ShowAnotherWindow    = true;
 
             void initEngine();
             void destroyEngine();
