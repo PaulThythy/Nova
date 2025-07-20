@@ -6,7 +6,7 @@
 namespace Nova {
     namespace GUI {
 
-        void render() {
+        void render(GLuint viewportTexture) {
             // ------ DockSpace ------
             ImGuiViewport* viewport = ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -64,7 +64,7 @@ namespace Nova {
             // ------ Viewport ------
             ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             ImVec2 size = ImGui::GetContentRegionAvail();
-            ImGui::Text("Your render goes here (%dx%d)", (int)size.x, (int)size.y);
+            ImGui::Image((ImTextureID)viewportTexture, size);
             ImGui::End();
 
             // ------ Inspector ------

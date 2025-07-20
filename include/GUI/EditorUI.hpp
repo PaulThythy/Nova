@@ -1,10 +1,12 @@
 #ifndef NOVA_GUI_EDITORUI_HPP
 #define NOVA_GUI_EDITORUI_HPP
 
+#include <GL/glew.h>
+
 namespace Nova {
     namespace GUI {
 
-        void render();
+        void render(GLuint viewportTexture);
 
     } // namespace GUI
 } // namespace Nova

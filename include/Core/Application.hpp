@@ -3,6 +3,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <GL/glew.h>
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL3/SDL_opengles2.h>
 #else
@@ -12,6 +14,8 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
+
+#include "Renderer/OpenGL/OpenGLRenderer.hpp"
 
 namespace Nova {
     namespace Core {
@@ -41,6 +45,8 @@ namespace Nova {
 
             SDL_Window* m_Window        = nullptr;
             SDL_GLContext m_GLContext   = nullptr;
+
+            Nova::Renderer::OpenGL::OpenGLRenderer m_Renderer;
 
         };
 
