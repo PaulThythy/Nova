@@ -19,6 +19,7 @@ include_directories(${SDL_DIR}/include)
 
 # Dear ImGui
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/vendors/imgui)
+include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
 # --- Compiler-specific flags ---
