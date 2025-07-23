@@ -6,29 +6,7 @@
 namespace Nova {
     namespace GUI {
 
-        void render(GLuint viewportTexture) {
-
-            bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
-
-            // ------ DockSpace ------
-            ImGuiViewport* viewport = ImGui::GetMainViewport();
-            ImGui::SetNextWindowPos(viewport->WorkPos);
-            ImGui::SetNextWindowSize(viewport->WorkSize);
-            ImGui::SetNextWindowViewport(viewport->ID);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-            ImGuiWindowFlags host_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_UnsavedDocument
-                | ImGuiWindowFlags_NoResize;
-
-            ImGui::Begin("Nova Editor", nullptr, host_window_flags);
-            ImGui::PopStyleVar(3);
-
-            ImGuiID dockspace_id = ImGui::GetID("NovaDockspace");
-            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
-
-            // ---- Dock layout initialization block -----
+        void setupDockSpace(bool useIni, ImGuiID dockspace_id) {
             static bool dock_initialized = false;
             if (!dock_initialized && !useIni && ImGui::DockBuilderGetNode(dockspace_id)) {
                 dock_initialized = true;
@@ -50,13 +28,11 @@ namespace Nova {
                 ImGui::DockBuilderDockWindow("Viewport",  dock_center);
                 ImGui::DockBuilderDockWindow("Asset Browser", dock_down);
 
-
                 ImGui::DockBuilderFinish(dockspace_id);
             }
-            ImGui::End();
+        }
 
-
-            // ------ Scene hierarchy ------
+        void renderHierarchyPanel() {
             ImGui::Begin("Hierarchy");
             ImGui::Text("Scene");
             ImGui::Separator();
@@ -65,16 +41,18 @@ namespace Nova {
             ImGui::Selectable("Cube");
             ImGui::Selectable("Sphere");
             ImGui::End();
+        }
 
-            // ------ Viewport ------
+        void renderViewportPanel(GLuint viewportTexture) {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             ImVec2 size = ImGui::GetContentRegionAvail();
             ImGui::Image((ImTextureID)viewportTexture, size);
             ImGui::End();
             ImGui::PopStyleVar();
-
-            // ------ Inspector ------
+        }
+        
+        void renderInspectorPanel() {
             ImGui::Begin("Inspector");
             ImGui::Text("Transform");
             ImGui::Separator();
@@ -94,15 +72,47 @@ namespace Nova {
                 if (ImGui::Button("Script")) {}
             }
             ImGui::End();
+        }
 
-            // ------ Asset Browser ------
+        void renderAssetBrowserPanel() {
             ImGui::Begin("Asset Browser");
             ImGui::Text("asset_1.obj");
             ImGui::Text("material_wood.mat");
             ImGui::Text("scene_01.nova");
             ImGui::End();
-
         }
 
+        void render(GLuint viewportTexture) {
+            bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
+
+            // ------ DockSpace ------
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGuiWindowFlags host_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_UnsavedDocument
+                | ImGuiWindowFlags_NoResize;
+
+            ImGui::Begin("Nova Editor", nullptr, host_window_flags);
+            ImGui::PopStyleVar(3);
+
+            ImGuiID dockspace_id = ImGui::GetID("NovaDockspace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+
+            setupDockSpace(useIni, dockspace_id);
+
+            ImGui::End();
+
+            // ------ Panels ------
+            renderHierarchyPanel();
+            renderViewportPanel(viewportTexture);
+            renderInspectorPanel();
+            renderAssetBrowserPanel();
+        }
+    
     } // namespace GUI
 } // namespace Nova
