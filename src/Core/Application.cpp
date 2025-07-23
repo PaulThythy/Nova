@@ -2,6 +2,7 @@
 #include "GUI/EditorUI.hpp"
 
 #include <iostream>
+#include <filesystem>
 
 namespace Nova {
     namespace Core {
@@ -86,7 +87,11 @@ namespace Nova {
 
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
-            ImGuiIO& io = ImGui::GetIO(); (void)io;
+            ImGuiIO& io = ImGui::GetIO();
+
+            io.IniFilename = "imgui.ini";
+            bool iniExisted = std::filesystem::exists(io.IniFilename);
+            io.UserData = (void*)(intptr_t)iniExisted;
 
             // imgui flags
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls

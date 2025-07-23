@@ -7,6 +7,9 @@ namespace Nova {
     namespace GUI {
 
         void render(GLuint viewportTexture) {
+
+            bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
+
             // ------ DockSpace ------
             ImGuiViewport* viewport = ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -27,7 +30,7 @@ namespace Nova {
 
             // ---- Dock layout initialization block -----
             static bool dock_initialized = false;
-            if (!dock_initialized && ImGui::DockBuilderGetNode(dockspace_id)) {
+            if (!dock_initialized && !useIni && ImGui::DockBuilderGetNode(dockspace_id)) {
                 dock_initialized = true;
                 ImGui::DockBuilderRemoveNode(dockspace_id);
                 ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);

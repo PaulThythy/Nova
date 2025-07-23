@@ -17,5 +17,3 @@ cmake --build build/$build_type --config $build_type
 #cmake -S . -B build/Dist -DCMAKE_BUILD_TYPE=Dist
 #cmake --build build/Dist --config Dist
 #./build/Dist/bin/Nova
-
-read
