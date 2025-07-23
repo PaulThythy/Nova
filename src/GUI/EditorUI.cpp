@@ -36,12 +36,14 @@ namespace Nova {
                 ImGuiID dock_down = 0, dock_main = 0;
                 ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.19f, &dock_down, &dock_main);
 
-                ImGuiID dock_left = 0, dock_right = 0, dock_center = 0;
-                ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.18f, &dock_left, &dock_main);
-                ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.22f, &dock_right, &dock_center);
+                ImGuiID dock_right = 0, dock_center = 0; 
+                ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.25f, &dock_right, &dock_center);
 
-                ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
-                ImGui::DockBuilderDockWindow("Inspector", dock_right);
+                ImGuiID dock_right_top = 0, dock_right_bottom = 0;
+                ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down, 0.5f, &dock_right_top, &dock_right_bottom);
+
+                ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
+                ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
                 ImGui::DockBuilderDockWindow("Viewport",  dock_center);
                 ImGui::DockBuilderDockWindow("Asset Browser", dock_down);
 
