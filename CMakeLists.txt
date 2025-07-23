@@ -22,6 +22,10 @@ set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/vendors/imgui)
 include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
+# glm
+add_subdirectory(${CMAKE_SOURCE_DIR}/vendors/glm/glm)
+include_directories(${CMAKE_SOURCE_DIR}/vendors/glm)
+
 # --- Compiler-specific flags ---
 if (MSVC)
     # MSVC uses cl.exe
@@ -39,7 +43,14 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS_DIST "${CMAKE_CXX_FLAGS_DIST} /Ox /GL /DNDEBUG")
     set(CMAKE_EXE_LINKER_FLAGS_DIST "${CMAKE_EXE_LINKER_FLAGS_DIST} /LTCG")
 
-    set(LIBRARIES SDL3::SDL3 opengl32)
+    set(GLEW_ROOT_DIR "${PROJECT_SOURCE_DIR}/vendors/GLEW")
+    set(GLEW_INCLUDE_DIR "${GLEW_ROOT_DIR}/include")
+    include_directories(${GLEW_INCLUDE_DIR})
+
+    set(GLEW_LIB_DIR     "${GLEW_ROOT_DIR}/lib/Release/x64")
+    set(GLEW_DLL_DIR     "${GLEW_ROOT_DIR}/Release/x64")
+
+    set(LIBRARIES SDL3::SDL3 glm::glm "${GLEW_LIB_DIR}/glew32.lib" opengl32)
 else()
     # GCC / Clang
     message(STATUS "Configuring for GCC/Clang")
@@ -58,7 +69,14 @@ else()
         find_package(GLEW REQUIRED)
         set(LIBRARIES SDL3::SDL3;GL;GLEW::GLEW)
     else()
-        set(LIBRARIES SDL3::SDL3;opengl32)
+        set(GLEW_ROOT_DIR "${PROJECT_SOURCE_DIR}/vendors/GLEW")
+        set(GLEW_INCLUDE_DIR "${GLEW_ROOT_DIR}/include")
+        include_directories(${GLEW_INCLUDE_DIR})
+
+        set(GLEW_LIB_DIR     "${GLEW_ROOT_DIR}/lib/Release/x64")
+        set(GLEW_DLL_DIR     "${GLEW_ROOT_DIR}/Release/x64")
+
+        set(LIBRARIES SDL3::SDL3 glm::glm "${GLEW_LIB_DIR}/glew32.lib" opengl32)
     endif()
 endif()
 
@@ -72,6 +90,27 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS}
     ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_draw.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp
     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
+
+if(WIN32)
+
+    get_target_property(_out_dir ${PROJECT_NAME} RUNTIME_OUTPUT_DIRECTORY)
+    if (NOT _out_dir)
+        set(_out_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+    endif()
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy 
+        $<TARGET_FILE:SDL3::SDL3-shared> $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        VERBATIM
+    )
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+       COMMAND ${CMAKE_COMMAND} -E copy_if_different
+       "${GLEW_DLL_DIR}/glew32.dll"
+       $<TARGET_FILE_DIR:${PROJECT_NAME}>
+   )
+
+endif()
 
 # Linking vendors
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
