@@ -17,13 +17,13 @@ namespace Nova {
             ImGui::SetNextWindowViewport(viewport->ID);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGuiWindowFlags host_window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
-                ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+                ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_UnsavedDocument
+                | ImGuiWindowFlags_NoResize;
 
             ImGui::Begin("Nova Editor", nullptr, host_window_flags);
-            ImGui::PopStyleVar(2);
+            ImGui::PopStyleVar(3);
 
             ImGuiID dockspace_id = ImGui::GetID("NovaDockspace");
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
@@ -67,10 +67,12 @@ namespace Nova {
             ImGui::End();
 
             // ------ Viewport ------
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             ImVec2 size = ImGui::GetContentRegionAvail();
             ImGui::Image((ImTextureID)viewportTexture, size);
             ImGui::End();
+            ImGui::PopStyleVar();
 
             // ------ Inspector ------
             ImGui::Begin("Inspector");
