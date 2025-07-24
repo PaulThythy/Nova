@@ -21,7 +21,7 @@ namespace Nova {
                 ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.25f, &dock_right, &dock_center);
 
                 ImGuiID dock_right_top = 0, dock_right_bottom = 0;
-                ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down, 0.5f, &dock_right_top, &dock_right_bottom);
+                ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up, 0.5f, &dock_right_top, &dock_right_bottom);
 
                 ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
                 ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
