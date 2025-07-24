@@ -1,21 +1,7 @@
 #include <iostream>
 
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
-
-static const char* vertexShaderSrc = R"(
-#version 130
-in vec2 position;
-void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-}
-)";
-static const char* fragmentShaderSrc = R"(
-#version 130
-out vec4 color;
-void main() {
-    color = vec4(1.0, 0.0, 0.0, 1.0);
-}
-)";
+#include "Renderer/OpenGL/Shader.hpp"
 
 namespace Nova {
     namespace Renderer {
@@ -42,21 +28,13 @@ namespace Nova {
                 glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
                 glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-                GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
-                glShaderSource(vertShader, 1, &vertexShaderSrc, nullptr);
-                glCompileShader(vertShader);
+                std::string vertexPath = std::string(SHADER_DIR) + "/vertex.vert";
+                std::string fragmentPath = std::string(SHADER_DIR) + "/fragment.frag";
+                m_shaderProgram = loadRenderShader(vertexPath, fragmentPath);
 
-                GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-                glShaderSource(fragShader, 1, &fragmentShaderSrc, nullptr);
-                glCompileShader(fragShader);
-
-                m_shaderProgram = glCreateProgram();
-                glAttachShader(m_shaderProgram, vertShader);
-                glAttachShader(m_shaderProgram, fragShader);
-                glLinkProgram(m_shaderProgram);
-
-                glDeleteShader(vertShader);
-                glDeleteShader(fragShader);
+                if (m_shaderProgram == 0) {
+                    std::cerr << "Failed to load or compile shaders!" << std::endl;
+                }
 
                 GLint posAttrib = glGetAttribLocation(m_shaderProgram, "position");
                 glEnableVertexAttribArray(posAttrib);
