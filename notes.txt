@@ -1,0 +1,111 @@
+EditorUI.cpp : 
+Tests for parented drag and drop hierarchy panel 
+
+struct GameObject {
+    std::string name;
+    std::vector<GameObject> children;
+};
+
+static std::vector<GameObject> sceneNodes = {
+    { "Camera", {} },
+    { "Light", {} },
+    { "Cube", { 
+        { "Sphere", {} }
+    } }
+};
+
+void drawNode(GameObject& node, GameObject* parent, GameObject*& node_dragged, GameObject*& node_drop_target) {
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    if (node.children.empty())
+        flags |= ImGuiTreeNodeFlags_Leaf;
+
+    bool node_open = ImGui::TreeNodeEx((void*)&node, flags, "%s", node.name.c_str());
+
+    // Drag&drop source
+    if (ImGui::BeginDragDropSource()) {
+        ImGui::SetDragDropPayload("GOBJ_PTR", &node, sizeof(GameObject*));
+        ImGui::Text("%s", node.name.c_str());
+        node_dragged = &node;
+        ImGui::EndDragDropSource();
+    }
+    // Drag&drop target
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GOBJ_PTR")) {
+            GameObject* dropped = *(GameObject**)payload->Data;
+            // Gérer l'attribution du parent après la frame
+            node_drop_target = &node;
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    // Affichage récursif pour les enfants
+    if (node_open) {
+        for (auto& child : node.children)
+            drawNode(child, &node, node_dragged, node_drop_target);
+        ImGui::TreePop();
+    }
+}
+
+void renderHierarchyPanel() {
+    ImGui::Begin("Hierarchy");
+    static GameObject* node_dragged = nullptr;
+    static GameObject* node_drop_target = nullptr;
+    // La structure racine :
+    static std::vector<GameObject> sceneNodes = {
+        { "Camera", {} },
+        { "Light", {} },
+        { "Cube", {
+            { "Sphere", {} }
+        } }
+    };
+
+    // Affiche les racines
+    for (auto& node : sceneNodes)
+        drawNode(node, nullptr, node_dragged, node_drop_target);
+
+    // Gestion du drag&drop entre racines
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GOBJ_PTR")) {
+            GameObject* dropped = *(GameObject**)payload->Data;
+            node_drop_target = nullptr; // Droppé sur l'espace racine : deviendra racine
+            if (dropped) {
+                // 1. Trouve et enlève dropped de son parent actuel (récursif)
+                std::function<bool(std::vector<GameObject>&)> remove_from_parent;
+                remove_from_parent = [&](std::vector<GameObject>& nodes){
+                    for (auto it = nodes.begin(); it != nodes.end(); ++it) {
+                        if (&*it == dropped) {
+                            nodes.erase(it);
+                            return true;
+                        }
+                        if (remove_from_parent(it->children)) return true;
+                    }
+                    return false;
+                };
+                remove_from_parent(sceneNodes);
+                // 2. Ajoute le dropped en racine
+                sceneNodes.push_back(*dropped);
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    // Applique le parentage après le drop dans les enfants
+    if (node_dragged && node_drop_target && node_dragged != node_drop_target) {
+        std::function<bool(std::vector<GameObject>&)> remove_from_parent;
+        remove_from_parent = [&](std::vector<GameObject>& nodes){
+            for (auto it = nodes.begin(); it != nodes.end(); ++it) {
+                if (&*it == node_dragged) {
+                    nodes.erase(it);
+                    return true;
+                }
+                if (remove_from_parent(it->children)) return true;
+            }
+            return false;
+        };
+        remove_from_parent(sceneNodes);
+        node_drop_target->children.push_back(*node_dragged);
+        node_dragged = node_drop_target = nullptr;
+    }
+
+    ImGui::End();
+}
