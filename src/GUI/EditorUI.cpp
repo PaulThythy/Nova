@@ -57,10 +57,15 @@ namespace Nova {
 
                 ImGuiStyle& style = ImGui::GetStyle();
                 float availW      = ImGui::GetContentRegionAvail().x;
-                float badgeW      = 20.0f;
+                float badgeW      = 2.0f;
                 float spacing     = style.ItemInnerSpacing.x;
-                float totalBadges = badgeW * 3 + spacing * 2;
-                float inputW      = (availW - totalBadges) / 3.0f;
+                float groupSpacing = style.ItemSpacing.x;
+                float rightMargin = style.WindowPadding.x;
+                float usableW = availW - rightMargin;
+
+                float totalGapsX    = spacing * 3 + groupSpacing * 2;   
+                float totalBadgesW  = badgeW * 3;
+                float inputW        = (usableW - totalBadgesW - totalGapsX) / 3.0f;
 
                 // --- POSITION ---
                 {
@@ -74,9 +79,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##posX", &position[0]);
+                    ImGui::InputFloat("##posX", &position[0], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
@@ -84,9 +89,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##posY", &position[1]);
+                    ImGui::InputFloat("##posY", &position[1], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
@@ -94,7 +99,7 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##posZ", &position[2]);
+                    ImGui::InputFloat("##posZ", &position[2], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
                 }
 
@@ -112,9 +117,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##rotX", &rotation[0]);
+                    ImGui::InputFloat("##rotX", &rotation[0], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
@@ -122,9 +127,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##rotY", &rotation[1]);
+                    ImGui::InputFloat("##rotY", &rotation[1], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
@@ -132,7 +137,7 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##rotZ", &rotation[2]);
+                    ImGui::InputFloat("##rotZ", &rotation[2], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
                 }
 
@@ -150,9 +155,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##sclX", &scale[0]);
+                    ImGui::InputFloat("##sclX", &scale[0], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
@@ -160,9 +165,9 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##sclY", &scale[1]);
+                    ImGui::InputFloat("##sclY", &scale[1], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
-                    ImGui::SameLine();
+                    ImGui::SameLine(0, groupSpacing);
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
@@ -170,7 +175,7 @@ namespace Nova {
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
-                    ImGui::InputFloat("##sclZ", &scale[2]);
+                    ImGui::InputFloat("##sclZ", &scale[2], 0.0f, 0.0f, "%.6f");
                     ImGui::PopItemWidth();
                 }
             }
