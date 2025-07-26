@@ -51,22 +51,128 @@ namespace Nova {
         
         void renderInspectorPanel() {
             ImGui::Begin("Inspector");
-            ImGui::Text("Transform");
-            ImGui::Separator();
-            static float position[3] = {0.0f, 0.0f, 0.0f};
-            static float rotation[3] = {0.0f, 0.0f, 0.0f};
-            static float scale[3]    = {1.0f, 1.0f, 1.0f};
-            ImGui::InputFloat3("Position", position);
-            ImGui::InputFloat3("Rotation", rotation);
-            ImGui::InputFloat3("Scale", scale);
+            if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::Separator();
 
-            ImGui::Separator();
-            ImGui::Text("Object Properties");
-            static bool visible = true;
-            ImGui::Checkbox("Visible", &visible);
-            if (ImGui::CollapsingHeader("Add Component")) {
-                if (ImGui::Button("Physics")) {}
-                if (ImGui::Button("Script")) {}
+                ImGuiStyle& style = ImGui::GetStyle();
+                float availW      = ImGui::GetContentRegionAvail().x;
+                float badgeW      = 20.0f;
+                float spacing     = style.ItemInnerSpacing.x;
+                float totalBadges = badgeW * 3 + spacing * 2;
+                float inputW      = (availW - totalBadges) / 3.0f;
+
+                // --- POSITION ---
+                {
+                    static float position[3] = { 0.0f, 0.0f, 0.0f };
+                    ImGui::Text("Position");
+                    ImGui::Spacing();
+
+                    // X
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::Button("X##posBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##posX", &position[0]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Y
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::Button("Y##posBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##posY", &position[1]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Z
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::Button("Z##posBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##posZ", &position[2]);
+                    ImGui::PopItemWidth();
+                }
+
+                ImGui::Separator();
+
+                // --- ROTATION ---
+                {
+                    static float rotation[3] = { 0.0f, 0.0f, 0.0f };
+                    ImGui::Text("Rotation");
+                    ImGui::Spacing();
+
+                    // X
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::Button("X##rotBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##rotX", &rotation[0]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Y
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::Button("Y##rotBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##rotY", &rotation[1]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Z
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::Button("Z##rotBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##rotZ", &rotation[2]);
+                    ImGui::PopItemWidth();
+                }
+
+                ImGui::Separator();
+
+                // --- SCALE ---
+                {
+                    static float scale[3] = { 1.0f, 1.0f, 1.0f };
+                    ImGui::Text("Scale");
+                    ImGui::Spacing();
+
+                    // X
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::Button("X##sclBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##sclX", &scale[0]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Y
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::Button("Y##sclBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##sclY", &scale[1]);
+                    ImGui::PopItemWidth();
+                    ImGui::SameLine();
+
+                    // Z
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::Button("Z##sclBadge", ImVec2(badgeW,0));
+                    ImGui::PopStyleColor();
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(inputW);
+                    ImGui::InputFloat("##sclZ", &scale[2]);
+                    ImGui::PopItemWidth();
+                }
             }
             ImGui::End();
         }
