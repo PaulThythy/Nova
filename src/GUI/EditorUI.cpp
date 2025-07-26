@@ -1,5 +1,7 @@
 #include "GUI/EditorUI.hpp"
 
+#include <iostream>
+
 namespace Nova {
     namespace GUI {
 
@@ -31,12 +33,28 @@ namespace Nova {
 
         void renderHierarchyPanel() {
             ImGui::Begin("Hierarchy");
+
+            static int selectedIndex = -1;
+
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+                ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                selectedIndex = -1;
+            }
+
+            const char* items[] = { "Camera", "Light", "Cube", "Sphere" };
+            int itemCount = IM_ARRAYSIZE(items);
+
             ImGui::Text("Scene");
             ImGui::Separator();
-            ImGui::Selectable("Camera");
-            ImGui::Selectable("Light");
-            ImGui::Selectable("Cube");
-            ImGui::Selectable("Sphere");
+
+            for (int i = 0; i < itemCount; i++) {
+                bool isSelected = (selectedIndex == i);
+                if (ImGui::Selectable(items[i], isSelected)) {
+                    selectedIndex = i;
+                }
+            }
+
             ImGui::End();
         }
 
