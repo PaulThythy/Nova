@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Nova {
     namespace Scene {
@@ -20,10 +21,11 @@ namespace Nova {
             Node* m_Parent;
 
             Node(const std::string& name) : m_Name(name), m_Parent(nullptr) {}
-            ~Node();
+            virtual ~Node();
 
             void addChild(Node* child);
             void removeChild(Node* child);
+            glm::mat4 getModelMatrix() const;
         };
 
     } // namespace Scene

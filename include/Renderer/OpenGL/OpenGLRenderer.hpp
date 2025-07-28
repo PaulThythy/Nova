@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 
 #include "Renderer/Renderer.hpp"
+#include "Scene/Scene.hpp"
+#include "Scene/Node/Sphere.hpp"
 
 namespace Nova {
     namespace Renderer {
@@ -13,7 +15,7 @@ namespace Nova {
             class OpenGLRenderer : public IRenderer {
             public:
                 void init(int width, int height) override;
-                void render() override;
+                void render(const Nova::Scene::Scene& scene) override;
                 void destroy() override;
 
                 void onResize(int width, int height) override;
@@ -31,6 +33,8 @@ namespace Nova {
                 int m_ViewportHeight = 720;
 
                 void initFBO(int width, int height);
+
+                void uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo);
             };
         }
 

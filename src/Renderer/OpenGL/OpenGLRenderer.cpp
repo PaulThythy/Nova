@@ -1,4 +1,6 @@
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
@@ -15,32 +17,13 @@ namespace Nova {
                     std::cerr << "Failed to initialize GLEW\n";
                 }
 
-                float vertices[] = {
-                    -0.5f, -0.5f,
-                     0.5f, -0.5f,
-                     0.0f,  0.5f
-                };
-
-                glGenVertexArrays(1, &m_VAO);
-                glGenBuffers(1, &m_VBO);
-
-                glBindVertexArray(m_VAO);
-                glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
                 std::string vertexPath = std::string(SHADER_DIR) + "/vertex.vert";
                 std::string fragmentPath = std::string(SHADER_DIR) + "/fragment.frag";
                 m_shaderProgram = loadRenderShader(vertexPath, fragmentPath);
 
                 if (m_shaderProgram == 0) {
                     std::cerr << "Failed to load or compile shaders!" << std::endl;
-                }
-
-                GLint posAttrib = glGetAttribLocation(m_shaderProgram, "position");
-                glEnableVertexAttribArray(posAttrib);
-                glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
-
-                glBindVertexArray(0);
+    }
 
                 initFBO(width, height);
             }
@@ -79,8 +62,27 @@ namespace Nova {
                 initFBO(width, height);
             }
 
+            void OpenGLRenderer::uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo) {
+                glGenVertexArrays(1, &vao);
+                glGenBuffers(1, &vbo);
+                glGenBuffers(1, &ibo);
 
-            void OpenGLRenderer::render() {
+                glBindVertexArray(vao);
+
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glBufferData(GL_ARRAY_BUFFER, sphere->m_Vertices.size() * sizeof(glm::vec3), sphere->m_Vertices.data(), GL_STATIC_DRAW);
+
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+                glEnableVertexAttribArray(0);
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere->m_Indices.size() * sizeof(unsigned int), sphere->m_Indices.data(), GL_STATIC_DRAW);
+
+                glBindVertexArray(0);
+            }
+
+
+            void OpenGLRenderer::render(const Nova::Scene::Scene& scene) {
                 glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
                 glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
                 glEnable(GL_DEPTH_TEST);
@@ -88,11 +90,39 @@ namespace Nova {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
                 glUseProgram(m_shaderProgram);
-                glBindVertexArray(m_VAO);
-                glDrawArrays(GL_TRIANGLES, 0, 3);
-                glBindVertexArray(0);
-                glUseProgram(0);
+                glm::mat4 view = scene.m_ViewportCamera->getViewMatrix();
+                glm::mat4 projection = scene.m_ViewportCamera->getProjectionMatrix();
 
+                GLint locView = glGetUniformLocation(m_shaderProgram, "u_View");
+                GLint locProj = glGetUniformLocation(m_shaderProgram, "u_Projection");
+                glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
+
+                for (auto* node : scene.m_Roots) {
+                    Nova::Scene::Sphere* sphere = dynamic_cast<Nova::Scene::Sphere*>(node);
+                    if (!sphere) continue;
+
+                    if (sphere->m_Vertices.empty() || sphere->m_Indices.empty()) {
+                        sphere->init();
+                    }
+
+                    GLuint vao, vbo, ibo;
+                    uploadSphereToGPU(sphere, vao, vbo, ibo);
+
+                    glm::mat4 model = sphere->getModelMatrix();
+                    GLint locModel = glGetUniformLocation(m_shaderProgram, "u_Model");
+                    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
+
+                    glBindVertexArray(vao);
+                    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(sphere->m_Indices.size()), GL_UNSIGNED_INT, 0);
+                    glBindVertexArray(0);
+
+                    glDeleteVertexArrays(1, &vao);
+                    glDeleteBuffers(1, &vbo);
+                    glDeleteBuffers(1, &ibo);
+                }
+
+                glUseProgram(0);
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
             }
 

@@ -16,6 +16,14 @@ namespace Nova {
             setupSDL();
             initSDL();
             initImGui();
+
+            auto* viewportCamera = new Nova::Scene::Camera("ViewportCamera");
+            m_Scene.m_ViewportCamera = viewportCamera;
+
+            auto* sphere = new Nova::Scene::Sphere("Sphere1");
+            sphere->init(16, 32);
+            m_Scene.addNode(sphere);
+
             m_Renderer.init(1280, 720);
         }
 
@@ -146,7 +154,7 @@ namespace Nova {
                 glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
                 glClear(GL_COLOR_BUFFER_BIT);
 
-                m_Renderer.render();
+                m_Renderer.render(m_Scene);
 
                 ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

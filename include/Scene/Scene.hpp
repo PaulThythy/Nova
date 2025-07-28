@@ -5,11 +5,14 @@
 #include <algorithm>
 
 #include "Scene/Node/Node.hpp"
+#include "Scene/Node/Camera.hpp"
 
 namespace Nova {
     namespace Scene {
         struct Scene {
             std::vector<Nova::Scene::Node*> m_Roots;
+
+            Nova::Scene::Camera* m_ViewportCamera;
 
             Scene() = default;
             ~Scene();

@@ -6,6 +6,8 @@ cmake -S . -B build/$build_type -DCMAKE_BUILD_TYPE=$build_type
 cmake --build build/$build_type --config $build_type
 ./build/$build_type/bin/Nova
 
+read
+
 #cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
 #cmake --build build/Debug --config Debug
 #./build/Debug/bin/Nova
