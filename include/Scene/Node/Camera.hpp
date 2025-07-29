@@ -12,7 +12,7 @@ namespace Nova {
     namespace Scene {
 
         struct Camera : public Node {
-            glm::vec3 m_Position = {0.0f, 0.0f, 5.0f};
+            glm::vec3 m_Position = {0.0f, 2.0f, 1.0f};
             glm::vec3 m_LookAt = {0.0f, 0.0f, 0.0f};
             glm::vec3 m_Up = {0.0f, 1.0f, 0.0f};
             float m_Fov = 45.0f;

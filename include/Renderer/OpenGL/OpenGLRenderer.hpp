@@ -6,6 +6,7 @@
 #include "Renderer/Renderer.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/Node/Sphere.hpp"
+#include "Scene/Node/Plane.hpp"
 
 namespace Nova {
     namespace Renderer {
@@ -36,6 +37,7 @@ namespace Nova {
                 void initFBO(int width, int height);
 
                 void uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo);
+                void uploadPlaneToGPU(const Nova::Scene::Plane* plane, GLuint& vao, GLuint& vbo, GLuint& ibo);
             };
         
         } // namespace OpenGL
