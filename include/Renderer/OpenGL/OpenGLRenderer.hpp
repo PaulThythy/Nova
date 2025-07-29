@@ -9,18 +9,20 @@
 
 namespace Nova {
     namespace Renderer {
-
         namespace OpenGL {
 
             class OpenGLRenderer : public IRenderer {
             public:
-                void init(int width, int height) override;
-                void render(const Nova::Scene::Scene& scene) override;
+                void init(const Nova::Scene::Scene& scene) override;
+                void render() override;
                 void destroy() override;
 
-                void onResize(int width, int height) override;
+                void updateViewportSize(int width, int height) override;
 
                 GLuint getTextureId() const { return m_ColorTexture; }
+
+                int m_ViewportWidth = 1280;
+                int m_ViewportHeight = 720;
 
             private:
                 GLuint m_VAO = 0;
@@ -29,15 +31,14 @@ namespace Nova {
                 GLuint m_FBO = 0;
                 GLuint m_ColorTexture = 0;
                 GLuint m_DepthBuffer = 0;
-                int m_ViewportWidth = 1280;
-                int m_ViewportHeight = 720;
+                const Nova::Scene::Scene* m_Scene = nullptr;
 
                 void initFBO(int width, int height);
 
                 void uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo);
             };
-        }
-
+        
+        } // namespace OpenGL
     } // namespace Renderer
 } // namespace Nova
 

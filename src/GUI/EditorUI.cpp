@@ -58,11 +58,14 @@ namespace Nova {
             ImGui::End();
         }
 
-        void renderViewportPanel(GLuint viewportTexture) {
+        void renderViewportPanel(Nova::Renderer::OpenGL::OpenGLRenderer& renderer) {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             ImVec2 size = ImGui::GetContentRegionAvail();
-            ImGui::Image((ImTextureID)viewportTexture, size);
+            
+            renderer.updateViewportSize((int)size.x, (int)size.y);
+
+            ImGui::Image((ImTextureID)renderer.getTextureId(), size);
             ImGui::End();
             ImGui::PopStyleVar();
         }
@@ -208,7 +211,7 @@ namespace Nova {
             ImGui::End();
         }
 
-        void render(GLuint viewportTexture) {
+        void render(Nova::Renderer::OpenGL::OpenGLRenderer& renderer) {
             bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
 
             // ------ DockSpace ------
@@ -235,7 +238,7 @@ namespace Nova {
 
             // ------ Panels ------
             renderHierarchyPanel();
-            renderViewportPanel(viewportTexture);
+            renderViewportPanel(renderer);
             renderInspectorPanel();
             renderAssetBrowserPanel();
         }

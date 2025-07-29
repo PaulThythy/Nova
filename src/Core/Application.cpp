@@ -24,7 +24,7 @@ namespace Nova {
             sphere->init(16, 32);
             m_Scene.addNode(sphere);
 
-            m_Renderer.init(1280, 720);
+            m_Renderer.init(m_Scene);
         }
 
         void Application::setupSDL() {
@@ -127,12 +127,12 @@ namespace Nova {
                     if (event.type == SDL_EVENT_QUIT) {
                         m_IsRunning = false;
                     }
-                }
 
-                if(event.type == SDL_EVENT_WINDOW_RESIZED) {
-                    int width = event.window.data1;
-                    int height = event.window.data2;
-                    m_Renderer.onResize(width, height);
+                    if(event.type == SDL_EVENT_WINDOW_RESIZED) {
+                        int width = event.window.data1;
+                        int height = event.window.data2;
+                        // resize event
+                    }
                 }
 
                 if (SDL_GetWindowFlags(m_Window) & SDL_WINDOW_MINIMIZED) {
@@ -146,7 +146,7 @@ namespace Nova {
 
                 // render UI
 
-                Nova::GUI::render(m_Renderer.getTextureId());
+                Nova::GUI::render(m_Renderer);
 
                 // Rendering
                 ImGui::Render();
@@ -154,7 +154,7 @@ namespace Nova {
                 glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
                 glClear(GL_COLOR_BUFFER_BIT);
 
-                m_Renderer.render(m_Scene);
+                m_Renderer.render();
 
                 ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

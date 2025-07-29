@@ -9,9 +9,8 @@ namespace Nova {
     namespace Renderer {
         namespace OpenGL {
 
-            void OpenGLRenderer::init(int width, int height) {
-                m_ViewportWidth = width;
-                m_ViewportHeight = height;
+            void OpenGLRenderer::init(const Nova::Scene::Scene& scene) {
+                m_Scene = &scene;
 
                 if(glewInit() != GLEW_OK) {
                     std::cerr << "Failed to initialize GLEW\n";
@@ -23,9 +22,9 @@ namespace Nova {
 
                 if (m_shaderProgram == 0) {
                     std::cerr << "Failed to load or compile shaders!" << std::endl;
-    }
+                }
 
-                initFBO(width, height);
+                initFBO(m_ViewportWidth, m_ViewportHeight);
             }
 
             void OpenGLRenderer::initFBO(int width, int height) {
@@ -56,10 +55,16 @@ namespace Nova {
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
             }
 
-            void OpenGLRenderer::onResize(int width, int height) {
-                m_ViewportWidth  = width;
-                m_ViewportHeight = height;
-                initFBO(width, height);
+            void OpenGLRenderer::updateViewportSize(int width, int height) {
+                if (width != m_ViewportWidth || height != m_ViewportHeight) {
+                    m_ViewportWidth = width;
+                    m_ViewportHeight = height;
+                    initFBO(width, height);
+
+                    if (m_Scene && m_Scene->m_ViewportCamera) {
+                        m_Scene->m_ViewportCamera->m_AspectRatio = static_cast<float>(width) / static_cast<float>(height);
+                    }
+                }
             }
 
             void OpenGLRenderer::uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo) {
@@ -82,7 +87,7 @@ namespace Nova {
             }
 
 
-            void OpenGLRenderer::render(const Nova::Scene::Scene& scene) {
+            void OpenGLRenderer::render() {
                 glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
                 glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
                 glEnable(GL_DEPTH_TEST);
@@ -90,15 +95,15 @@ namespace Nova {
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
                 glUseProgram(m_shaderProgram);
-                glm::mat4 view = scene.m_ViewportCamera->getViewMatrix();
-                glm::mat4 projection = scene.m_ViewportCamera->getProjectionMatrix();
+                glm::mat4 view = m_Scene->m_ViewportCamera->getViewMatrix();
+                glm::mat4 projection = m_Scene->m_ViewportCamera->getProjectionMatrix();
 
                 GLint locView = glGetUniformLocation(m_shaderProgram, "u_View");
                 GLint locProj = glGetUniformLocation(m_shaderProgram, "u_Projection");
                 glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(view));
                 glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
 
-                for (auto* node : scene.m_Roots) {
+                for (auto* node : m_Scene->m_Roots) {
                     Nova::Scene::Sphere* sphere = dynamic_cast<Nova::Scene::Sphere*>(node);
                     if (!sphere) continue;
 
