@@ -74,11 +74,24 @@ namespace Nova {
 
                 glBindVertexArray(vao);
 
-                glBindBuffer(GL_ARRAY_BUFFER, vbo);
-                glBufferData(GL_ARRAY_BUFFER, sphere->m_Vertices.size() * sizeof(glm::vec3), sphere->m_Vertices.data(), GL_STATIC_DRAW);
+                struct Vertex {
+                    glm::vec3 position;
+                    glm::vec3 normal;
+                };
+                std::vector<Vertex> vertices;
+                vertices.reserve(sphere->m_Vertices.size());
+                for (size_t i = 0; i < sphere->m_Vertices.size(); ++i) {
+                    vertices.push_back({ sphere->m_Vertices[i], sphere->m_Normals[i] });
+                }
 
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
                 glEnableVertexAttribArray(0);
+
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+                glEnableVertexAttribArray(1);
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere->m_Indices.size() * sizeof(unsigned int), sphere->m_Indices.data(), GL_STATIC_DRAW);
@@ -93,11 +106,24 @@ namespace Nova {
 
                 glBindVertexArray(vao);
 
-                glBindBuffer(GL_ARRAY_BUFFER, vbo);
-                glBufferData(GL_ARRAY_BUFFER, plane->m_Vertices.size() * sizeof(glm::vec3), plane->m_Vertices.data(), GL_STATIC_DRAW);
+                struct Vertex {
+                    glm::vec3 position;
+                    glm::vec3 normal;
+                };
+                std::vector<Vertex> vertices;
+                vertices.reserve(plane->m_Vertices.size());
+                for (size_t i = 0; i < plane->m_Vertices.size(); ++i) {
+                    vertices.push_back({ plane->m_Vertices[i], plane->m_Normals[i] });
+                }
 
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
                 glEnableVertexAttribArray(0);
+
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+                glEnableVertexAttribArray(1);
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, plane->m_Indices.size() * sizeof(unsigned int), plane->m_Indices.data(), GL_STATIC_DRAW);
@@ -105,6 +131,18 @@ namespace Nova {
                 glBindVertexArray(0);
             }
 
+
+            void OpenGLRenderer::uploadLightToShader(const Nova::Scene::Light* light, GLuint shaderProgram) {
+                GLint locLightPos = glGetUniformLocation(shaderProgram, "u_LightPosition");
+                GLint locLightColor = glGetUniformLocation(shaderProgram, "u_LightColor");
+                GLint locLightIntensity = glGetUniformLocation(shaderProgram, "u_LightIntensity");
+
+                glm::vec3 worldPos = glm::vec3(light->getModelMatrix() * glm::vec4(0, 0, 0, 1));
+
+                glUniform3fv(locLightPos, 1, glm::value_ptr(worldPos));
+                glUniform3fv(locLightColor, 1, glm::value_ptr(light->m_Color));
+                glUniform1f(locLightIntensity, light->m_Intensity);
+            }
 
             void OpenGLRenderer::render() {
                 glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
@@ -122,7 +160,15 @@ namespace Nova {
                 glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(view));
                 glUniformMatrix4fv(locProj, 1, GL_FALSE, glm::value_ptr(projection));
 
+                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_CameraPos"), 1, glm::value_ptr(m_Scene->m_ViewportCamera->m_Position));
+                glUniform3f(glGetUniformLocation(m_shaderProgram, "u_ObjectColor"), 1.0f, 0.0f, 0.0f);
+
+
                 for (auto* node : m_Scene->m_Roots) {
+                    if (auto* light = dynamic_cast<Nova::Scene::Light*>(node)) {
+                        uploadLightToShader(light, m_shaderProgram);
+                    }
+
                     if (auto* sphere = dynamic_cast<Nova::Scene::Sphere*>(node)) {
                         if (sphere->m_Vertices.empty() || sphere->m_Indices.empty()) {
                             sphere->init();

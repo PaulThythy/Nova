@@ -20,13 +20,17 @@ namespace Nova {
             auto* viewportCamera = new Nova::Scene::Camera("ViewportCamera");
             m_Scene.m_ViewportCamera = viewportCamera;
 
-            /*auto* sphere = new Nova::Scene::Sphere("Sphere1");
+            auto* sphere = new Nova::Scene::Sphere("Sphere1");
             sphere->init(16, 32);
-            m_Scene.addNode(sphere);*/
+            m_Scene.addNode(sphere);
 
-            auto* plane = new Nova::Scene::Plane("GroundPlane");
+            auto* light = new Nova::Scene::Light("mainLight");
+            light->m_Position = glm::vec3(1.0f, 2.0f, 1.0f);
+            m_Scene.addNode(light);
+
+            /*auto* plane = new Nova::Scene::Plane("GroundPlane");
             plane->init();
-            m_Scene.addNode(plane);
+            m_Scene.addNode(plane);*/
 
             m_Renderer.init(m_Scene);
         }

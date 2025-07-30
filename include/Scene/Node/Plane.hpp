@@ -12,6 +12,7 @@ namespace Nova {
         struct Plane : public Node {
 
             std::vector<glm::vec3> m_Vertices;
+            std::vector<glm::vec3> m_Normals;
             std::vector<unsigned int> m_Indices;
 
             Plane(const std::string& name = "Plane") : Node(name) {}
@@ -25,6 +26,13 @@ namespace Nova {
                     { 0.5f, 0.0f, -0.5f},
                     { 0.5f, 0.0f,  0.5f},
                     {-0.5f, 0.0f,  0.5f}
+                };
+
+                m_Normals = {
+                    {0.0f, 1.0f, 0.0f},
+                    {0.0f, 1.0f, 0.0f},
+                    {0.0f, 1.0f, 0.0f},
+                    {0.0f, 1.0f, 0.0f}
                 };
 
                 m_Indices = {

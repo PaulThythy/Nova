@@ -13,6 +13,7 @@ namespace Nova {
             float m_Radius = 1.0f;
 
             std::vector<glm::vec3> m_Vertices;
+            std::vector<glm::vec3> m_Normals;
             std::vector<unsigned int> m_Indices;
 
             Sphere(const std::string& name = "Sphere") : Node(name) {}
@@ -30,6 +31,7 @@ namespace Nova {
                         float zPos = m_Radius * std::sin(xSegment * 2.0f * glm::pi<float>()) * std::sin(ySegment * glm::pi<float>());
 
                         m_Vertices.emplace_back(xPos, yPos, zPos);
+                        m_Normals.emplace_back(glm::normalize(glm::vec3(xPos, yPos, zPos)));
                     }
                 }
 

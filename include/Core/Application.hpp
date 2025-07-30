@@ -20,6 +20,7 @@
 #include "Scene/Node/Camera.hpp"
 #include "Scene/Node/Sphere.hpp"
 #include "Scene/Node/Plane.hpp"
+#include "Scene/Node/Light.hpp"
 
 namespace Nova {
     namespace Core {
