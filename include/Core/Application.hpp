@@ -17,10 +17,6 @@
 
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
 #include "Scene/Scene.hpp"
-#include "Scene/Node/Camera.hpp"
-#include "Scene/Node/Sphere.hpp"
-#include "Scene/Node/Plane.hpp"
-#include "Scene/Node/Light.hpp"
 
 namespace Nova {
     namespace Core {
@@ -52,7 +48,7 @@ namespace Nova {
             SDL_GLContext m_GLContext   = nullptr;
 
             Nova::Renderer::OpenGL::OpenGLRenderer m_Renderer;
-            Nova::Scene::Scene m_Scene;
+            Nova::Scene m_Scene;
         };
 
     } // namespace Core

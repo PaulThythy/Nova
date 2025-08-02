@@ -5,9 +5,10 @@
 
 #include "Renderer/Renderer.hpp"
 #include "Scene/Scene.hpp"
-#include "Scene/Node/Sphere.hpp"
-#include "Scene/Node/Plane.hpp"
-#include "Scene/Node/Light.hpp"
+#include "Components/MeshComponent.hpp"
+#include "Components/CameraComponent.hpp"
+#include "Components/TransformComponent.hpp"
+#include "Components/LightComponent.hpp"
 
 namespace Nova {
     namespace Renderer {
@@ -15,7 +16,7 @@ namespace Nova {
 
             class OpenGLRenderer : public IRenderer {
             public:
-                void init(const Nova::Scene::Scene& scene) override;
+                void init(Nova::Scene& scene) override;
                 void render() override;
                 void destroy() override;
 
@@ -33,13 +34,10 @@ namespace Nova {
                 GLuint m_FBO = 0;
                 GLuint m_ColorTexture = 0;
                 GLuint m_DepthBuffer = 0;
-                const Nova::Scene::Scene* m_Scene = nullptr;
+                Nova::Scene* m_Scene = nullptr;
 
                 void initFBO(int width, int height);
-
-                void uploadSphereToGPU(const Nova::Scene::Sphere* sphere, GLuint& vao, GLuint& vbo, GLuint& ibo);
-                void uploadPlaneToGPU(const Nova::Scene::Plane* plane, GLuint& vao, GLuint& vbo, GLuint& ibo);
-                void uploadLightToShader(const Nova::Scene::Light* light, GLuint shaderProgram);
+                GLuint uploadMesh(const Nova::Components::MeshComponent& mesh);
             };
         
         } // namespace OpenGL

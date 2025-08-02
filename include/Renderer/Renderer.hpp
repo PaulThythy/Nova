@@ -5,7 +5,7 @@ namespace Nova {
 
         class IRenderer {
         public:
-            virtual void init(const Nova::Scene::Scene& scene) = 0;
+            virtual void init(Nova::Scene& scene) = 0;
             virtual void render() = 0;
             virtual void destroy() = 0;
             virtual void updateViewportSize(int width, int height) = 0;
