@@ -1,6 +1,12 @@
 #include "Core/Application.hpp"
 #include "GUI/EditorUI.hpp"
 
+#include <Components/CameraComponent.hpp>
+#include <Components/TransformComponent.hpp>
+#include <Components/TagComponent.hpp>
+#include <Components/MeshComponent.hpp>
+#include <Components/LightComponent.hpp>
+
 #include <iostream>
 #include <filesystem>
 
@@ -17,16 +23,21 @@ namespace Nova {
             initSDL();
             initImGui();
 
-            auto* viewportCamera = new Nova::Scene::Camera("ViewportCamera");
-            m_Scene.m_ViewportCamera = viewportCamera;
+            auto cam = m_Scene.createViewportCamera("MainCamera");
 
-            auto* sphere = new Nova::Scene::Sphere("Sphere1");
-            sphere->init(16, 32);
-            m_Scene.addNode(sphere);
+            auto sphereEntity = m_Scene.createEntity("Sphere");
+            m_Scene.registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
+            m_Scene.registry().emplace<Nova::Components::MeshComponent>(sphereEntity);
+            auto &sphereMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(sphereEntity);
+            sphereMesh.initSphere(24, 48);
 
-            auto* light = new Nova::Scene::Light("mainLight");
-            light->m_Position = glm::vec3(1.0f, 2.0f, 1.0f);
-            m_Scene.addNode(light);
+            auto lightEntity = m_Scene.createEntity("SunLight");
+            m_Scene.registry().emplace<Nova::Components::TransformComponent>(lightEntity);
+            m_Scene.registry().emplace<Nova::Components::LightComponent>(lightEntity);
+            auto& light = m_Scene.registry().get<Nova::Components::LightComponent>(lightEntity);
+            light.m_Intensity = 1.0f;
+            auto& lightTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(lightEntity);
+            lightTransform.m_Position = {0.0f, 5.0f, 0.0f};
 
             /*auto* plane = new Nova::Scene::Plane("GroundPlane");
             plane->init();
@@ -137,8 +148,8 @@ namespace Nova {
                     }
 
                     if(event.type == SDL_EVENT_WINDOW_RESIZED) {
-                        int width = event.window.data1;
-                        int height = event.window.data2;
+                        //int width = event.window.data1;
+                        //int height = event.window.data2;
                         // resize event
                     }
                 }

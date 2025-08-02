@@ -1,29 +1,71 @@
 #ifndef SCENE_HPP
 #define SCENE_HPP
 
-#include <vector>
-#include <algorithm>
+#include <entt/entt.hpp>
+#include <functional>
 
-#include "Scene/Node/Node.hpp"
-#include "Scene/Node/Camera.hpp"
+#include "Components/TagComponent.hpp"
+#include "Components/CameraComponent.hpp"
 
 namespace Nova {
-    namespace Scene {
-        struct Scene {
-            std::vector<Nova::Scene::Node*> m_Roots;
 
-            Nova::Scene::Camera* m_ViewportCamera;
+    class Scene {
+    public:
+        Scene() = default;
+        ~Scene() = default;
+    
+        entt::registry& registry() { return m_Registry; }
+        const entt::registry& registry() const { return m_Registry; }
 
-            Scene() = default;
-            ~Scene();
+        entt::entity createEntity(const std::string& tag = "") {
+            entt::entity entity = m_Registry.create();
+            if (!tag.empty()) {
+                m_Registry.emplace<Nova::Components::TagComponent>(entity, tag);
+            }
+            return entity;
+        }
 
-            void addNode(Nova::Scene::Node* node);
-            void removeRoot(Nova::Scene::Node* node);
+        void destroyEntity(entt::entity entity) { 
+            if (m_Registry.valid(entity)) {
+                m_Registry.destroy(entity); 
+            }
+        }
 
-            Nova::Scene::Node* findRootByName(const std::string& name) const;
-        };
+        entt::entity getViewportCamera() const { return m_ViewportCamera; }
 
-    } // namespace Scene
+        entt::entity createViewportCamera(const std::string& tag = "ViewportCamera") {
+            entt::entity cam = createEntity(tag);
+            m_Registry.emplace<Nova::Components::CameraComponent>(cam);
+            m_ViewportCamera = cam;
+            return cam;
+        }
+
+        template<typename Component>
+        void onComponentCreate(std::function<void(entt::registry&, entt::entity)> callback) {
+            m_Registry.on_construct<Component>().sink().connect(callback);
+        }
+
+        template<typename Component>
+        void onComponentUpdate(std::function<void(entt::registry&, entt::entity)> callback) {
+            m_Registry.on_update<Component>().sink().connect(callback);
+        }
+
+        template<typename Component>
+        void onComponentDestroy(std::function<void(entt::registry&, entt::entity)> callback) {
+            m_Registry.on_destroy<Component>().sink().connect(callback);
+        }
+
+        template<typename... Comps, typename Func>
+        void forEach(Func&& system) {
+            m_Registry.view<Comps...>().each(std::forward<Func>(system));
+        }
+
+    private:
+
+        entt::registry m_Registry;
+        entt::entity m_ViewportCamera = entt::null;
+    };
+    
 } // namespace Nova
 
 #endif // SCENE_HPP
