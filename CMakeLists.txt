@@ -26,6 +26,9 @@ include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 add_subdirectory(${CMAKE_SOURCE_DIR}/vendors/glm/glm)
 include_directories(${CMAKE_SOURCE_DIR}/vendors/glm)
 
+# entt
+include_directories(${CMAKE_SOURCE_DIR}/vendors/entt/single_include)
+
 # --- Compiler-specific flags ---
 if (MSVC)
     # MSVC uses cl.exe
