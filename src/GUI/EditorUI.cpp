@@ -71,7 +71,7 @@ namespace Nova {
         }
         
         void renderInspectorPanel() {
-            ImGui::Begin("Inspector");
+            ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::Separator();
@@ -96,7 +96,9 @@ namespace Nova {
 
                     // X
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("X##posBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -106,7 +108,9 @@ namespace Nova {
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Y##posBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -116,7 +120,9 @@ namespace Nova {
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Z##posBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -134,7 +140,9 @@ namespace Nova {
 
                     // X
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("X##rotBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -144,7 +152,9 @@ namespace Nova {
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Y##rotBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -154,7 +164,9 @@ namespace Nova {
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Z##rotBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -172,7 +184,9 @@ namespace Nova {
 
                     // X
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("X##sclBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -182,7 +196,9 @@ namespace Nova {
 
                     // Y
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,1,0,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Y##sclBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
@@ -192,7 +208,9 @@ namespace Nova {
 
                     // Z
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,1,1));
+                    ImGui::BeginDisabled();
                     ImGui::Button("Z##sclBadge", ImVec2(badgeW,0));
+                    ImGui::EndDisabled();
                     ImGui::PopStyleColor();
                     ImGui::SameLine();
                     ImGui::PushItemWidth(inputW);
