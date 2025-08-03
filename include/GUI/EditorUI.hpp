@@ -7,19 +7,17 @@
 
 #include <GL/glew.h>
 
-namespace Nova {
-    namespace GUI {
+namespace Nova::GUI {
 
-        void render(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
+    void render(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
 
-        void setupDockSpace(bool useIni, ImGuiID dockspace_id);
+    void setupDockSpace(bool useIni, ImGuiID dockspace_id);
 
-        void renderHierarchyPanel();
-        void renderViewportPanel(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
-        void renderInspectorPanel();
-        void renderAssetBrowserPanel();
+    void renderHierarchyPanel();
+    void renderViewportPanel(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
+    void renderInspectorPanel();
+    void renderAssetBrowserPanel();
 
-    } // namespace GUI
-} // namespace Nova
+} // namespace Nova::GUI
 
 #endif // NOVA_GUI_EDITORUI_HPP

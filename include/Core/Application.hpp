@@ -18,40 +18,37 @@
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
 #include "Scene/Scene.hpp"
 
-namespace Nova {
-    namespace Core {
+namespace Nova::Core {
 
-        class Application {
-        public:
-            Application();
-            ~Application();
+    class Application {
+    public:
+        Application();
+        ~Application();
 
-            void run();
+        void run();
 
-        private:
-            bool m_IsRunning;
+    private:
+        bool m_IsRunning;
 
-            bool m_ShowDemoWindow       = true;
-            bool m_ShowAnotherWindow    = true;
+        bool m_ShowDemoWindow       = true;
+        bool m_ShowAnotherWindow    = true;
 
-            void initEngine();
-            void destroyEngine();
+        void initEngine();
+        void destroyEngine();
 
-            void setupSDL();
-            void initSDL();
-            void destroySDL();
+        void setupSDL();
+        void initSDL();
+        void destroySDL();
 
-            void initImGui();
-            void destroyImGui();
+        void initImGui();
+        void destroyImGui();
 
-            SDL_Window* m_Window        = nullptr;
-            SDL_GLContext m_GLContext   = nullptr;
+        SDL_Window* m_Window        = nullptr;
+        SDL_GLContext m_GLContext   = nullptr;
 
-            Nova::Renderer::OpenGL::OpenGLRenderer m_Renderer;
-            Nova::Scene m_Scene;
-        };
-
-    } // namespace Core
-} // namespace Nova
+        Nova::Renderer::OpenGL::OpenGLRenderer m_Renderer;
+        Nova::Scene m_Scene;
+    };
+} // namespace Nova::Core
 
 #endif // NOVA_CORE_APPLICATION_HPP
