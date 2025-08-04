@@ -31,6 +31,7 @@
 bin
 .vscode
 .vs
+.idea
 build
 out
 imgui.ini
