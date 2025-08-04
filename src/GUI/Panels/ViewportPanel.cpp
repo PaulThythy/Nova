@@ -11,7 +11,7 @@ namespace Nova::GUI {
         ImVec2 size = ImGui::GetContentRegionAvail();
         renderer.updateViewportSize((int)size.x, (int)size.y);
 
-        ImGui::Image((ImTextureID)renderer.getTextureId(), size);
+        ImGui::Image((ImTextureID)renderer.getImGuiTextureID(), size);
 
         ImGui::End();
         ImGui::PopStyleVar();

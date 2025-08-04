@@ -8,6 +8,7 @@ namespace Nova::Renderer {
         virtual void render() = 0;
         virtual void destroy() = 0;
         virtual void updateViewportSize(int width, int height) = 0;
+        virtual void* getImGuiTextureID() const = 0;
         virtual ~IRenderer() = default;
     };
 

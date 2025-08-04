@@ -22,7 +22,7 @@ namespace Nova {
 
                 void updateViewportSize(int width, int height) override;
 
-                GLuint getTextureId() const { return m_ColorTexture; }
+                void* getImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
 
                 int m_ViewportWidth = 1280;
                 int m_ViewportHeight = 720;
