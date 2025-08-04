@@ -1,6 +1,16 @@
+#ifndef RENDERER_HPP
+#define RENDERER_HPP
+
 #include "Scene/Scene.hpp"
 
+#include <memory>
+#include <cstdint>
+
 namespace Nova::Renderer {
+
+    enum class GraphicsAPI {
+        OpenGL
+    };
 
     class IRenderer {
     public:
@@ -12,4 +22,8 @@ namespace Nova::Renderer {
         virtual ~IRenderer() = default;
     };
 
+    std::unique_ptr<IRenderer> createRenderer(GraphicsAPI api);
+
 } // namespace Nova::Renderer
+
+#endif // RENDERER_HPP

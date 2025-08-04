@@ -7,13 +7,16 @@
 #include "GUI/Panels/InspectorPanel.hpp"
 #include "GUI/Panels/AssetBrowserPanel.hpp"
 #include "GUI/Panels/ViewportPanel.hpp"
-#include "Renderer/OpenGL/OpenGLRenderer.hpp"
 
 #include <GL/glew.h>
+#include <memory>
+
+namespace Nova::Renderer {
+    class IRenderer;
+}
 
 namespace Nova::GUI {
-    //TODO rework to pass any kind of renderer
-    void render(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
+    void render(Nova::Renderer::IRenderer& renderer);
 
     void setupDockSpace(bool useIni, ImGuiID dockspace_id);
 

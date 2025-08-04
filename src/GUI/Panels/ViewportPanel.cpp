@@ -1,10 +1,10 @@
 #include "GUI/Panels/ViewportPanel.hpp"
-#include "Renderer/OpenGL/OpenGLRenderer.hpp"
+#include "Renderer/Renderer.hpp"
 #include "imgui.h"
 
 namespace Nova::GUI {
 
-    void renderViewportPanel(Nova::Renderer::OpenGL::OpenGLRenderer& renderer) {
+    void renderViewportPanel(Nova::Renderer::IRenderer& renderer) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 

@@ -42,7 +42,8 @@ namespace Nova::Core {
         plane->init();
         m_Scene.addNode(plane);*/
 
-        m_Renderer.init(m_Scene);
+        m_Renderer = createRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
+        m_Renderer->init(m_Scene);
     }
 
     void Application::setupSDL() {
@@ -162,7 +163,7 @@ namespace Nova::Core {
 
             // render UI
 
-            Nova::GUI::render(m_Renderer);
+            Nova::GUI::render(*m_Renderer);
 
             // Rendering
             ImGui::Render();
@@ -170,7 +171,7 @@ namespace Nova::Core {
             glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            m_Renderer.render();
+            m_Renderer->render();
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
