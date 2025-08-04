@@ -1,23 +1,22 @@
-#ifndef NOVA_GUI_EDITORUI_HPP
-#define NOVA_GUI_EDITORUI_HPP
+#ifndef EDITOR_UI_HPP
+#define EDITOR_UI_HPP
 
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "GUI/Panels/HierarchyPanel.hpp"
+#include "GUI/Panels/InspectorPanel.hpp"
+#include "GUI/Panels/AssetBrowserPanel.hpp"
+#include "GUI/Panels/ViewportPanel.hpp"
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
 
 #include <GL/glew.h>
 
 namespace Nova::GUI {
-
+    //TODO rework to pass any kind of renderer
     void render(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
 
     void setupDockSpace(bool useIni, ImGuiID dockspace_id);
 
-    void renderHierarchyPanel();
-    void renderViewportPanel(Nova::Renderer::OpenGL::OpenGLRenderer& renderer);
-    void renderInspectorPanel();
-    void renderAssetBrowserPanel();
-
 } // namespace Nova::GUI
 
-#endif // NOVA_GUI_EDITORUI_HPP
+#endif // EDITOR_UI_HPP
