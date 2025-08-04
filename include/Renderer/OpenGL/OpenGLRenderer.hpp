@@ -10,38 +10,33 @@
 #include "Components/TransformComponent.hpp"
 #include "Components/LightComponent.hpp"
 
-namespace Nova {
-    namespace Renderer {
-        namespace OpenGL {
+namespace Nova::Renderer::OpenGL {
 
-            class OpenGLRenderer : public IRenderer {
-            public:
-                void init(Nova::Scene& scene) override;
-                void render() override;
-                void destroy() override;
+    class OpenGLRenderer : public IRenderer {
+    public:
+        void init(Nova::Scene& scene) override;
+        void render() override;
+        void destroy() override;
 
-                void updateViewportSize(int width, int height) override;
+        void updateViewportSize(int width, int height) override;
 
-                void* getImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
+        void* getImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
 
-                int m_ViewportWidth = 1280;
-                int m_ViewportHeight = 720;
+        int m_ViewportWidth = 1280;
+        int m_ViewportHeight = 720;
 
-            private:
-                GLuint m_VAO = 0;
-                GLuint m_VBO = 0;
-                GLuint m_shaderProgram = 0;
-                GLuint m_FBO = 0;
-                GLuint m_ColorTexture = 0;
-                GLuint m_DepthBuffer = 0;
-                Nova::Scene* m_Scene = nullptr;
+    private:
+        GLuint m_VAO = 0;
+        GLuint m_VBO = 0;
+        GLuint m_shaderProgram = 0;
+        GLuint m_FBO = 0;
+        GLuint m_ColorTexture = 0;
+        GLuint m_DepthBuffer = 0;
+        Nova::Scene* m_Scene = nullptr;
 
-                void initFBO(int width, int height);
-                GLuint uploadMesh(const Nova::Components::MeshComponent& mesh);
-            };
-        
-        } // namespace OpenGL
-    } // namespace Renderer
-} // namespace Nova
+        void initFBO(int width, int height);
+        GLuint uploadMesh(const Nova::Components::MeshComponent& mesh);
+    };
+} // namespace Nova::Renderer::OpenGL
 
 #endif // OPENGL_RENDERER_HPP
