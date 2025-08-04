@@ -11,8 +11,6 @@
 #include <SDL3/SDL_opengl.h>
 #endif
 
-#include <memory>
-
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
@@ -48,7 +46,7 @@ namespace Nova::Core {
         SDL_Window* m_Window        = nullptr;
         SDL_GLContext m_GLContext   = nullptr;
 
-        std::unique_ptr<Nova::Renderer::IRenderer> m_Renderer = nullptr;
+        Nova::Renderer::IRenderer* m_Renderer = nullptr;
         Nova::Scene m_Scene;
     };
 } // namespace Nova::Core

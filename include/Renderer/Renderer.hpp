@@ -3,9 +3,6 @@
 
 #include "Scene/Scene.hpp"
 
-#include <memory>
-#include <cstdint>
-
 namespace Nova::Renderer {
 
     enum class GraphicsAPI {
@@ -22,7 +19,7 @@ namespace Nova::Renderer {
         virtual ~IRenderer() = default;
     };
 
-    std::unique_ptr<IRenderer> createRenderer(GraphicsAPI api);
+    IRenderer* createRenderer(GraphicsAPI api);
 
 } // namespace Nova::Renderer
 

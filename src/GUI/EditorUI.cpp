@@ -30,7 +30,7 @@ namespace Nova::GUI {
         }
     }
 
-    void render(Nova::Renderer::IRenderer& renderer) {
+    void render(Nova::Renderer::IRenderer* renderer) {
         bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
 
         // ------ DockSpace ------

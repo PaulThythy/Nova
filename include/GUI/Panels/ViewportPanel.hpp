@@ -7,7 +7,7 @@ namespace Nova::Renderer {
 }
 
 namespace Nova::GUI {
-    void renderViewportPanel(Nova::Renderer::IRenderer& renderer);
+    void renderViewportPanel(Nova::Renderer::IRenderer* renderer);
 }
 
 #endif //VIEWPORT_PANEL_HPP

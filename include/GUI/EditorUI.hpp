@@ -16,7 +16,7 @@ namespace Nova::Renderer {
 }
 
 namespace Nova::GUI {
-    void render(Nova::Renderer::IRenderer& renderer);
+    void render(Nova::Renderer::IRenderer* renderer);
 
     void setupDockSpace(bool useIni, ImGuiID dockspace_id);
 
