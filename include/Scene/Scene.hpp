@@ -6,6 +6,9 @@
 
 #include "Components/TagComponent.hpp"
 #include "Components/CameraComponent.hpp"
+#include "Components/TransformComponent.hpp"
+#include "Components/MeshComponent.hpp"
+#include "Math/Ray.hpp"
 
 namespace Nova {
 
@@ -16,6 +19,13 @@ namespace Nova {
     
         entt::registry& registry() { return m_Registry; }
         const entt::registry& registry() const { return m_Registry; }
+
+        struct RayHitEntity {
+            entt::entity  entity;
+            float         distance;
+        };
+
+        std::optional<RayHitEntity> pickEntity(const Math::Ray& rayWorld, entt::registry&  reg);
 
         entt::entity createEntity(const std::string& tag = "") {
             entt::entity entity = m_Registry.create();

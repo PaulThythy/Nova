@@ -1,6 +1,6 @@
 #include "GUI/EditorUI.hpp"
 
-#include <iostream>
+#include <cstdint>
 
 namespace Nova::GUI {
 
@@ -30,7 +30,7 @@ namespace Nova::GUI {
         }
     }
 
-    void render(Nova::Renderer::IRenderer* renderer) {
+    void render(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene) {
         bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
 
         // ------ DockSpace ------
@@ -57,7 +57,7 @@ namespace Nova::GUI {
 
         // ------ Panels ------
         renderHierarchyPanel();
-        renderViewportPanel(renderer);
+        renderViewportPanel(renderer, scene);
         renderInspectorPanel();
         renderAssetBrowserPanel();
 

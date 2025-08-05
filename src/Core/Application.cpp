@@ -163,7 +163,7 @@ namespace Nova::Core {
 
             // render UI
 
-            Nova::GUI::render(m_Renderer);
+            Nova::GUI::render(m_Renderer, m_Scene);
 
             // Rendering
             ImGui::Render();

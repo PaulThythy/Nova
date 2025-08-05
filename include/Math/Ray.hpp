@@ -80,43 +80,29 @@ namespace Nova::Math {
         return rayAABB(Ray{rO, rD}, localMin, localMax, outTmin, outTmax);
     }
 
-    inline glm::vec2 screenToNDC(const glm::vec2& mousePos,
-                                 const glm::vec2& viewportSize,
-                                 bool originTopLeft = true)
-    {
-        glm::vec2 ndc;
-        ndc.x = ( 2.0f * mousePos.x) / viewportSize.x - 1.0f;
-        ndc.y = ( 2.0f * mousePos.y) / viewportSize.y;
-        ndc.y = originTopLeft ? (1.0f - 2.0f * ndc.y) : (2.0f * ndc.y - 1.0f);
-        return ndc;
-    }
-
-    inline Ray mouseRayFromViewport(const glm::vec2& mousePos,
-                                    const glm::vec2& viewportSize,
-                                    const glm::mat4& view,
-                                    const glm::mat4& proj,
-                                    const glm::vec3& camWorldPos,
-                                    bool originTopLeft = true)
-    {
-        glm::vec2 ndc = screenToNDC(mousePos, viewportSize, originTopLeft);
-        glm::vec4 clip{ ndc.x, ndc.y, -1.0f, 1.0f };
-
-        glm::mat4 invVP = glm::inverse(proj * view);
-        glm::vec4 world = invVP * clip;
-        world /= world.w;
-
-        glm::vec3 dir = glm::normalize(glm::vec3(world) - camWorldPos);
-        return Ray{ camWorldPos, dir };
-    }
-
-    inline Ray mouseClickRayCast(const glm::vec2& mousePos,
-                                 const glm::vec2& viewportSize,
+    inline Ray mouseClickRayCast(const glm::vec2& mousePx,
+                                 const glm::vec2& viewportPx,
                                  const glm::mat4& view,
                                  const glm::mat4& proj,
-                                 const glm::vec3& camWorldPos)
-    {
-        return mouseRayFromViewport(mousePos, viewportSize, view, proj, camWorldPos, /*originTopLeft=*/true);
+                                 const glm::vec3& camWorldPos) {
+
+        // NDC in [-1,1], origin at top-left of the *image*
+        const float nx =  (2.0f * mousePx.x) / viewportPx.x - 1.0f;
+        const float ny =  1.0f - (2.0f * mousePx.y) / viewportPx.y;
+
+        const glm::mat4 invVP = glm::inverse(proj * view);
+
+        glm::vec4 pNear = invVP * glm::vec4(nx, ny, -1.0f, 1.0f);
+        glm::vec4 pFar  = invVP * glm::vec4(nx, ny,  1.0f, 1.0f);
+        pNear /= pNear.w;
+        pFar  /= pFar.w;
+
+        glm::vec3 origin = glm::vec3(pNear);               // or camWorldPos (both OK)
+        glm::vec3 dir    = glm::normalize(glm::vec3(pFar - pNear));
+
+        return { origin, dir };
     }
+
 }
 
 #endif // RAY_HPP

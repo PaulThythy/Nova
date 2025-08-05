@@ -8,15 +8,15 @@
 #include "GUI/Panels/AssetBrowserPanel.hpp"
 #include "GUI/Panels/ViewportPanel.hpp"
 
-#include <GL/glew.h>
-#include <memory>
+#include "Scene/Scene.hpp"
+
 
 namespace Nova::Renderer {
     class IRenderer;
 }
 
 namespace Nova::GUI {
-    void render(Nova::Renderer::IRenderer* renderer);
+    void render(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene);
 
     void setupDockSpace(bool useIni, ImGuiID dockspace_id);
 
