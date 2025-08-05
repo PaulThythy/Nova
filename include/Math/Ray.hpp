@@ -1,6 +1,8 @@
 #ifndef RAY_HPP
 #define RAY_HPP
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtx/norm.hpp>
