@@ -60,10 +60,16 @@ namespace Nova {
             m_Registry.view<Comps...>().each(std::forward<Func>(system));
         }
 
+        void setSelected(entt::entity e)         { m_Selected = e; }
+        void clearSelected()                     { m_Selected = entt::null; }
+        entt::entity getSelected() const         { return m_Selected; }
+        bool hasSelection() const                { return m_Selected != entt::null; }
+
     private:
 
         entt::registry m_Registry;
         entt::entity m_ViewportCamera = entt::null;
+        entt::entity m_Selected = entt::null;
     };
     
 } // namespace Nova
