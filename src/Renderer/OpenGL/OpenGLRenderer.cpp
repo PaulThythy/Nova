@@ -16,12 +16,16 @@ namespace Nova::Renderer::OpenGL {
             std::cerr << "Failed to initialize GLEW\n";
         }
 
-        std::string vertexPath = std::string(SHADER_DIR) + "/vertex.vert";
+        std::string vertexPath   = std::string(SHADER_DIR) + "/vertex.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/fragment.frag";
         m_shaderProgram = loadRenderShader(vertexPath, fragmentPath);
 
-        if (m_shaderProgram == 0) {
-            std::cerr << "Failed to load or compile shaders!" << std::endl;
+        std::string outlineVert = std::string(SHADER_DIR) + "/outline.vert";
+        std::string outlineFrag = std::string(SHADER_DIR) + "/outline.frag";
+        m_outlineProgram = loadRenderShader(outlineVert, outlineFrag);
+
+        if (m_shaderProgram == 0 || m_outlineProgram == 0) {
+            std::cerr << "Failed to load/compile shaders!" << std::endl;
         }
 
         initFBO(m_ViewportWidth, m_ViewportHeight);
@@ -76,8 +80,18 @@ namespace Nova::Renderer::OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
         glViewport(0,0,m_ViewportWidth,m_ViewportHeight);
         glEnable(GL_DEPTH_TEST);
+
+        glEnable(GL_STENCIL_TEST);
+        glClearStencil(0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
         glClearColor(0.1f,0.1f,0.1f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+        //RENDER PASS 1
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
 
         glUseProgram(m_shaderProgram);
         // Camera
@@ -108,6 +122,49 @@ namespace Nova::Renderer::OpenGL {
             glDrawElements(GL_TRIANGLES, (GLsizei)mesh.m_Indices.size(), GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         });
+
+        //RENDER PASS 2 (outlines)
+        if (m_Scene->hasSelection()) {
+            entt::entity sel = m_Scene->getSelected();
+            auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
+            auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
+            if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
+                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+                glStencilMask(0x00);
+                glDisable(GL_DEPTH_TEST);
+
+                glUseProgram(m_outlineProgram);
+
+                auto camEntity = m_Scene->getViewportCamera();
+                if (camEntity != entt::null) {
+                    auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
+                    glm::mat4 view = cam.getViewMatrix();
+                    glm::mat4 proj = cam.getProjectionMatrix();
+                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_View"),1,GL_FALSE,glm::value_ptr(view));
+                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_Projection"),1,GL_FALSE,glm::value_ptr(proj));
+                }
+
+                // color + "thickness"
+                glUniform3f(glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
+                glUniform1f(glGetUniformLocation(m_outlineProgram, "u_OutlineWidth"), 0.02f);
+
+                // normal dilatation in the shader
+                glm::mat4 model = tf->GetTransform();
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_Model"),1,GL_FALSE,glm::value_ptr(model));
+
+                GLuint vao = uploadMesh(*mesh);
+                glBindVertexArray(vao);
+                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+
+                // restore state
+                glEnable(GL_DEPTH_TEST);
+                glStencilMask(0xFF);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+            }
+        }
+
+        glDisable(GL_STENCIL_TEST);
         glUseProgram(0);
         glBindFramebuffer(GL_FRAMEBUFFER,0);
     }

@@ -29,6 +29,7 @@ namespace Nova::Renderer::OpenGL {
         GLuint m_VAO = 0;
         GLuint m_VBO = 0;
         GLuint m_shaderProgram = 0;
+        GLuint m_outlineProgram = 0;
         GLuint m_FBO = 0;
         GLuint m_ColorTexture = 0;
         GLuint m_DepthBuffer = 0;
