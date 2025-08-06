@@ -49,7 +49,6 @@ namespace Nova::GUI {
 
                 if (auto hit = scene.pickEntity(ray, scene.registry())) {
                     auto tag = scene.registry().try_get<Nova::Components::TagComponent>(hit->entity);
-                    std::cout << "Hit entity " << (tag ? tag->m_Tag : "<un-tagged>") << '\n';
                     scene.setSelected(hit->entity);
                 }
             }
