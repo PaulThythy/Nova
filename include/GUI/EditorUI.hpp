@@ -7,6 +7,7 @@
 #include "GUI/Panels/InspectorPanel.hpp"
 #include "GUI/Panels/AssetBrowserPanel.hpp"
 #include "GUI/Panels/ViewportPanel.hpp"
+#include "GUI/Panels/MainMenuBar.hpp"
 
 #include "Scene/Scene.hpp"
 
