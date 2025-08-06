@@ -12,7 +12,7 @@ namespace Nova {
             const auto& tf   = view.get<Nova::Components::TransformComponent>(e);
             const auto& mesh = view.get<Nova::Components::MeshComponent>(e);
 
-            // Passage en espace objet
+            // Transform to object space
             glm::mat4 invModel = glm::inverse(tf.GetTransform());
             glm::vec3 origObj  = glm::vec3(invModel * glm::vec4(rayWorld.m_Origin,1));
             glm::vec3 dirObj   = glm::normalize(glm::vec3(invModel * glm::vec4(rayWorld.m_Direction,0)));
