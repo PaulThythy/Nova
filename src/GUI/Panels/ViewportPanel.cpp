@@ -19,6 +19,12 @@ namespace Nova::GUI {
 
         ImGui::Image((ImTextureID)renderer->getImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
 
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            scene.clearSelected();
+        }
+
         // ----- Picking -----
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             // mouse position relative to image quad
