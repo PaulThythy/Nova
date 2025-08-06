@@ -58,7 +58,7 @@ namespace Nova::GUI {
         // ------ Panels ------
         renderHierarchyPanel();
         renderViewportPanel(renderer, scene);
-        renderInspectorPanel();
+        renderInspectorPanel(scene);
         renderAssetBrowserPanel();
 
         // Remove border color on main menu bar
