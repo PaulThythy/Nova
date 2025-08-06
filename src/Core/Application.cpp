@@ -37,7 +37,7 @@ namespace Nova::Core {
         m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
         auto& planeMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(planeEntity);
         auto& planeTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
-        planeTransform.m_Scale = {5.0f, 5.0f, 5.0f};
+        planeTransform.m_Scale = {2.0f, 2.0f, 2.0f};
         planeMesh.initPlane();
 
         auto lightEntity = m_Scene.createEntity("SunLight");
@@ -47,10 +47,6 @@ namespace Nova::Core {
         light.m_Intensity = 1.0f;
         auto& lightTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(lightEntity);
         lightTransform.m_Position = {0.0f, 5.0f, 0.0f};
-
-        /*auto* plane = new Nova::Scene::Plane("GroundPlane");
-        plane->init();
-        m_Scene.addNode(plane);*/
 
         m_Renderer = createRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
         m_Renderer->init(m_Scene);

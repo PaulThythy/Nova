@@ -76,117 +76,155 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void OpenGLRenderer::render() {
-        // bind FBO
+        // --- FBO + viewport ---
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glViewport(0,0,m_ViewportWidth,m_ViewportHeight);
+        glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
         glEnable(GL_DEPTH_TEST);
-
-        glEnable(GL_STENCIL_TEST);
-        glClearStencil(0);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        glClearColor(0.1f,0.1f,0.1f,1.0f);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        // --- Récup cam ---
+        glm::mat4 view(1.0f), proj(1.0f);
+        glm::vec3 camPos(0.0f);
+        auto camEntity = m_Scene->getViewportCamera();
+        if (camEntity != entt::null) {
+            auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
+            view   = cam.getViewMatrix();
+            proj   = cam.getProjectionMatrix();
+            camPos = cam.m_LookFrom;
+        }
 
-        //RENDER PASS 1
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
+        // --- Récup une lumière simple (première) ---
+        glm::vec3 lightPos(5.0f, 7.0f, 5.0f);
+        glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+        float     lightIntensity = 1.0f;
+        m_Scene->forEach<TransformComponent, LightComponent>([&](entt::entity e, auto& tf, auto& lt){
+            // on prend la première et basta
+            lightPos       = glm::vec3(tf.GetTransform() * glm::vec4(0,0,0,1));
+            lightColor     = lt.m_Color;
+            lightIntensity = lt.m_Intensity;
+            // break déguisé : on ne change plus après la 1ère
+        });
+
+        // =========================================================
+        // 1) SCENE PASS (AUCUN ÉCRITURE STENCIL)
+        // =========================================================
+        glDisable(GL_STENCIL_TEST);
 
         glUseProgram(m_shaderProgram);
-        // Camera
-        auto camEntity = m_Scene->getViewportCamera();
-        if(camEntity != entt::null) {
-            auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
-            glm::mat4 view = cam.getViewMatrix();
-            glm::mat4 proj = cam.getProjectionMatrix();
-            glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram,"u_View"),1,GL_FALSE,glm::value_ptr(view));
-            glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram,"u_Projection"),1,GL_FALSE,glm::value_ptr(proj));
-            glUniform3fv(glGetUniformLocation(m_shaderProgram,"u_CameraPos"),1,glm::value_ptr(cam.m_LookFrom));
-        }
-        glUniform3f(glGetUniformLocation(m_shaderProgram, "u_ObjectColor"), 1.0f, 0.0f, 0.0f);
-        // Lights
-        m_Scene->forEach<TransformComponent, LightComponent>([&](entt::entity id, TransformComponent& tf, LightComponent& lt){
-            glm::vec3 pos = tf.GetTransform() * glm::vec4(0,0,0,1);
-            glUniform3fv(glGetUniformLocation(m_shaderProgram,"u_LightPos"),1,glm::value_ptr(pos));
-            glUniform3fv(glGetUniformLocation(m_shaderProgram,"u_LightColor"),1,glm::value_ptr(lt.m_Color));
-            glUniform1f(glGetUniformLocation(m_shaderProgram,"u_LightIntensity"),lt.m_Intensity);
-        });
-        // Meshes
+        glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+        glUniform3fv       (glGetUniformLocation(m_shaderProgram, "u_CameraPos"), 1, glm::value_ptr(camPos));
+
+        glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_LightPos"),       1, glm::value_ptr(lightPos));
+        glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_LightColor"),     1, glm::value_ptr(lightColor));
+        glUniform1f (glGetUniformLocation(m_shaderProgram, "u_LightIntensity"), lightIntensity);
+
         m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity id, TransformComponent& tf, MeshComponent& mesh){
-            const auto* mr = m_Scene->registry().try_get<Nova::Components::MeshRendererComponent>(id);
+            const auto* mr = m_Scene->registry().try_get<MeshRendererComponent>(id);
             if (mr && !mr->m_Visible) return;
 
+            // Matériaux (défauts si pas de MR)
             if (mr) {
-                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_BaseColor"), 1, glm::value_ptr(mr->m_BaseColor));
-                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_Roughness"), mr->m_Roughness);
-                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_Metallic"),  mr->m_Metallic);
-                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_EmissiveColor"), 1, glm::value_ptr(mr->m_EmissiveColor));
-                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_EmissiveStrength"), mr->m_EmissiveStrength);
-
+                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_BaseColor"),         1, glm::value_ptr(mr->m_BaseColor));
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_Roughness"),            mr->m_Roughness);
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_Metallic"),             mr->m_Metallic);
+                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_EmissiveColor"),     1, glm::value_ptr(mr->m_EmissiveColor));
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_EmissiveStrength"),     mr->m_EmissiveStrength);
             } else {
-                glUniform3f(glGetUniformLocation(m_shaderProgram, "u_BaseColor"), 1.0f, 1.0f, 1.0f);
+                glUniform3f (glGetUniformLocation(m_shaderProgram, "u_BaseColor"), 1.0f, 1.0f, 1.0f);
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_Roughness"), 0.8f);
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_Metallic"),  0.0f);
+                glUniform3f (glGetUniformLocation(m_shaderProgram, "u_EmissiveColor"), 0.0f, 0.0f, 0.0f);
+                glUniform1f (glGetUniformLocation(m_shaderProgram, "u_EmissiveStrength"), 0.0f);
             }
 
-            if (mr && mr->m_Wireframe) {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            } else {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            }
+            // Wireframe éventuel
+            glPolygonMode(GL_FRONT_AND_BACK, (mr && mr->m_Wireframe) ? GL_LINE : GL_FILL);
 
             GLuint vao = uploadMesh(mesh);
             glm::mat4 model = tf.GetTransform();
-            glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram,"u_Model"),1,GL_FALSE,glm::value_ptr(model));
+            glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
             glBindVertexArray(vao);
             glDrawElements(GL_TRIANGLES, (GLsizei)mesh.m_Indices.size(), GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         });
 
-        //RENDER PASS 2 (outlines)
+        // =========================================================
+        // 2) MASK PASS (STENCIL POUR L’OBJET SÉLECTIONNÉ SEULEMENT)
+        // =========================================================
         if (m_Scene->hasSelection()) {
             entt::entity sel = m_Scene->getSelected();
             auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
             auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
             if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
-                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-                glStencilMask(0x00);
+                glEnable(GL_STENCIL_TEST);
+                glStencilMask(0xFF);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+
+                // On n’écrit PAS la couleur, on veut juste tamponner le stencil
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                // Et on ne veut pas que le depth test coupe le masque : silhouette complète
                 glDisable(GL_DEPTH_TEST);
 
-                glUseProgram(m_outlineProgram);
-
-                auto camEntity = m_Scene->getViewportCamera();
-                if (camEntity != entt::null) {
-                    auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
-                    glm::mat4 view = cam.getViewMatrix();
-                    glm::mat4 proj = cam.getProjectionMatrix();
-                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_View"),1,GL_FALSE,glm::value_ptr(view));
-                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_Projection"),1,GL_FALSE,glm::value_ptr(proj));
-                }
-
-                // color + "thickness"
-                glUniform3f(glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
-                glUniform1f(glGetUniformLocation(m_outlineProgram, "u_OutlineWidth"), 0.02f);
-
-                // normal dilatation in the shader
-                glm::mat4 model = tf->GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram,"u_Model"),1,GL_FALSE,glm::value_ptr(model));
+                glUseProgram(m_shaderProgram);
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
 
                 GLuint vao = uploadMesh(*mesh);
+                glm::mat4 model = tf->GetTransform();
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
                 glBindVertexArray(vao);
                 glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
                 glBindVertexArray(0);
 
-                // restore state
+                // Restore writes
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 glEnable(GL_DEPTH_TEST);
-                glStencilMask(0xFF);
-                glStencilFunc(GL_ALWAYS, 1, 0xFF);
             }
         }
 
-        glDisable(GL_STENCIL_TEST);
+        // =========================================================
+        // 3) OUTLINE PASS (NOTEQUAL stencil, depth off)
+        // =========================================================
+        if (m_Scene->hasSelection()) {
+            entt::entity sel = m_Scene->getSelected();
+            auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
+            auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
+            if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
+                glEnable(GL_STENCIL_TEST);
+                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+                glStencilMask(0x00);          // ne pas modifier le stencil ici
+                glDisable(GL_DEPTH_TEST);     // dessiner par-dessus tout
+
+                glUseProgram(m_outlineProgram);
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+                glUniform3f (glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
+                glUniform1f (glGetUniformLocation(m_outlineProgram, "u_OutlineWorld"), 0.02f); // épaisseur *en mètres* monde
+
+                GLuint vao = uploadMesh(*mesh);
+                glm::mat4 model = tf->GetTransform();
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
+                glBindVertexArray(vao);
+                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+
+                // Restore stencil/depth
+                glStencilMask(0xFF);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                glDisable(GL_STENCIL_TEST);
+                glEnable(GL_DEPTH_TEST);
+            }
+        }
+
+        // --- Cleanup ---
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glUseProgram(0);
-        glBindFramebuffer(GL_FRAMEBUFFER,0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+
 
     GLuint OpenGLRenderer::uploadMesh(const Nova::Components::MeshComponent& mesh) {
         static std::unordered_map<const Nova::Components::MeshComponent*,GLuint> cache;
