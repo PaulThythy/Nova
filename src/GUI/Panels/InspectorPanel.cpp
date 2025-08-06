@@ -1,5 +1,6 @@
 #include "GUI/Panels/InspectorPanel.hpp"
 #include "imgui.h"
+#include "Components/MeshRendererComponent.hpp"
 
 namespace Nova::GUI {
 
@@ -56,6 +57,29 @@ namespace Nova::GUI {
         }
     }
 
+    void drawMeshRenderer(entt::registry& reg, entt::entity e) {
+        if (auto* mr = reg.try_get<Components::MeshRendererComponent>(e)) {
+            if(ImGui::CollapsingHeader("Mesh Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Checkbox("Visible", &mr->m_Visible);
+                ImGui::SameLine();
+                ImGui::Checkbox("Wireframe", &mr->m_Wireframe);
+
+                ImGui::Checkbox("Cast Shadows", &mr->m_CastShadows);
+
+                ImGui::Separator();
+
+                ImGui::ColorEdit3("Base Color", &mr->m_BaseColor.x);
+                ImGui::SliderFloat("Roughness", &mr->m_Roughness, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic",  &mr->m_Metallic,  0.0f, 1.0f);
+
+                ImGui::Separator();
+
+                ImGui::ColorEdit3("Emissive Color", &mr->m_EmissiveColor.x);
+                ImGui::SliderFloat("Emissive Strength", &mr->m_EmissiveStrength, 0.0f, 1.0f);
+            }
+        }
+    }
+
     void renderInspectorPanel(Nova::Scene& scene) {
         ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -83,6 +107,7 @@ namespace Nova::GUI {
         auto& reg = scene.registry();
 
         drawTransform(reg, e, inputW, badgeW, groupSpacing);
+        drawMeshRenderer(reg, e);
 
         ImGui::End();
     }

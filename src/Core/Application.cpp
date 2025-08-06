@@ -27,8 +27,18 @@ namespace Nova::Core {
         auto sphereEntity = m_Scene.createEntity("Sphere");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
         m_Scene.registry().emplace<Nova::Components::MeshComponent>(sphereEntity);
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(sphereEntity);
         auto &sphereMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(sphereEntity);
         sphereMesh.initSphere(24, 48);
+
+        auto planeEntity = m_Scene.createEntity("Ground");
+        m_Scene.registry().emplace<Nova::Components::TransformComponent>(planeEntity);
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(planeEntity);
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
+        auto& planeMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(planeEntity);
+        auto& planeTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
+        planeTransform.m_Scale = {5.0f, 5.0f, 5.0f};
+        planeMesh.initPlane();
 
         auto lightEntity = m_Scene.createEntity("SunLight");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(lightEntity);

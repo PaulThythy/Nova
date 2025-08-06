@@ -8,6 +8,7 @@
 #include "Components/CameraComponent.hpp"
 #include "Components/TransformComponent.hpp"
 #include "Components/MeshComponent.hpp"
+#include "Components/MeshRendererComponent.hpp"
 #include "Math/Ray.hpp"
 
 namespace Nova {

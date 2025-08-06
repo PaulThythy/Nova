@@ -9,6 +9,7 @@
 #include "Components/CameraComponent.hpp"
 #include "Components/TransformComponent.hpp"
 #include "Components/LightComponent.hpp"
+#include "Components/MeshRendererComponent.hpp"
 
 namespace Nova::Renderer::OpenGL {
 

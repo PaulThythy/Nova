@@ -114,7 +114,26 @@ namespace Nova::Renderer::OpenGL {
         });
         // Meshes
         m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity id, TransformComponent& tf, MeshComponent& mesh){
-            // upload VAO once per mesh or cache
+            const auto* mr = m_Scene->registry().try_get<Nova::Components::MeshRendererComponent>(id);
+            if (mr && !mr->m_Visible) return;
+
+            if (mr) {
+                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_BaseColor"), 1, glm::value_ptr(mr->m_BaseColor));
+                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_Roughness"), mr->m_Roughness);
+                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_Metallic"),  mr->m_Metallic);
+                glUniform3fv(glGetUniformLocation(m_shaderProgram, "u_EmissiveColor"), 1, glm::value_ptr(mr->m_EmissiveColor));
+                glUniform1f(glGetUniformLocation(m_shaderProgram, "u_EmissiveStrength"), mr->m_EmissiveStrength);
+
+            } else {
+                glUniform3f(glGetUniformLocation(m_shaderProgram, "u_BaseColor"), 1.0f, 1.0f, 1.0f);
+            }
+
+            if (mr && mr->m_Wireframe) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            } else {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            }
+
             GLuint vao = uploadMesh(mesh);
             glm::mat4 model = tf.GetTransform();
             glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram,"u_Model"),1,GL_FALSE,glm::value_ptr(model));
