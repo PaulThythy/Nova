@@ -59,8 +59,8 @@ namespace Nova::GUI {
         renderHierarchyPanel(scene);
         renderViewportPanel(renderer, scene);
         renderInspectorPanel(scene);
-        renderAssetBrowserPanel();
-        renderMainMenuBar();
+        renderAssetBrowserPanel(scene);
+        renderMainMenuBar(scene);
     }
 
 } // namespace Nova::GUI

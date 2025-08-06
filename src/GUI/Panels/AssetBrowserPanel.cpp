@@ -3,7 +3,7 @@
 
 namespace Nova::GUI {
 
-    void renderAssetBrowserPanel() {
+    void renderAssetBrowserPanel(Nova::Scene& scene) {
         ImGui::Begin("Asset Browser");
         ImGui::Text("asset_1.obj");
         ImGui::Text("material_wood.mat");

@@ -3,7 +3,7 @@
 
 namespace Nova::GUI {
 
-    void renderMainMenuBar() {
+    void renderMainMenuBar(Nova::Scene& scene) {
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0,0,0,0));
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
