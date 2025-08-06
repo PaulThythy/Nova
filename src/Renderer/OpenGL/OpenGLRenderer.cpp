@@ -255,5 +255,9 @@ namespace Nova::Renderer::OpenGL {
         glDeleteBuffers(1, &m_VBO);
         if (m_shaderProgram)  glDeleteProgram(m_shaderProgram);
         if (m_outlineProgram) glDeleteProgram(m_outlineProgram);
+
+        glDeleteFramebuffers(1, &m_FBO);
+        glDeleteTextures(1, &m_ColorTexture);
+        glDeleteRenderbuffers(1, &m_DepthBuffer);
     }
 } // namespace Nova::Renderer::OpenGL
