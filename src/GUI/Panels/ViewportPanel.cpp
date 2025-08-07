@@ -78,7 +78,7 @@ namespace Nova::GUI {
         }
 
         if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_Escape))
-            scene.clearSelected();
+            scene.clearSelection();
 
         // ----- Picking -----
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
@@ -103,8 +103,26 @@ namespace Nova::GUI {
                 );
 
                 if (auto hit = scene.pickEntity(ray, scene.registry())) {
-                    auto tag = scene.registry().try_get<Nova::Components::TagComponent>(hit->entity);
-                    scene.setSelected(hit->entity);
+                    ImGuiIO& io = ImGui::GetIO();
+
+                    if (io.KeyShift || io.KeyCtrl) {
+                        // Ajout à la sélection existante si Maj/Ctrl est enfoncé
+                        if (scene.isSelected(hit->entity)) {
+                            // Si déjà sélectionné, on le retire
+                            scene.removeFromSelection(hit->entity);
+                        } else {
+                            // Sinon on l'ajoute
+                            scene.addToSelection(hit->entity);
+                        }
+                    } else {
+                        // Pas de Maj/Ctrl - sélection simple (remplace la sélection actuelle)
+                        scene.clearSelection();
+                        scene.addToSelection(hit->entity);
+                    }
+                } else {
+                    if (!(io.KeyShift || io.KeyCtrl)) {
+                        scene.clearSelection();
+                    }
                 }
             }
         }

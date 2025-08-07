@@ -103,11 +103,12 @@ namespace Nova::GUI {
             return;
         }
 
-        auto e = scene.getSelected();
+        auto selectedEntities = scene.getSelected();
+        entt::entity selectedEntity = *selectedEntities.begin();            //take first element
         auto& reg = scene.registry();
 
-        drawTransform(reg, e, inputW, badgeW, groupSpacing);
-        drawMeshRenderer(reg, e);
+        drawTransform(reg, selectedEntity, inputW, badgeW, groupSpacing);
+        drawMeshRenderer(reg, selectedEntity);
 
         ImGui::End();
     }

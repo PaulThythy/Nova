@@ -154,34 +154,37 @@ namespace Nova::Renderer::OpenGL {
         // 2) MASK PASS (STENCIL POUR L’OBJET SÉLECTIONNÉ SEULEMENT)
         // =========================================================
         if (m_Scene->hasSelection()) {
-            entt::entity sel = m_Scene->getSelected();
-            auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
-            auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
-            if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
-                glEnable(GL_STENCIL_TEST);
-                glStencilMask(0xFF);
-                glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+            for (entt::entity sel: m_Scene->getSelected()) {
+                auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
+                auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
 
-                // On n’écrit PAS la couleur, on veut juste tamponner le stencil
-                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-                // Et on ne veut pas que le depth test coupe le masque : silhouette complète
-                glDisable(GL_DEPTH_TEST);
 
-                glUseProgram(m_shaderProgram);
-                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+                if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
+                    glEnable(GL_STENCIL_TEST);
+                    glStencilMask(0xFF);
+                    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
-                GLuint vao = uploadMesh(*mesh);
-                glm::mat4 model = tf->GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                glBindVertexArray(vao);
-                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
+                    // On n’écrit PAS la couleur, on veut juste tamponner le stencil
+                    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                    // Et on ne veut pas que le depth test coupe le masque : silhouette complète
+                    glDisable(GL_DEPTH_TEST);
 
-                // Restore writes
-                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-                glEnable(GL_DEPTH_TEST);
+                    glUseProgram(m_shaderProgram);
+                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+
+                    GLuint vao = uploadMesh(*mesh);
+                    glm::mat4 model = tf->GetTransform();
+                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
+                    glBindVertexArray(vao);
+                    glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                    glBindVertexArray(0);
+
+                    // Restore writes
+                    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+                    glEnable(GL_DEPTH_TEST);
+                }
             }
         }
 
@@ -189,33 +192,34 @@ namespace Nova::Renderer::OpenGL {
         // 3) OUTLINE PASS (NOTEQUAL stencil, depth off)
         // =========================================================
         if (m_Scene->hasSelection()) {
-            entt::entity sel = m_Scene->getSelected();
-            auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
-            auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
-            if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
-                glEnable(GL_STENCIL_TEST);
-                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-                glStencilMask(0x00);          // ne pas modifier le stencil ici
-                glDisable(GL_DEPTH_TEST);     // dessiner par-dessus tout
+            for (entt::entity sel : m_Scene->getSelected()) {
+                auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
+                auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
+                if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
+                    glEnable(GL_STENCIL_TEST);
+                    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+                    glStencilMask(0x00);          // ne pas modifier le stencil ici
+                    glDisable(GL_DEPTH_TEST);     // dessiner par-dessus tout
 
-                glUseProgram(m_outlineProgram);
-                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-                glUniform3f (glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
-                glUniform1f (glGetUniformLocation(m_outlineProgram, "u_OutlineWorld"), 0.02f); // épaisseur *en mètres* monde
+                    glUseProgram(m_outlineProgram);
+                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+                    glUniform3f (glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
+                    glUniform1f (glGetUniformLocation(m_outlineProgram, "u_OutlineWorld"), 0.02f); // épaisseur *en mètres* monde
 
-                GLuint vao = uploadMesh(*mesh);
-                glm::mat4 model = tf->GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                glBindVertexArray(vao);
-                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
+                    GLuint vao = uploadMesh(*mesh);
+                    glm::mat4 model = tf->GetTransform();
+                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
+                    glBindVertexArray(vao);
+                    glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                    glBindVertexArray(0);
 
-                // Restore stencil/depth
-                glStencilMask(0xFF);
-                glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                glDisable(GL_STENCIL_TEST);
-                glEnable(GL_DEPTH_TEST);
+                    // Restore stencil/depth
+                    glStencilMask(0xFF);
+                    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                    glDisable(GL_STENCIL_TEST);
+                    glEnable(GL_DEPTH_TEST);
+                }
             }
         }
 
