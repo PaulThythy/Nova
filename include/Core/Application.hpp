@@ -27,6 +27,13 @@ namespace Nova::Core {
 
         void run();
 
+        enum class RunMode {
+            Editor,
+            Game
+        };
+        void    setRunMode(RunMode m)   { m_RunMode = m; }
+        RunMode runMode() const         { return m_RunMode; }
+
     private:
         bool m_IsRunning;
 
@@ -48,6 +55,8 @@ namespace Nova::Core {
 
         Nova::Renderer::IRenderer* m_Renderer = nullptr;
         Nova::Scene m_Scene;
+
+        RunMode m_RunMode = RunMode::Editor;
     };
 } // namespace Nova::Core
 
