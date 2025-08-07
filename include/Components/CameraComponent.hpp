@@ -16,6 +16,9 @@ namespace Nova::Components {
         float m_NearPlane = 0.1f;
         float m_FarPlane = 100.0f;
 
+        bool m_IsViewportCamera = false;
+        bool m_IsRenderingCamera = false;
+
         CameraComponent() = default;
         ~CameraComponent() = default;
 

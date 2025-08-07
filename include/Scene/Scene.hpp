@@ -47,6 +47,8 @@ namespace Nova {
         entt::entity createViewportCamera(const std::string& tag = "ViewportCamera") {
             entt::entity cam = createEntity(tag);
             m_Registry.emplace<Nova::Components::CameraComponent>(cam);
+            auto &camera = registry().get<Nova::Components::CameraComponent>(cam);
+            camera.m_IsViewportCamera= true;
             m_ViewportCamera = cam;
             return cam;
         }

@@ -14,6 +14,10 @@ namespace Nova::GUI {
         auto& reg = scene.registry();
 
         for (auto e : reg.storage<entt::entity>()) {
+            if (auto cam = reg.try_get<Components::CameraComponent>(e)) {
+                if (cam->m_IsViewportCamera) continue;
+            }
+
             const char* name = "Entity";
             if (auto tag = reg.try_get<Components::TagComponent>(e)) {
                 if (!tag->m_Tag.empty()) name = tag->m_Tag.c_str();
