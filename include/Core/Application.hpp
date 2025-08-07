@@ -17,6 +17,7 @@
 
 #include "Renderer/Renderer.hpp"
 #include "Scene/Scene.hpp"
+#include "Input/InputManager.hpp"
 
 namespace Nova::Core {
 
@@ -31,7 +32,10 @@ namespace Nova::Core {
             Editor,
             Game
         };
-        void    setRunMode(RunMode m)   { m_RunMode = m; }
+        void    setRunMode(RunMode m) {
+            m_RunMode = m;
+            m_InputManager.setRunMode(m);
+        }
         RunMode runMode() const         { return m_RunMode; }
 
     private:
@@ -56,7 +60,9 @@ namespace Nova::Core {
         Nova::Renderer::IRenderer* m_Renderer = nullptr;
         Nova::Scene m_Scene;
 
-        RunMode m_RunMode = RunMode::Editor;
+        RunMode m_RunMode;
+
+        Nova::Input::InputManager& m_InputManager = Nova::Input::InputManager::instance();
     };
 } // namespace Nova::Core
 

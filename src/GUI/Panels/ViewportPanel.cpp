@@ -19,11 +19,66 @@ namespace Nova::GUI {
 
         ImGui::Image((ImTextureID)renderer->getImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
 
-        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-        ImGui::IsKeyPressed(ImGuiKey_Escape))
+        constexpr float ROTATE_SPEED = 0.005f;
+        constexpr float PAN_SPEED    = 0.002f;
+        constexpr float ZOOM_SPEED   = 1.0f;
+
+        static ImVec2 lastMousePos {0,0};
+
+        auto camE = scene.getViewportCamera();
+        Nova::Components::CameraComponent* camPtr = nullptr;
+        if (camE != entt::null)
+            camPtr = &scene.registry().get<Nova::Components::CameraComponent>(camE);
+
+        const bool viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered();
+        ImGuiIO& io = ImGui::GetIO();
+        ImVec2 mousePos = io.MousePos;
+        ImVec2 delta    = { mousePos.x - lastMousePos.x,
+                            mousePos.y - lastMousePos.y };
+        lastMousePos    = mousePos;
+
+        if (camPtr && viewportFocused)
         {
-            scene.clearSelected();
+            glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+            glm::vec3 right   = glm::normalize(glm::cross(forward, camPtr->m_Up));
+            glm::vec3 up      = camPtr->m_Up;
+
+            float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
+
+            // ------------------------------------------------------------- ROTATE
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+            {
+                float yaw   = -delta.x * ROTATE_SPEED;
+                float pitch = -delta.y * ROTATE_SPEED;
+
+                glm::mat4 rot = glm::rotate(glm::mat4(1.f), yaw,   up)   *
+                                glm::rotate(glm::mat4(1.f), pitch, right);
+
+                glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
+                offset           = glm::vec3(rot * glm::vec4(offset, 1.f));
+
+                camPtr->m_LookFrom = camPtr->m_LookAt + offset;
+            }
+
+            // --------------------------------------------------------------- PAN
+            if (io.KeyShift && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            {
+                glm::vec3 pan =
+                    (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
+                camPtr->m_LookFrom += pan;
+                camPtr->m_LookAt   += pan;
+            }
+
+            // -------------------------------------------------------------- ZOOM
+            if (std::abs(io.MouseWheel) > 0.0f)
+            {
+                float zoom = -io.MouseWheel * ZOOM_SPEED;
+                camPtr->m_LookFrom += forward * zoom;
+            }
         }
+
+        if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_Escape))
+            scene.clearSelected();
 
         // ----- Picking -----
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {

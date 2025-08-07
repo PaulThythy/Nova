@@ -21,6 +21,7 @@ namespace Nova::Core {
         setupSDL();
         initSDL();
         initImGui();
+        setRunMode(RunMode::Editor);
 
         auto cam = m_Scene.createViewportCamera("MainCamera");
 
@@ -147,6 +148,8 @@ namespace Nova::Core {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
+                //TODO to implement
+                //m_InputManager.processEvent(event);
                 if (event.type == SDL_EVENT_QUIT) {
                     m_IsRunning = false;
                 }
@@ -162,6 +165,9 @@ namespace Nova::Core {
                 SDL_Delay(10);
                 continue;
             }
+
+            //TODO to implement
+            //m_InputManager.update();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplSDL3_NewFrame();
