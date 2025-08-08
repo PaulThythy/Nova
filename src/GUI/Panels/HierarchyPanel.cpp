@@ -31,6 +31,9 @@ namespace Nova::GUI {
         auto& reg = scene.registry();
 
         for (auto e : reg.storage<entt::entity>()) {
+            if (!reg.valid(e))
+                continue;
+
             if (auto cam = reg.try_get<Components::CameraComponent>(e)) {
                 if (cam->m_IsViewportCamera) continue;
             }

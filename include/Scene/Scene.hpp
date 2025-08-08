@@ -36,12 +36,6 @@ namespace Nova {
             return entity;
         }
 
-        void destroyEntity(entt::entity entity) { 
-            if (m_Registry.valid(entity)) {
-                m_Registry.destroy(entity); 
-            }
-        }
-
         entt::entity getViewportCamera() const { return m_ViewportCamera; }
 
         entt::entity createViewportCamera(const std::string& tag = "ViewportCamera") {
@@ -51,21 +45,6 @@ namespace Nova {
             camera.m_IsViewportCamera= true;
             m_ViewportCamera = cam;
             return cam;
-        }
-
-        template<typename Component>
-        void onComponentCreate(std::function<void(entt::registry&, entt::entity)> callback) {
-            m_Registry.on_construct<Component>().sink().connect(callback);
-        }
-
-        template<typename Component>
-        void onComponentUpdate(std::function<void(entt::registry&, entt::entity)> callback) {
-            m_Registry.on_update<Component>().sink().connect(callback);
-        }
-
-        template<typename Component>
-        void onComponentDestroy(std::function<void(entt::registry&, entt::entity)> callback) {
-            m_Registry.on_destroy<Component>().sink().connect(callback);
         }
 
         template<typename... Comps, typename Func>
@@ -78,6 +57,10 @@ namespace Nova {
         void clearSelection()                    { m_Selected.clear(); }
         bool isSelected(entt::entity e) const    { return m_Selected.count(e) > 0; }
         bool hasSelection() const               { return !m_Selected.empty(); }
+        void destroyEntity(entt::entity e) {
+            if (isSelected(e)) removeFromSelection(e);
+            if (m_Registry.valid(e)) m_Registry.destroy(e);
+        }
         const std::unordered_set<entt::entity>& getSelected() const { return m_Selected; }
 
     private:

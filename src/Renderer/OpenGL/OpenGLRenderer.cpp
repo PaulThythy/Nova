@@ -12,6 +12,8 @@ namespace Nova::Renderer::OpenGL {
     void OpenGLRenderer::init(Nova::Scene& scene) {
         m_Scene = &scene;
 
+        m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshDestroyed>(this);
+
         if(glewInit() != GLEW_OK) {
             std::cerr << "Failed to initialize GLEW\n";
         }
@@ -231,7 +233,7 @@ namespace Nova::Renderer::OpenGL {
 
 
     GLuint OpenGLRenderer::uploadMesh(const Nova::Components::MeshComponent& mesh) {
-        static std::unordered_map<const Nova::Components::MeshComponent*,GLuint> cache;
+        auto& cache = getMeshCache();;
         auto it = cache.find(&mesh);
         if(it!=cache.end()) return it->second;
         GLuint vao,vbo,ibo;
@@ -252,6 +254,33 @@ namespace Nova::Renderer::OpenGL {
         glBindVertexArray(0);
         cache[&mesh]=vao;
         return vao;
+    }
+
+    void OpenGLRenderer::releaseMesh(const Nova::Components::MeshComponent* mesh) {
+        auto& cache = getMeshCache();
+        auto it = cache.find(mesh);
+        if (it != cache.end()) {
+            GLuint vao = it->second;
+
+            GLint vbo = 0, ibo = 0;
+            glBindVertexArray(vao);
+            glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &vbo);
+            glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ibo);
+            glBindVertexArray(0);
+
+            if (vbo) glDeleteBuffers(1, (GLuint*)&vbo);
+            if (ibo) glDeleteBuffers(1, (GLuint*)&ibo);
+
+            glDeleteVertexArrays(1, &vao);
+
+            cache.erase(it);
+        }
+    }
+
+    void OpenGLRenderer::onMeshDestroyed(entt::registry& reg, entt::entity ent)
+    {
+        if (auto* mesh = reg.try_get<Components::MeshComponent>(ent))
+            releaseMesh(mesh);
     }
 
     void OpenGLRenderer::destroy() {

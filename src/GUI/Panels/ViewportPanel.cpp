@@ -37,6 +37,15 @@ namespace Nova::GUI {
                             mousePos.y - lastMousePos.y };
         lastMousePos    = mousePos;
 
+        if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+            auto selected = scene.getSelected();
+            if (!selected.empty()) {
+                for (auto entity : selected)
+                    scene.destroyEntity(entity);
+                scene.clearSelection();
+            }
+        }
+
         if (camPtr && viewportFocused)
         {
             glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
@@ -63,8 +72,7 @@ namespace Nova::GUI {
             // --------------------------------------------------------------- PAN
             if (io.KeyShift && ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
-                glm::vec3 pan =
-                    (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
+                glm::vec3 pan = (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
                 camPtr->m_LookFrom += pan;
                 camPtr->m_LookAt   += pan;
             }
