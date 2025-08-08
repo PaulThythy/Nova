@@ -284,8 +284,6 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void OpenGLRenderer::destroy() {
-        glDeleteVertexArrays(1, &m_VAO);
-        glDeleteBuffers(1, &m_VBO);
         if (m_shaderProgram)  glDeleteProgram(m_shaderProgram);
         if (m_outlineProgram) glDeleteProgram(m_outlineProgram);
 

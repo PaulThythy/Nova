@@ -27,8 +27,6 @@ namespace Nova::Renderer::OpenGL {
         int m_ViewportHeight = 720;
 
     private:
-        GLuint m_VAO = 0;
-        GLuint m_VBO = 0;
         GLuint m_shaderProgram = 0;
         GLuint m_outlineProgram = 0;
         GLuint m_FBO = 0;
