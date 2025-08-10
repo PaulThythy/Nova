@@ -80,7 +80,7 @@ namespace Nova::GUI {
             // -------------------------------------------------------------- ZOOM
             if (std::abs(io.MouseWheel) > 0.0f)
             {
-                float zoom = -io.MouseWheel * ZOOM_SPEED;
+                float zoom = io.MouseWheel * ZOOM_SPEED;
                 camPtr->m_LookFrom += forward * zoom;
             }
         }
