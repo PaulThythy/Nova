@@ -70,7 +70,7 @@ namespace Nova::GUI {
             }
 
             // --------------------------------------------------------------- PAN
-            if (io.KeyShift && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
             {
                 glm::vec3 pan = (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
                 camPtr->m_LookFrom += pan;
