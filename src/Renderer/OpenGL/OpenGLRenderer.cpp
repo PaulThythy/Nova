@@ -13,6 +13,7 @@ namespace Nova::Renderer::OpenGL {
         m_Scene = &scene;
 
         m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshDestroyed>(this);
+        m_Scene->registry().on_construct<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshConstructed>(this);
 
         if(glewInit() != GLEW_OK) {
             std::cerr << "Failed to initialize GLEW\n";
@@ -31,6 +32,12 @@ namespace Nova::Renderer::OpenGL {
         }
 
         initFBO(m_ViewportWidth, m_ViewportHeight);
+
+        //necessary to render objects allready in the scene
+        //TODO but we have to solve it
+        for (auto e : m_Scene->registry().view<Nova::Components::MeshComponent>()) {
+            onMeshConstructed(m_Scene->registry(), e);
+        }
     }
 
     void OpenGLRenderer::initFBO(int width, int height) {        
@@ -144,7 +151,14 @@ namespace Nova::Renderer::OpenGL {
             // Wireframe éventuel
             glPolygonMode(GL_FRONT_AND_BACK, (mr && mr->m_Wireframe) ? GL_LINE : GL_FILL);
 
-            GLuint vao = uploadMesh(mesh);
+            auto it = m_MeshCache.find(id);
+            if (it == m_MeshCache.end()) {
+                // Option A: lazy build (uncomment if you want)
+                // it = m_MeshCache.emplace(id, createGLMeshBuffers(mesh)).first;
+                return; // otherwise skip this frame
+            }
+            const GLuint vao = it->second.m_VAO;
+
             glm::mat4 model = tf.GetTransform();
             glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
             glBindVertexArray(vao);
@@ -159,34 +173,39 @@ namespace Nova::Renderer::OpenGL {
             for (entt::entity sel: m_Scene->getSelected()) {
                 auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
                 auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
+                if (!tf || !mesh || mesh->m_Vertices.empty() || mesh->m_Indices.empty()) continue;
 
-
-                if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
-                    glEnable(GL_STENCIL_TEST);
-                    glStencilMask(0xFF);
-                    glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-
-                    // On n’écrit PAS la couleur, on veut juste tamponner le stencil
-                    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-                    // Et on ne veut pas que le depth test coupe le masque : silhouette complète
-                    glDisable(GL_DEPTH_TEST);
-
-                    glUseProgram(m_shaderProgram);
-                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-
-                    GLuint vao = uploadMesh(*mesh);
-                    glm::mat4 model = tf->GetTransform();
-                    glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                    glBindVertexArray(vao);
-                    glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                    glBindVertexArray(0);
-
-                    // Restore writes
-                    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-                    glEnable(GL_DEPTH_TEST);
+                auto it = m_MeshCache.find(sel);
+                if (it == m_MeshCache.end()) {
+                    // Option A: lazy build
+                    // it = m_MeshCache.emplace(sel, createGLMeshBuffers(*mesh)).first;
+                    continue;
                 }
+                const GLuint vao = it->second.m_VAO;
+
+                glEnable(GL_STENCIL_TEST);
+                glStencilMask(0xFF);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+
+                // On n’écrit PAS la couleur, on veut juste tamponner le stencil
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                // Et on ne veut pas que le depth test coupe le masque : silhouette complète
+                glDisable(GL_DEPTH_TEST);
+
+                glUseProgram(m_shaderProgram);
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+
+                glm::mat4 model = tf->GetTransform();
+                glUniformMatrix4fv(glGetUniformLocation(m_shaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
+                glBindVertexArray(vao);
+                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+
+                // Restore writes
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+                glEnable(GL_DEPTH_TEST);
             }
         }
 
@@ -197,31 +216,38 @@ namespace Nova::Renderer::OpenGL {
             for (entt::entity sel : m_Scene->getSelected()) {
                 auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
                 auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
-                if (tf && mesh && !mesh->m_Vertices.empty() && !mesh->m_Indices.empty()) {
-                    glEnable(GL_STENCIL_TEST);
-                    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-                    glStencilMask(0x00);          // ne pas modifier le stencil ici
-                    glDisable(GL_DEPTH_TEST);     // dessiner par-dessus tout
+                if (!tf || !mesh || mesh->m_Vertices.empty() || mesh->m_Indices.empty()) continue;
 
-                    glUseProgram(m_outlineProgram);
-                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-                    glUniform3f (glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
-                    glUniform1f (glGetUniformLocation(m_outlineProgram, "u_OutlineWorld"), 0.02f); // épaisseur *en mètres* monde
-
-                    GLuint vao = uploadMesh(*mesh);
-                    glm::mat4 model = tf->GetTransform();
-                    glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                    glBindVertexArray(vao);
-                    glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                    glBindVertexArray(0);
-
-                    // Restore stencil/depth
-                    glStencilMask(0xFF);
-                    glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                    glDisable(GL_STENCIL_TEST);
-                    glEnable(GL_DEPTH_TEST);
+                auto it = m_MeshCache.find(sel);
+                if (it == m_MeshCache.end()) {
+                    // Option A: lazy build
+                    // it = m_MeshCache.emplace(sel, createGLMeshBuffers(*mesh)).first;
+                    continue;
                 }
+                const GLuint vao = it->second.m_VAO;
+
+                glEnable(GL_STENCIL_TEST);
+                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+                glStencilMask(0x00);          // ne pas modifier le stencil ici
+                glDisable(GL_DEPTH_TEST);     // dessiner par-dessus tout
+
+                glUseProgram(m_outlineProgram);
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
+                glUniform3f (glGetUniformLocation(m_outlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
+                glUniform1f (glGetUniformLocation(m_outlineProgram, "u_OutlineWorld"), 0.02f); // épaisseur *en mètres* monde
+
+                glm::mat4 model = tf->GetTransform();
+                glUniformMatrix4fv(glGetUniformLocation(m_outlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
+                glBindVertexArray(vao);
+                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+
+                // Restore stencil/depth
+                glStencilMask(0xFF);
+                glStencilFunc(GL_ALWAYS, 1, 0xFF);
+                glDisable(GL_STENCIL_TEST);
+                glEnable(GL_DEPTH_TEST);
             }
         }
 
@@ -231,56 +257,52 @@ namespace Nova::Renderer::OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-
-    GLuint OpenGLRenderer::uploadMesh(const Nova::Components::MeshComponent& mesh) {
-        auto& cache = getMeshCache();;
-        auto it = cache.find(&mesh);
-        if(it!=cache.end()) return it->second;
-        GLuint vao,vbo,ibo;
-        glGenVertexArrays(1,&vao);
-        glBindVertexArray(vao);
-        glGenBuffers(1,&vbo);
-        glBindBuffer(GL_ARRAY_BUFFER,vbo);
-        struct Vertex{glm::vec3 pos,nrm;};
-        std::vector<Vertex> data;
-        for(size_t i=0;i<mesh.m_Vertices.size();++i)
-            data.push_back({mesh.m_Vertices[i],mesh.m_Normals[i]});
-        glBufferData(GL_ARRAY_BUFFER,data.size()*sizeof(Vertex),data.data(),GL_STATIC_DRAW);
-        glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,pos));glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,nrm));glEnableVertexAttribArray(1);
-        glGenBuffers(1,&ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,mesh.m_Indices.size()*sizeof(unsigned),mesh.m_Indices.data(),GL_STATIC_DRAW);
-        glBindVertexArray(0);
-        cache[&mesh]=vao;
-        return vao;
-    }
-
-    void OpenGLRenderer::releaseMesh(const Nova::Components::MeshComponent* mesh) {
-        auto& cache = getMeshCache();
-        auto it = cache.find(mesh);
-        if (it != cache.end()) {
-            GLuint vao = it->second;
-
-            GLint vbo = 0, ibo = 0;
-            glBindVertexArray(vao);
-            glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &vbo);
-            glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ibo);
-            glBindVertexArray(0);
-
-            if (vbo) glDeleteBuffers(1, (GLuint*)&vbo);
-            if (ibo) glDeleteBuffers(1, (GLuint*)&ibo);
-
-            glDeleteVertexArrays(1, &vao);
-
-            cache.erase(it);
+    void OpenGLRenderer::onMeshDestroyed(entt::registry& reg, entt::entity ent)
+    {
+        if (auto it = m_MeshCache.find(ent); it != m_MeshCache.end()) {
+            glDeleteBuffers  (1, &it->second.m_VBO);
+            glDeleteBuffers  (1, &it->second.m_IBO);
+            glDeleteVertexArrays(1, &it->second.m_VAO);
+            m_MeshCache.erase(it);
         }
     }
 
-    void OpenGLRenderer::onMeshDestroyed(entt::registry& reg, entt::entity ent)
+    void OpenGLRenderer::onMeshConstructed(entt::registry& reg, entt::entity ent)
     {
-        if (auto* mesh = reg.try_get<Components::MeshComponent>(ent))
-            releaseMesh(mesh);
+        auto& mesh = reg.get<Components::MeshComponent>(ent);
+        GLMeshBuffers entry = createGLMeshBuffers(mesh);
+        m_MeshCache[ent] = entry;
+    }
+
+    OpenGLRenderer::GLMeshBuffers OpenGLRenderer::createGLMeshBuffers(const Nova::Components::MeshComponent& mesh) {
+        OpenGLRenderer::GLMeshBuffers e{};
+        glGenVertexArrays(1, &e.m_VAO);
+        glBindVertexArray(e.m_VAO);
+
+        glGenBuffers(1, &e.m_VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, e.m_VBO);
+
+        struct Vertex { glm::vec3 pos, nrm; };
+        std::vector<Vertex> data;
+        data.reserve(mesh.m_Vertices.size());
+        for (size_t i = 0; i < mesh.m_Vertices.size(); ++i)
+            data.push_back({mesh.m_Vertices[i], mesh.m_Normals[i]});
+
+        glBufferData(GL_ARRAY_BUFFER, data.size()*sizeof(Vertex), data.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,pos));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,nrm));
+        glEnableVertexAttribArray(1);
+
+        glGenBuffers(1, &e.m_IBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, e.m_IBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     mesh.m_Indices.size()*sizeof(unsigned),
+                     mesh.m_Indices.data(),
+                     GL_STATIC_DRAW);
+
+        glBindVertexArray(0);
+        return e;
     }
 
     void OpenGLRenderer::destroy() {

@@ -35,15 +35,15 @@ namespace Nova::Renderer::OpenGL {
         Nova::Scene* m_Scene = nullptr;
 
         void initFBO(int width, int height);
-        GLuint uploadMesh(const Nova::Components::MeshComponent& mesh);
-        void releaseMesh(const Nova::Components::MeshComponent* mesh);
 
         void onMeshDestroyed(entt::registry& reg, entt::entity ent);
+        void onMeshConstructed(entt::registry& reg, entt::entity ent);
 
-        static std::unordered_map<const Nova::Components::MeshComponent*,GLuint>& getMeshCache() {
-            static std::unordered_map<const Nova::Components::MeshComponent*, GLuint> cache;
-            return cache;
-        }
+        struct GLMeshBuffers {
+            GLuint m_VAO, m_VBO, m_IBO;
+        };
+        std::unordered_map<entt::entity, GLMeshBuffers> m_MeshCache;
+        GLMeshBuffers createGLMeshBuffers(const Nova::Components::MeshComponent& mesh);
     };
 } // namespace Nova::Renderer::OpenGL
 
