@@ -11,6 +11,10 @@ namespace Nova::GUI {
         ImGui::Text("%s", label);
         ImGui::Spacing();
 
+        ImGuiIO& io = ImGui::GetIO();
+        const float base = 0.01f;
+        const float speed = base * (io.KeyShift ? 10.0f : (io.KeyAlt ? 0.1f : 1.0f));
+
         // X
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));
         ImGui::BeginDisabled();
@@ -19,7 +23,7 @@ namespace Nova::GUI {
         ImGui::PopStyleColor();
         ImGui::SameLine();
         ImGui::PushItemWidth(inputW);
-        ImGui::InputFloat(xInputLabel, &values.x, 0.0f, 0.0f, "%.6f");
+        ImGui::DragFloat(xInputLabel, &values.x, speed, 0.0f, 0.0f, "%.6f");
         ImGui::PopItemWidth();
         ImGui::SameLine(0, groupSpacing);
 
@@ -31,7 +35,7 @@ namespace Nova::GUI {
         ImGui::PopStyleColor();
         ImGui::SameLine();
         ImGui::PushItemWidth(inputW);
-        ImGui::InputFloat(yInputLabel, &values.y, 0.0f, 0.0f, "%.6f");
+        ImGui::DragFloat(yInputLabel, &values.y, speed, 0.0f, 0.0f, "%.6f");
         ImGui::PopItemWidth();
         ImGui::SameLine(0, groupSpacing);
 
@@ -43,7 +47,7 @@ namespace Nova::GUI {
         ImGui::PopStyleColor();
         ImGui::SameLine();
         ImGui::PushItemWidth(inputW);
-        ImGui::InputFloat(zInputLabel, &values.z, 0.0f, 0.0f, "%.6f");
+        ImGui::DragFloat(zInputLabel, &values.z, speed, 0.0f, 0.0f, "%.6f");
         ImGui::PopItemWidth();
     }
 

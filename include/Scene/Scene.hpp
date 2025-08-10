@@ -2,7 +2,7 @@
 #define SCENE_HPP
 
 #include <entt/entt.hpp>
-#include <functional>
+#include <optional>
 
 #include "Components/TagComponent.hpp"
 #include "Components/CameraComponent.hpp"
