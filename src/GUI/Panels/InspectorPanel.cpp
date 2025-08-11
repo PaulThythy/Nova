@@ -55,9 +55,9 @@ namespace Nova::GUI {
         if (!reg.any_of<Nova::Components::TransformComponent>(e)) return;
         if(ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-            drawTRSvectors("Position", "X###posBadge", "##posX", "Y###posBadge", "##posY", "Z###posBadge", "##posZ", reg.get<Nova::Components::TransformComponent>(e).m_Position, inputW, badgeW, groupSpacing);
-            drawTRSvectors("Rotation", "X###rotBadge", "##rotX", "Y###rotBadge", "##rotY", "Z###rotBadge", "##rotZ", reg.get<Nova::Components::TransformComponent>(e).m_Rotation, inputW, badgeW, groupSpacing);
-            drawTRSvectors("Scale", "X###scaleBadge", "##scaleX", "Y###scaleBadge", "##scaleY", "Z###scaleBadge", "##scaleZ", reg.get<Nova::Components::TransformComponent>(e).m_Scale, inputW, badgeW, groupSpacing);
+            drawTRSvectors("Position", "X###posXBadge", "##posX", "Y###posYBadge", "##posY", "Z###posZBadge", "##posZ", reg.get<Nova::Components::TransformComponent>(e).m_Position, inputW, badgeW, groupSpacing);
+            drawTRSvectors("Rotation", "X###rotXBadge", "##rotX", "Y###rotYBadge", "##rotY", "Z###rotZBadge", "##rotZ", reg.get<Nova::Components::TransformComponent>(e).m_Rotation, inputW, badgeW, groupSpacing);
+            drawTRSvectors("Scale", "X###scaleXBadge", "##scaleX", "Y###scaleYBadge", "##scaleY", "Z###scaleZBadge", "##scaleZ", reg.get<Nova::Components::TransformComponent>(e).m_Scale, inputW, badgeW, groupSpacing);
         }
     }
 
