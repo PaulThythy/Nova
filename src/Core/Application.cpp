@@ -30,6 +30,8 @@ namespace Nova::Core {
 
         auto sphereEntity = m_Scene.createEntity("Sphere");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
+        auto& sphereTf = m_Scene.registry().get<Nova::Components::TransformComponent>(sphereEntity);
+        sphereTf.m_Position = { 0.0f, 1.0f, 0.0f };
 
         Nova::Components::MeshComponent sphereMesh;
         sphereMesh.initSphere(24, 48);
@@ -39,12 +41,42 @@ namespace Nova::Core {
         auto planeEntity = m_Scene.createEntity("Ground");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(planeEntity);
         auto& planeTf = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
-        planeTf.m_Scale = { 2.0f, 2.0f, 2.0f };
+        planeTf.m_Scale = { 10.0f, 10.0f, 10.0f };
 
         Nova::Components::MeshComponent planeMesh;
         planeMesh.initPlane();
         m_Scene.registry().emplace<Nova::Components::MeshComponent>(planeEntity, std::move(planeMesh));
         m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
+
+        auto cubeEntity = m_Scene.createEntity("Cube");
+        m_Scene.registry().emplace<Nova::Components::TransformComponent>(cubeEntity);
+        auto& cubeTf = m_Scene.registry().get<Nova::Components::TransformComponent>(cubeEntity);
+        cubeTf.m_Position = { -2.8f, 0.5f, 3.0f }; cubeTf.m_Rotation = { 0.0f, -0.7f, 0.0f };
+
+        Nova::Components::MeshComponent cubeMesh;
+        cubeMesh.initCube();
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(cubeEntity, std::move(cubeMesh));
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(cubeEntity);
+
+        auto cylinderEntity = m_Scene.createEntity("Cylinder");
+        m_Scene.registry().emplace<Nova::Components::TransformComponent>(cylinderEntity);
+        auto& cylinderTf = m_Scene.registry().get<Nova::Components::TransformComponent>(cylinderEntity);
+        cylinderTf.m_Position = { 3.0f, 0.5f, 1.5f };
+
+        Nova::Components::MeshComponent cylinderMesh;
+        cylinderMesh.initCylinder();
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(cylinderEntity, std::move(cylinderMesh));
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(cylinderEntity);
+
+        auto capsuleEntity = m_Scene.createEntity("Capsule");
+        m_Scene.registry().emplace<Nova::Components::TransformComponent>(capsuleEntity);
+        auto& capsuleTf = m_Scene.registry().get<Nova::Components::TransformComponent>(capsuleEntity);
+        capsuleTf.m_Position = { 1.0f, 0.5f, 2.2f }; capsuleTf.m_Rotation = { -1.5f, -3.17f, 1.5f };
+
+        Nova::Components::MeshComponent capsuleMesh;
+        capsuleMesh.initCapsule();
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(capsuleEntity, std::move(capsuleMesh));
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(capsuleEntity);
 
         auto lightEntity = m_Scene.createEntity("SunLight");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(lightEntity);
