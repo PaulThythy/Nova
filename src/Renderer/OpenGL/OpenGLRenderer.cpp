@@ -32,12 +32,6 @@ namespace Nova::Renderer::OpenGL {
         }
 
         initFBO(m_ViewportWidth, m_ViewportHeight);
-
-        //necessary to render objects allready in the scene
-        //TODO but we have to solve it
-        for (auto e : m_Scene->registry().view<Nova::Components::MeshComponent>()) {
-            onMeshConstructed(m_Scene->registry(), e);
-        }
     }
 
     void OpenGLRenderer::initFBO(int width, int height) {        

@@ -23,23 +23,28 @@ namespace Nova::Core {
         initImGui();
         setRunMode(RunMode::Editor);
 
+        m_Renderer = createRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
+        m_Renderer->init(m_Scene);
+
         auto cam = m_Scene.createViewportCamera("MainCamera");
 
         auto sphereEntity = m_Scene.createEntity("Sphere");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(sphereEntity);
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(sphereEntity);
-        auto &sphereMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(sphereEntity);
+
+        Nova::Components::MeshComponent sphereMesh;
         sphereMesh.initSphere(24, 48);
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(sphereEntity, std::move(sphereMesh));
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(sphereEntity);
 
         auto planeEntity = m_Scene.createEntity("Ground");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(planeEntity);
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(planeEntity);
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
-        auto& planeMesh = m_Scene.registry().get<Nova::Components::MeshComponent>(planeEntity);
-        auto& planeTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
-        planeTransform.m_Scale = {2.0f, 2.0f, 2.0f};
+        auto& planeTf = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
+        planeTf.m_Scale = { 2.0f, 2.0f, 2.0f };
+
+        Nova::Components::MeshComponent planeMesh;
         planeMesh.initPlane();
+        m_Scene.registry().emplace<Nova::Components::MeshComponent>(planeEntity, std::move(planeMesh));
+        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
 
         auto lightEntity = m_Scene.createEntity("SunLight");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(lightEntity);
@@ -48,9 +53,6 @@ namespace Nova::Core {
         light.m_Intensity = 1.0f;
         auto& lightTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(lightEntity);
         lightTransform.m_Position = {0.0f, 5.0f, 0.0f};
-
-        m_Renderer = createRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
-        m_Renderer->init(m_Scene);
     }
 
     void Application::setupSDL() {
