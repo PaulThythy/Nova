@@ -60,21 +60,46 @@ namespace Nova::GUI {
                 float yaw = -delta.x * ROTATE_SPEED;
                 float pitch = -delta.y * ROTATE_SPEED;
 
-                float dist = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
+                const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+                float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
 
-                glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), yaw, camPtr->m_Up);
-                glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), pitch, right);
+                // Current forward
+                glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
 
-                // Forward -> yaw rotation then pitch
-                glm::vec3 fwd = glm::normalize(glm::vec3(yawRot * glm::vec4(forward, 0.0f)));
-                fwd = glm::normalize(glm::vec3(pitchRot * glm::vec4(fwd, 0.0f)));
+                // 1) Yaw around WORLD_UP (no roll)
+                glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), yaw, WORLD_UP);
+                glm::vec3 fwdAfterYaw = glm::normalize(glm::vec3(yawRot * glm::vec4(forward, 0.0f)));
 
-                // up auto update (no roll lock)
-                glm::vec3 newRight = glm::normalize(glm::cross(fwd, camPtr->m_Up));
-                glm::vec3 newUp = glm::normalize(glm::cross(newRight, fwd));
+                // Stable right; reuse last valid right if near the pole
+                static glm::vec3 s_lastRight = glm::vec3(1, 0, 0);
+                glm::vec3 right = glm::cross(fwdAfterYaw, WORLD_UP);
+                float rl2 = glm::dot(right, right);
+                if (rl2 < 1e-10f) {
+                    right = s_lastRight; // fallback
+                }
+                else {
+                    right *= glm::inversesqrt(rl2);
+                    s_lastRight = right;
+                }
 
-                // update camera
-                camPtr->m_LookAt = camPtr->m_LookFrom + fwd * distance;
+                // 2) Clamp pitch so we never hit colinearity with WORLD_UP
+                //    elevation = asin(dot(fwd, WORLD_UP)) in [-pi/2, +pi/2]
+                float elevation = std::asin(glm::clamp(glm::dot(fwdAfterYaw, WORLD_UP), -1.0f, 1.0f));
+                const float epsDeg = 0.8f;                       // "safety margin" from the pole
+                const float maxEl = glm::radians(90.0f - epsDeg);
+                float newElevation = glm::clamp(elevation + pitch, -maxEl, +maxEl);
+                float clampedPitch = newElevation - elevation;
+
+                // 3) Apply clamped pitch around right
+                glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), clampedPitch, right);
+                glm::vec3 newForward = glm::normalize(glm::vec3(pitchRot * glm::vec4(fwdAfterYaw, 0.0f)));
+
+                // Rebuild ortho-normal basis (no roll): up is derived from WORLD_UP
+                glm::vec3 newRight = glm::normalize(glm::cross(newForward, WORLD_UP));
+                glm::vec3 newUp = glm::normalize(glm::cross(newRight, newForward));
+
+                // Update camera (pivot at LookFrom)
+                camPtr->m_LookAt = camPtr->m_LookFrom + newForward * distance;
                 camPtr->m_Up = newUp;
             }
 
