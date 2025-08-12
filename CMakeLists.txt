@@ -22,6 +22,10 @@ set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/vendors/imgui)
 include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
+# ImGuizmo
+set(IMGUIZMO_DIR ${CMAKE_SOURCE_DIR}/vendors/ImGuizmo)
+include_directories(${IMGUIZMO_DIR})
+
 # glm
 add_subdirectory(${CMAKE_SOURCE_DIR}/vendors/glm/glm)
 include_directories(${CMAKE_SOURCE_DIR}/vendors/glm)
@@ -91,7 +95,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Add executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS}
     ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_draw.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp ${IMGUIZMO_DIR}/ImGuizmo.cpp ${IMGUIZMO_DIR}/ImGuizmo.h 
 )
 
 if(WIN32)
