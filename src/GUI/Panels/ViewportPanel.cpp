@@ -90,8 +90,25 @@ namespace Nova::GUI {
             // -------------------------------------------------------------- ZOOM
             if (std::abs(io.MouseWheel) > 0.0f)
             {
-                float zoom = io.MouseWheel * ZOOM_SPEED;
-                camPtr->m_LookFrom += forward * zoom;
+                const float zoomSens = 0.12f;               // wheel sensitivity per notch
+                const float minDist = 0.05f;                // clamp: don't get stuck on target
+                const float maxDist = 500.0f;               // optional far clamp
+
+                glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
+                float     dist = glm::max(1e-6f, glm::length(offset));
+                glm::vec3 dir = offset / dist;
+
+                // scale distance exponentially (wheel>0 => factor<1 => zoom in)
+                float factor = std::exp(-io.MouseWheel * zoomSens);
+                float newDist = glm::clamp(dist * factor, minDist, maxDist);
+
+                camPtr->m_LookFrom = camPtr->m_LookAt + dir * newDist;
+
+                // update cached values for next pan the same frame
+                distance = newDist;
+                forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+                right = glm::normalize(glm::cross(forward, camPtr->m_Up));
+                up = glm::normalize(glm::cross(right, forward));
             }
         }
 
