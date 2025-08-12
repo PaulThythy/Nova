@@ -60,23 +60,34 @@ namespace Nova::GUI {
                 float yaw = -delta.x * ROTATE_SPEED;
                 float pitch = -delta.y * ROTATE_SPEED;
 
-                // Local camera axes
-                glm::mat4 Ry = glm::rotate(glm::mat4(1.f), yaw, up);
+                const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+                float dist = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
+
+                // Current forward
+                glm::vec3 fwd = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+
+                // Pick a safe up to avoid colinearity at the poles
+                glm::vec3 upRef = (std::abs(glm::dot(fwd, WORLD_UP)) > 0.999f) ? glm::vec3(0, 0, 1) : WORLD_UP;
+
+                // 1) Yaw around world up
+                glm::mat4 Ry = glm::rotate(glm::mat4(1.f), yaw, upRef);
+                fwd = glm::normalize(glm::vec3(Ry * glm::vec4(fwd, 0.0f)));
+
+                // Rebuild right/up (no roll)
+                glm::vec3 right = glm::normalize(glm::cross(fwd, upRef));
+                glm::vec3 up = glm::normalize(glm::cross(right, fwd));
+
+                // 2) Pitch around camera right
                 glm::mat4 Rx = glm::rotate(glm::mat4(1.f), pitch, right);
-                glm::mat4 R = Ry * Rx; // yaw then pitch
+                fwd = glm::normalize(glm::vec3(Rx * glm::vec4(fwd, 0.0f)));
 
-                // Rotate the offset vector (direction => w=0)
-                glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
-                offset = glm::vec3(R * glm::vec4(offset, 0.0f));
-                camPtr->m_LookFrom = camPtr->m_LookAt + offset;
+                // Final orthonormalization
+                right = glm::normalize(glm::cross(fwd, upRef));
+                up = glm::normalize(glm::cross(right, fwd));
 
-                // Also rotate the camera's up vector
-                camPtr->m_Up = glm::normalize(glm::vec3(R * glm::vec4(camPtr->m_Up, 0.0f)));
-
-                // Re-orthonormalize the basis after rotation (prevents numerical drift)
-                glm::vec3 newFwd = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
-                glm::vec3 newRight = glm::normalize(glm::cross(newFwd, camPtr->m_Up));
-                camPtr->m_Up = glm::normalize(glm::cross(newRight, newFwd));
+                // Update camera (pivot in place)
+                camPtr->m_LookAt = camPtr->m_LookFrom + fwd * dist;
+                camPtr->m_Up = up; // stays aligned to "no-roll" frame
             }
 
             // --------------------------------------------------------------- PAN
