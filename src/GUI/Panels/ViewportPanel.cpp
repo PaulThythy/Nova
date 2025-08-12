@@ -60,34 +60,37 @@ namespace Nova::GUI {
                 float yaw = -delta.x * ROTATE_SPEED;
                 float pitch = -delta.y * ROTATE_SPEED;
 
-                const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
                 float dist = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
 
-                // Current forward
+                // Current basis
                 glm::vec3 fwd = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+                glm::vec3 up = glm::normalize(camPtr->m_Up);
 
-                // Pick a safe up to avoid colinearity at the poles
-                glm::vec3 upRef = (std::abs(glm::dot(fwd, WORLD_UP)) > 0.999f) ? glm::vec3(0, 0, 1) : WORLD_UP;
+                // Build a stable right even if fwd ~ up (avoid degeneracy at the poles)
+                glm::vec3 right = glm::cross(fwd, up);
+                if (glm::length2(right) < 1e-8f) {
+                    // pick an alternate helper axis to break colinearity
+                    glm::vec3 alt = (std::abs(fwd.y) < 0.9f) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
+                    right = glm::cross(fwd, alt);
+                }
+                right = glm::normalize(right);
+                up = glm::normalize(glm::cross(right, fwd)); // re-orthonormalize
 
-                // 1) Yaw around world up
-                glm::mat4 Ry = glm::rotate(glm::mat4(1.f), yaw, upRef);
-                fwd = glm::normalize(glm::vec3(Ry * glm::vec4(fwd, 0.0f)));
+                // 1) Yaw around current up
+                fwd = glm::normalize(glm::vec3(glm::rotate(glm::mat4(1.f), yaw, up) * glm::vec4(fwd, 0.0f)));
+                right = glm::normalize(glm::cross(fwd, up)); // keep orthonormal
 
-                // Rebuild right/up (no roll)
-                glm::vec3 right = glm::normalize(glm::cross(fwd, upRef));
-                glm::vec3 up = glm::normalize(glm::cross(right, fwd));
+                // 2) Pitch around (updated) right
+                fwd = glm::normalize(glm::vec3(glm::rotate(glm::mat4(1.f), pitch, right) * glm::vec4(fwd, 0.0f)));
+                up = glm::normalize(glm::cross(right, fwd)); // up follows the rotation (allows upside-down)
 
-                // 2) Pitch around camera right
-                glm::mat4 Rx = glm::rotate(glm::mat4(1.f), pitch, right);
-                fwd = glm::normalize(glm::vec3(Rx * glm::vec4(fwd, 0.0f)));
-
-                // Final orthonormalization
-                right = glm::normalize(glm::cross(fwd, upRef));
-                up = glm::normalize(glm::cross(right, fwd));
+                // Final tiny safeguard if numeric colinearity reappears
+                if (std::abs(glm::dot(fwd, up)) > 0.9999f)
+                    up = glm::normalize(glm::cross(right, fwd));
 
                 // Update camera (pivot in place)
                 camPtr->m_LookAt = camPtr->m_LookFrom + fwd * dist;
-                camPtr->m_Up = up; // stays aligned to "no-roll" frame
+                camPtr->m_Up = up;
             }
 
             // --------------------------------------------------------------- PAN
