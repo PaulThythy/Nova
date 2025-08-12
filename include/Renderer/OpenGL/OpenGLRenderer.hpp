@@ -27,14 +27,23 @@ namespace Nova::Renderer::OpenGL {
         int m_ViewportHeight = 720;
 
     private:
-        GLuint m_shaderProgram = 0;
-        GLuint m_outlineProgram = 0;
+        GLuint m_ShaderProgram = 0;
+        GLuint m_OutlineProgram = 0;
         GLuint m_FBO = 0;
         GLuint m_ColorTexture = 0;
         GLuint m_DepthBuffer = 0;
         Nova::Scene* m_Scene = nullptr;
 
         void initFBO(int width, int height);
+
+        GLuint m_ShadowFBO = 0;
+        GLuint m_ShadowDepthTex = 0;
+        int m_ShadowSize = 2048;
+        GLuint m_ShadowProgram = 0;
+        glm::mat4 m_LastLightVP = glm::mat4(1.0f);
+
+        void initShadows();
+        void renderShadowPass(const glm::mat4& lightVP);
 
         void onMeshDestroyed(entt::registry& reg, entt::entity ent);
         void onMeshConstructed(entt::registry& reg, entt::entity ent);
