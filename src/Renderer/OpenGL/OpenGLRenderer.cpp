@@ -5,6 +5,8 @@
 
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
+#include "Components/TransformComponent.hpp"
+#include "Components/LightComponent.hpp"
 
 using namespace Nova::Components;
 
@@ -13,390 +15,127 @@ namespace Nova::Renderer::OpenGL {
     void OpenGLRenderer::init(Nova::Scene& scene) {
         m_Scene = &scene;
 
-        m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshDestroyed>(this);
-        m_Scene->registry().on_construct<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshConstructed>(this);
-
-        if(glewInit() != GLEW_OK) {
+        if (glewInit() != GLEW_OK) {
             std::cerr << "Failed to initialize GLEW\n";
         }
 
-        // Main forward shading program
-        std::string vertexPath   = std::string(SHADER_DIR) + "/vertex.vert";
-        std::string fragmentPath = std::string(SHADER_DIR) + "/fragment.frag";
-        m_ShaderProgram = loadRenderShader(vertexPath, fragmentPath);
+        m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshDestroyed>(this);
+        m_Scene->registry().on_construct<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshConstructed>(this);
 
-        // Outline shader (stencil-based highlight)
-        std::string outlineVert = std::string(SHADER_DIR) + "/outline.vert";
-        std::string outlineFrag = std::string(SHADER_DIR) + "/outline.frag";
-        m_OutlineProgram = loadRenderShader(outlineVert, outlineFrag);
+        buildViewportFBO(m_W, m_H);
+        buildShadowFBO();
 
-        // Depth-only shader for shadow-map generation
-        std::string shadowVert = std::string(SHADER_DIR) + "/shadowDepth.vert";
-        std::string shadowFrag = std::string(SHADER_DIR) + "/shadowDepth.frag";
-        m_ShadowProgram = loadRenderShader(shadowVert, shadowFrag);
+        m_ShadowPass   = std::make_unique<ShadowPass>(&m_MeshCache, &m_ShadowFBO, &m_ShadowDepth, &m_ShadowSize);
+        m_GeometryPass = std::make_unique<GeometryPass>(&m_MeshCache);
+        m_OutlinePass  = std::make_unique<OutlinePass>(&m_MeshCache);
+    }
 
-        if (m_ShaderProgram == 0 || m_OutlineProgram == 0 || m_ShadowProgram == 0) {
-            std::cerr << "Failed to load/compile shaders!" << std::endl;
+    void OpenGLRenderer::buildViewportFBO(int w,int h){
+        if(m_FBO){ glDeleteFramebuffers(1,&m_FBO); glDeleteTextures(1,&m_ColorTexture); glDeleteRenderbuffers(1,&m_DepthStencil);}    
+        glGenFramebuffers(1,&m_FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER,m_FBO);
+
+        glGenTextures(1,&m_ColorTexture);
+        glBindTexture(GL_TEXTURE_2D,m_ColorTexture);
+        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_ColorTexture,0);
+
+        glGenRenderbuffers(1,&m_DepthStencil);
+        glBindRenderbuffer(GL_RENDERBUFFER,m_DepthStencil);
+        glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH24_STENCIL8,w,h);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,m_DepthStencil);
+
+        glBindFramebuffer(GL_FRAMEBUFFER,0);
+    }
+
+    void OpenGLRenderer::buildShadowFBO(){
+    if(m_ShadowFBO){ glDeleteFramebuffers(1,&m_ShadowFBO); glDeleteTextures(1,&m_ShadowDepth);}    
+        glGenFramebuffers(1,&m_ShadowFBO);
+        glGenTextures(1,&m_ShadowDepth);
+        glBindTexture(GL_TEXTURE_2D,m_ShadowDepth);
+        glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,m_ShadowSize,m_ShadowSize,0,GL_DEPTH_COMPONENT,GL_FLOAT,nullptr);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
+        const float border[4]={1,1,1,1};
+        glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,border);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,GL_COMPARE_REF_TO_TEXTURE);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_FUNC,GL_LEQUAL);
+
+        glBindFramebuffer(GL_FRAMEBUFFER,m_ShadowFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,m_ShadowDepth,0);
+        glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER,0);
+    }
+
+    void OpenGLRenderer::updateViewportSize(int w,int h){
+        if(w==m_W && h==m_H) return; m_W=w; m_H=h; buildViewportFBO(w,h);
+        // keep camera aspect synced
+        if(auto camE = m_Scene->getViewportCamera(); camE!=entt::null){
+            auto& cam = m_Scene->registry().get<CameraComponent>(camE);
+            cam.m_AspectRatio = (float)w/(float)h;
         }
-
-        // Render target for the viewport panel
-        initFBO(m_ViewportWidth, m_ViewportHeight);
-        // Shadow-map framebuffer/texture
-        initShadows();
-    }
-
-    void OpenGLRenderer::initFBO(int width, int height) {        
-        if (m_FBO) {
-            glDeleteFramebuffers(1, &m_FBO);
-            glDeleteTextures(1, &m_ColorTexture);
-            glDeleteRenderbuffers(1, &m_DepthBuffer);
-        }
-
-        glGenFramebuffers(1, &m_FBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-
-        // Color attachment (RGBA8)
-        glGenTextures(1, &m_ColorTexture);
-        glBindTexture(GL_TEXTURE_2D, m_ColorTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_ColorTexture, 0);
-
-        // Depth + stencil (combined renderbuffer)
-        glGenRenderbuffers(1, &m_DepthBuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_DepthBuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_DepthBuffer);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cerr << "FBO not complete!\n";
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void OpenGLRenderer::initShadows() {
-        glGenFramebuffers(1, &m_ShadowFBO);
-        glGenTextures(1, &m_ShadowDepthTex);
-        glBindTexture(GL_TEXTURE_2D, m_ShadowDepthTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
-            m_ShadowSize, m_ShadowSize, 0,
-            GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        float border[4] = { 1,1,1,1 };
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
-        // Enable hardware depth compare for sampler2DShadow sampling
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_ShadowDepthTex, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cerr << "Shadow FBO not complete!\n";
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void OpenGLRenderer::updateViewportSize(int width, int height) {
-        if (width != m_ViewportWidth || height != m_ViewportHeight) {
-            m_ViewportWidth = width;
-            m_ViewportHeight = height;
-            initFBO(width, height);
-
-            // Keep the camera aspect-ratio in sync with the viewport
-            if (m_Scene) {
-                auto camEntity = m_Scene->getViewportCamera();
-                if (camEntity != entt::null) {
-                    auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
-                    cam.m_AspectRatio = static_cast<float>(width) / static_cast<float>(height);
-                }
-            }
-        }
-    }
-
-    void OpenGLRenderer::renderShadowPass(const glm::mat4& lightVP) {
-        // Render all shadow-casting meshes into the depth texture (light's POV)
-        m_LastLightVP = lightVP;
-
-        glViewport(0, 0, m_ShadowSize, m_ShadowSize);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT); // reduce shadow acne (front-face culling)
-
-        glUseProgram(m_ShadowProgram);
-        GLint loc_LVP = glGetUniformLocation(m_ShadowProgram, "u_LightViewProj");
-        GLint loc_M = glGetUniformLocation(m_ShadowProgram, "u_Model");
-
-        glUniformMatrix4fv(loc_LVP, 1, GL_FALSE, glm::value_ptr(lightVP));
-
-        // Draw all meshes that cast shadows
-        m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity id, TransformComponent& tf, MeshComponent& mesh) {
-            const auto* mr = m_Scene->registry().try_get<MeshRendererComponent>(id);
-            if (mr && !mr->m_CastShadows) return;
-            auto it = m_MeshCache.find(id);
-            if (it == m_MeshCache.end()) return;
-
-            glm::mat4 model = tf.GetTransform();
-            glUniformMatrix4fv(loc_M, 1, GL_FALSE, glm::value_ptr(model));
-            glBindVertexArray(it->second.m_VAO);
-            glDrawElements(GL_TRIANGLES, (GLsizei)mesh.m_Indices.size(), GL_UNSIGNED_INT, 0);
-            });
-
-        // Leave depth culling in a sane state for subsequent passes
-        glCullFace(GL_BACK);
-        glBindVertexArray(0);
-        glUseProgram(0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void OpenGLRenderer::render() {
-        // Bind the viewport render target and clear
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
-        glEnable(GL_DEPTH_TEST);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        // Fetch active camera
-        glm::mat4 view(1.0f), proj(1.0f);
-        glm::vec3 camPos(0.0f);
-        auto camEntity = m_Scene->getViewportCamera();
-        if (camEntity != entt::null) {
-            auto& cam = m_Scene->registry().get<CameraComponent>(camEntity);
-            view   = cam.getViewMatrix();
-            proj   = cam.getProjectionMatrix();
-            camPos = cam.m_LookFrom;
+        // fetch camera
+        glm::mat4 view(1.0f), proj(1.0f); glm::vec3 camPos(0.0f);
+        if(auto camE = m_Scene->getViewportCamera(); camE!=entt::null){
+            auto& cam = m_Scene->registry().get<CameraComponent>(camE);
+            view = cam.getViewMatrix(); proj = cam.getProjectionMatrix(); camPos = cam.m_LookFrom;
         }
 
-        glDisable(GL_STENCIL_TEST);
+        // One light (first found)
+        bool hasLight = false;
+        glm::vec3 Lpos(3, 5, 2), Lcol(1.0f);
+        float Lint = 1.0f;
+        glm::mat4 lightVP(1.0f);
 
-        // ---------------------------------------------------------
-        // Gather all lights and build a light view-projection (VP)
-        // for each one, then generate a shadow map.
-        // ---------------------------------------------------------
-        struct LightData { glm::vec3 pos, color; float intensity; glm::mat4 lightVP; };
-        std::vector<LightData> lights;
-        m_Scene->forEach<TransformComponent, LightComponent>([&](entt::entity e, auto& tf, auto& lt) {
-            LightData L{};
-            L.pos = glm::vec3(tf.GetTransform() * glm::vec4(0, 0, 0, 1));
-            L.color = lt.m_Color;
-            L.intensity = lt.m_Intensity;
+        m_Scene->forEach<LightComponent, TransformComponent>([&](entt::entity, LightComponent& l, TransformComponent& t) {
+            if (hasLight) return; // keep the first light only
+            hasLight = true;
+            Lpos = t.m_Position;
+            Lcol = l.m_Color;
+            Lint = l.m_Intensity;
 
-            // Simple directional-like VP: look from light toward an approximate scene center
-            glm::vec3 center(0.0f);
-            int count = 0;
-            m_Scene->forEach<TransformComponent>([&](entt::entity, TransformComponent& t) {
-                center += t.m_Position; ++count;
-                });
-            if (count > 0) center /= float(count);
-            glm::vec3 up(0, 1, 0);
-            glm::mat4 lightView = glm::lookAt(L.pos, center, up);
+            // --- Safe lookAt (avoid colinearity with up) ---
+            glm::vec3 target(0.0f, 0.0f, 0.0f);
+            glm::vec3 up(0.0f, 1.0f, 0.0f);
 
-            float s = 15.0f; // ortho frustum size (TODO: expose)
-            glm::mat4 lightProj = glm::ortho(-s, s, -s, s, 0.1f, 60.0f);
-            L.lightVP = lightProj * lightView;
-
-            // Generate the shadow map for this light
-            renderShadowPass(L.lightVP);
-
-            lights.push_back(L);
-        });
-
-        // Restore main render target / viewport after shadow pass(es)
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
-        glDisable(GL_CULL_FACE);
-
-
-        // ---------------------------------------------------------
-        // 1) Scene pass (no stencil writes)
-        //    - If no lights, consider adding a simple fallback pass.
-        // ---------------------------------------------------------
-        if (lights.empty()) {
-            glUseProgram(m_ShaderProgram);
-            glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_View"), 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-            glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_CameraPos"), 1, glm::value_ptr(camPos));
-            glUniform1i(glGetUniformLocation(m_ShaderProgram, "u_AdditivePass"), 2);
-            glUniform1i(glGetUniformLocation(m_ShaderProgram, "u_UseShadowMap"), 0);
-        }
-        // With lights: one pass per light, additive blending to accumulate lighting
-        bool first = true;
-        for (const auto& L : lights) {
-            if (!first) {
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_ONE, GL_ONE);   // additive accumulation
-                glDepthMask(GL_FALSE);         // do not overwrite depth on subsequent light passes
+            glm::vec3 fwd = target - Lpos;
+            float fwdLen2 = glm::dot(fwd, fwd);
+            if (fwdLen2 < 1e-8f) {
+                // Light exactly at target: pick a default forward
+                fwd = glm::vec3(0.0f, -1.0f, 0.0f);
             }
             else {
-                glDisable(GL_BLEND);
-                glDepthMask(GL_TRUE);
+                fwd *= glm::inversesqrt(fwdLen2);
             }
 
-            glUseProgram(m_ShaderProgram);
-            glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_View"), 1, GL_FALSE, glm::value_ptr(view));
-            glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-            glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_CameraPos"), 1, glm::value_ptr(camPos));
+            // If forward ~ colinear with up, pick another up
+            if (std::abs(glm::dot(fwd, up)) > 0.999f) up = glm::vec3(0.0f, 0.0f, 1.0f);
+            if (std::abs(glm::dot(fwd, up)) > 0.999f) up = glm::vec3(1.0f, 0.0f, 0.0f);
 
-            glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_LightPos"), 1, glm::value_ptr(L.pos));
-            glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_LightColor"), 1, glm::value_ptr(L.color));
-            glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_LightIntensity"), L.intensity);
+            glm::mat4 V = glm::lookAt(Lpos, target, up);
+            glm::mat4 P = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.1f, 50.f);
+            lightVP = P * V;
+        });
 
-            // Shadow uniforms
-            glUniform1i(glGetUniformLocation(m_ShaderProgram, "u_AdditivePass"), first ? 0 : 1);
-            glUniform1i(glGetUniformLocation(m_ShaderProgram, "u_UseShadowMap"), 1);
-            glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_ShadowBias"), 0.0008f);
-            glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_ShadowTexelSize"), 1.0f / float(m_ShadowSize));
-            glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_LightViewProj"), 1, GL_FALSE, glm::value_ptr(L.lightVP));
+        RenderContext ctx; ctx.m_Scene=m_Scene; ctx.m_View=view; ctx.m_Proj=proj; ctx.m_CameraPos=camPos;
+        ctx.m_HasLight=hasLight; ctx.m_LightPos=Lpos; ctx.m_LightColor=Lcol; ctx.m_LightIntensity=Lint; ctx.m_LightVP=lightVP;
+        ctx.m_FBO=m_FBO; ctx.m_ViewportWidth=m_W; ctx.m_ViewportHeight=m_H; ctx.m_ShadowTex=m_ShadowDepth; ctx.m_ShadowSize=m_ShadowSize; ctx.m_ShadowBias=0.0008f;
 
-            // Bind shadow map on texture unit 5
-            glActiveTexture(GL_TEXTURE5);
-            glBindTexture(GL_TEXTURE_2D, m_ShadowDepthTex);
-            glUniform1i(glGetUniformLocation(m_ShaderProgram, "u_ShadowMap"), 5);
+        // 1) shadow
+        if (hasLight) m_ShadowPass->execute(ctx);
 
-            // Draw all visible meshes (same routine as the previous single-pass version)
-            m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity id, TransformComponent& tf, MeshComponent& mesh) {
-                const auto* mr = m_Scene->registry().try_get<MeshRendererComponent>(id);
-                if (mr && !mr->m_Visible) return;
+        // 2) geometry + lighting
+        m_GeometryPass->execute(ctx);
 
-                // Material parameters (defaults if no MeshRendererComponent)
-                if (mr) {
-                    glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_BaseColor"), 1, glm::value_ptr(mr->m_BaseColor));
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_Roughness"), mr->m_Roughness);
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_Metallic"), mr->m_Metallic);
-                    glUniform3fv(glGetUniformLocation(m_ShaderProgram, "u_EmissiveColor"), 1, glm::value_ptr(mr->m_EmissiveColor));
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_EmissiveStrength"), mr->m_EmissiveStrength);
-                }
-                else {
-                    glUniform3f(glGetUniformLocation(m_ShaderProgram, "u_BaseColor"), 1.0f, 1.0f, 1.0f);
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_Roughness"), 0.8f);
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_Metallic"), 0.0f);
-                    glUniform3f(glGetUniformLocation(m_ShaderProgram, "u_EmissiveColor"), 0.0f, 0.0f, 0.0f);
-                    glUniform1f(glGetUniformLocation(m_ShaderProgram, "u_EmissiveStrength"), 0.0f);
-                }
-
-                // Optional wireframe
-                glPolygonMode(GL_FRONT_AND_BACK, (mr && mr->m_Wireframe) ? GL_LINE : GL_FILL);
-
-                auto it = m_MeshCache.find(id);
-                if (it == m_MeshCache.end()) return;
-
-                glm::mat4 model = tf.GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                // Normal matrix for correct lighting
-                glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(model)));
-                glUniformMatrix3fv(glGetUniformLocation(m_ShaderProgram, "u_NormalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMat));
-
-                glBindVertexArray(it->second.m_VAO);
-                glDrawElements(GL_TRIANGLES, (GLsizei)mesh.m_Indices.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
-                });
-            // ------------------------------------------------------------------
-
-            first = false;
-        }
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
-
-        // ---------------------------------------------------------
-        // 2) MASK pass (stencil for selected object only)
-        //    - We stamp the stencil with the selected object's silhouette
-        //      (color writes OFF, depth test OFF)
-        // ---------------------------------------------------------
-        if (m_Scene->hasSelection()) {
-            for (entt::entity sel: m_Scene->getSelected()) {
-                auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
-                auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
-                if (!tf || !mesh || mesh->m_Vertices.empty() || mesh->m_Indices.empty()) continue;
-
-                auto it = m_MeshCache.find(sel);
-                if (it == m_MeshCache.end()) {
-                    // Option A: lazy build (if desired)
-                    // it = m_MeshCache.emplace(sel, createGLMeshBuffers(*mesh)).first;
-                    continue;
-                }
-                const GLuint vao = it->second.m_VAO;
-
-                glEnable(GL_STENCIL_TEST);
-                glStencilMask(0xFF);
-                glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-
-                // We only write to stencil, not to color
-                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-                // Disable depth test so the full silhouette is written
-                glDisable(GL_DEPTH_TEST);
-
-                glUseProgram(m_ShaderProgram);
-                glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-
-                glm::mat4 model = tf->GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_ShaderProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                glBindVertexArray(vao);
-                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
-
-                // Restore color/depth writes
-                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-                glEnable(GL_DEPTH_TEST);
-            }
-        }
-
-        // ---------------------------------------------------------
-        // 3) OUTLINE pass (draw where stencil != 1, depth test OFF)
-        // ---------------------------------------------------------
-        if (m_Scene->hasSelection()) {
-            for (entt::entity sel : m_Scene->getSelected()) {
-                auto* tf   = m_Scene->registry().try_get<TransformComponent>(sel);
-                auto* mesh = m_Scene->registry().try_get<MeshComponent>(sel);
-                if (!tf || !mesh || mesh->m_Vertices.empty() || mesh->m_Indices.empty()) continue;
-
-                auto it = m_MeshCache.find(sel);
-                if (it == m_MeshCache.end()) {
-                    // Option A: lazy build (if desired)
-                    // it = m_MeshCache.emplace(sel, createGLMeshBuffers(*mesh)).first;
-                    continue;
-                }
-                const GLuint vao = it->second.m_VAO;
-
-                glEnable(GL_STENCIL_TEST);
-                glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-                glStencilMask(0x00);          // don't modify stencil here
-                glDisable(GL_DEPTH_TEST);     // draw on top of everything
-
-                glUseProgram(m_OutlineProgram);
-                glUniformMatrix4fv(glGetUniformLocation(m_OutlineProgram, "u_View"),       1, GL_FALSE, glm::value_ptr(view));
-                glUniformMatrix4fv(glGetUniformLocation(m_OutlineProgram, "u_Projection"), 1, GL_FALSE, glm::value_ptr(proj));
-                glUniform3f (glGetUniformLocation(m_OutlineProgram, "u_OutlineColor"), 1.0f, 0.85f, 0.2f);
-                glUniform1f (glGetUniformLocation(m_OutlineProgram, "u_OutlineWorld"), 0.02f); // outline thickness in world meters
-
-                glm::mat4 model = tf->GetTransform();
-                glUniformMatrix4fv(glGetUniformLocation(m_OutlineProgram, "u_Model"), 1, GL_FALSE, glm::value_ptr(model));
-                glBindVertexArray(vao);
-                glDrawElements(GL_TRIANGLES, (GLsizei)mesh->m_Indices.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
-
-                // Restore stencil/depth state
-                glStencilMask(0xFF);
-                glStencilFunc(GL_ALWAYS, 1, 0xFF);
-                glDisable(GL_STENCIL_TEST);
-                glEnable(GL_DEPTH_TEST);
-            }
-        }
-
-        // Final state cleanup for the frame
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glUseProgram(0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // 3) outline of selection
+        m_OutlinePass->execute(ctx);
     }
 
     void OpenGLRenderer::onMeshDestroyed(entt::registry& reg, entt::entity ent) {
@@ -414,9 +153,9 @@ namespace Nova::Renderer::OpenGL {
         m_MeshCache[ent] = entry;
     }
 
-    OpenGLRenderer::GLMeshBuffers OpenGLRenderer::createGLMeshBuffers(const Nova::Components::MeshComponent& mesh) {
+    Renderer::OpenGL::GLMeshBuffers OpenGLRenderer::createGLMeshBuffers(const MeshComponent& mesh) {
         // Upload vertices/normals + indices, configure VAO
-        OpenGLRenderer::GLMeshBuffers e{};
+        Renderer::OpenGL::GLMeshBuffers e{};
         glGenVertexArrays(1, &e.m_VAO);
         glBindVertexArray(e.m_VAO);
 
@@ -447,18 +186,11 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void OpenGLRenderer::destroy() {
-        // Delete shader programs
-        if (m_ShaderProgram)  glDeleteProgram(m_ShaderProgram);
-        if (m_OutlineProgram) glDeleteProgram(m_OutlineProgram);
-
         // Delete viewport FBO resources
         glDeleteFramebuffers(1, &m_FBO);
         glDeleteTextures(1, &m_ColorTexture);
-        glDeleteRenderbuffers(1, &m_DepthBuffer);
 
         // Delete shadow-map resources
-        if (m_ShadowProgram) glDeleteProgram(m_ShadowProgram);
-        if (m_ShadowDepthTex) { glDeleteTextures(1, &m_ShadowDepthTex); m_ShadowDepthTex = 0; }
         if (m_ShadowFBO) { glDeleteFramebuffers(1, &m_ShadowFBO);  m_ShadowFBO = 0; }
     }
 } // namespace Nova::Renderer::OpenGL
