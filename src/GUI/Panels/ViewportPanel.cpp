@@ -57,16 +57,26 @@ namespace Nova::GUI {
             // ------------------------------------------------------------- ROTATE
             if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
             {
-                float yaw   = -delta.x * ROTATE_SPEED;
+                float yaw = -delta.x * ROTATE_SPEED;
                 float pitch = -delta.y * ROTATE_SPEED;
 
-                glm::mat4 rot = glm::rotate(glm::mat4(1.f), yaw,   up)   *
-                                glm::rotate(glm::mat4(1.f), pitch, right);
+                // Local camera axes
+                glm::mat4 Ry = glm::rotate(glm::mat4(1.f), yaw, up);
+                glm::mat4 Rx = glm::rotate(glm::mat4(1.f), pitch, right);
+                glm::mat4 R = Ry * Rx; // yaw then pitch
 
+                // Rotate the offset vector (direction => w=0)
                 glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
-                offset           = glm::vec3(rot * glm::vec4(offset, 1.f));
-
+                offset = glm::vec3(R * glm::vec4(offset, 0.0f));
                 camPtr->m_LookFrom = camPtr->m_LookAt + offset;
+
+                // Also rotate the camera's up vector
+                camPtr->m_Up = glm::normalize(glm::vec3(R * glm::vec4(camPtr->m_Up, 0.0f)));
+
+                // Re-orthonormalize the basis after rotation (prevents numerical drift)
+                glm::vec3 newFwd = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+                glm::vec3 newRight = glm::normalize(glm::cross(newFwd, camPtr->m_Up));
+                camPtr->m_Up = glm::normalize(glm::cross(newRight, newFwd));
             }
 
             // --------------------------------------------------------------- PAN
