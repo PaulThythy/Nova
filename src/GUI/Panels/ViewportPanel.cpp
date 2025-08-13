@@ -1,6 +1,5 @@
 #include "GUI/Panels/ViewportPanel.hpp"
 #include "Renderer/Renderer.hpp"
-#include "imgui.h"
 #include "Math/Ray.hpp"
 #include "Math/AABB.hpp"
 #include "Components/TransformComponent.hpp"
@@ -19,38 +18,41 @@ namespace Nova::GUI {
 
         ImGui::Image((ImTextureID)renderer->getImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
 
-        constexpr float ROTATE_SPEED = 0.005f;
-        constexpr float PAN_SPEED    = 0.002f;
-        constexpr float ZOOM_SPEED   = 1.0f;
+        controls(scene);
 
-        static ImVec2 lastMousePos {0,0};
+        deleteSelection(scene);
+
+        clearSelection(scene);
+
+        picking(scene, size);
+
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }
+
+    void controls(Nova::Scene& scene) {
+        constexpr float ROTATE_SPEED = 0.005f;
+        constexpr float PAN_SPEED = 0.002f;
+        constexpr float ZOOM_SPEED = 1.0f;
+
+        static ImVec2 lastMousePos{ 0,0 };
 
         auto camE = scene.getViewportCamera();
         Nova::Components::CameraComponent* camPtr = nullptr;
         if (camE != entt::null)
             camPtr = &scene.registry().get<Nova::Components::CameraComponent>(camE);
 
-        const bool viewportFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered();
         ImGuiIO& io = ImGui::GetIO();
         ImVec2 mousePos = io.MousePos;
-        ImVec2 delta    = { mousePos.x - lastMousePos.x,
+        ImVec2 delta = { mousePos.x - lastMousePos.x,
                             mousePos.y - lastMousePos.y };
-        lastMousePos    = mousePos;
+        lastMousePos = mousePos;
 
-        if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-            auto selected = scene.getSelected();
-            if (!selected.empty()) {
-                for (auto entity : selected)
-                    scene.destroyEntity(entity);
-                scene.clearSelection();
-            }
-        }
-
-        if (camPtr && viewportFocused)
+        if (camPtr && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered())
         {
             glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
-            glm::vec3 right   = glm::normalize(glm::cross(forward, camPtr->m_Up));
-            glm::vec3 up      = camPtr->m_Up;
+            glm::vec3 right = glm::normalize(glm::cross(forward, camPtr->m_Up));
+            glm::vec3 up = camPtr->m_Up;
 
             float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
 
@@ -108,7 +110,7 @@ namespace Nova::GUI {
             {
                 glm::vec3 pan = (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
                 camPtr->m_LookFrom += pan;
-                camPtr->m_LookAt   += pan;
+                camPtr->m_LookAt += pan;
             }
 
             // -------------------------------------------------------------- ZOOM
@@ -135,16 +137,30 @@ namespace Nova::GUI {
                 up = glm::normalize(glm::cross(right, forward));
             }
         }
+    }
 
-        if (viewportFocused && ImGui::IsKeyPressed(ImGuiKey_Escape))
+    void clearSelection(Nova::Scene& scene) {
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Escape))
             scene.clearSelection();
+    }
+    
+    void deleteSelection(Nova::Scene& scene) {
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
+            auto selected = scene.getSelected();
+            if (!selected.empty()) {
+                for (auto entity : selected)
+                    scene.destroyEntity(entity);
+                scene.clearSelection();
+            }
+        }
+    }
 
-        // ----- Picking -----
+    void picking(Nova::Scene& scene, ImVec2 size) {
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             // mouse position relative to image quad
             ImVec2 mouse = ImGui::GetMousePos();
-            ImVec2 rmin  = ImGui::GetItemRectMin();
-            ImVec2 rel   = ImVec2(mouse.x - rmin.x, mouse.y - rmin.y);
+            ImVec2 rmin = ImGui::GetItemRectMin();
+            ImVec2 rel = ImVec2(mouse.x - rmin.x, mouse.y - rmin.y);
 
             // camera
             auto camE = scene.getViewportCamera();
@@ -161,34 +177,34 @@ namespace Nova::GUI {
                     cam.m_LookFrom
                 );
 
+                ImGuiIO& io = ImGui::GetIO();
+
                 if (auto hit = scene.pickEntity(ray, scene.registry())) {
-                    ImGuiIO& io = ImGui::GetIO();
 
                     if (io.KeyShift || io.KeyCtrl) {
                         // Ajout à la sélection existante si Maj/Ctrl est enfoncé
                         if (scene.isSelected(hit->entity)) {
                             // Si déjà sélectionné, on le retire
                             scene.removeFromSelection(hit->entity);
-                        } else {
+                        }
+                        else {
                             // Sinon on l'ajoute
                             scene.addToSelection(hit->entity);
                         }
-                    } else {
+                    }
+                    else {
                         // Pas de Maj/Ctrl - sélection simple (remplace la sélection actuelle)
                         scene.clearSelection();
                         scene.addToSelection(hit->entity);
                     }
-                } else {
+                }
+                else {
                     if (!(io.KeyShift || io.KeyCtrl)) {
                         scene.clearSelection();
                     }
                 }
             }
         }
-        // ----- end picking -----
-
-        ImGui::End();
-        ImGui::PopStyleVar();
     }
 
 } // namespace Nova::GUI
