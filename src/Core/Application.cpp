@@ -78,13 +78,50 @@ namespace Nova::Core {
         m_Scene.registry().emplace<Nova::Components::MeshComponent>(capsuleEntity, std::move(capsuleMesh));
         m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(capsuleEntity);
 
-        auto lightEntity = m_Scene.createEntity("SunLight");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(lightEntity);
-        m_Scene.registry().emplace<Nova::Components::LightComponent>(lightEntity);
-        auto& light = m_Scene.registry().get<Nova::Components::LightComponent>(lightEntity);
-        light.m_Intensity = 1.0f;
-        auto& lightTransform = m_Scene.registry().get<Nova::Components::TransformComponent>(lightEntity);
-        lightTransform.m_Position = {0.0f, 5.0f, 0.0f};
+        // ---------- Directional ----------
+        {
+            auto e = m_Scene.createEntity("Sun");
+            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+            tf.m_Rotation = { -45.0f, 45.0f, 0.0f };
+
+            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            li.m_Type = Nova::Components::LightType::Directional;
+            li.m_Color = { 1.0f, 0.97f, 0.9f };
+            li.m_Intensity = 1.0f;
+            li.m_LightShadows = true;
+        }
+        
+
+        // ---------- Point ----------
+        /*{
+            auto e = m_Scene.createEntity("Lamp");
+            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+            tf.m_Position = { 2.0f, 2.0f, 2.0f };
+
+            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            li.m_Type = Nova::Components::LightType::Point;
+            li.m_Color = { 1.0f, 0.7f, 0.5f };
+            li.m_Intensity = 1.0f;
+            li.m_Range = 7.0f;
+            li.m_LightShadows = true;
+        }*/
+
+        // ---------- Spot ----------
+        /* {
+            auto e = m_Scene.createEntity("SpotLight");
+            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+            tf.m_Position = { 0.0f, 3.0f, 0.0f };
+            tf.m_Rotation = { -60.0f, 0.0f, 0.0f };
+
+            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            li.m_Type = Nova::Components::LightType::Spot;
+            li.m_Color = { 1.0f, 1.0f, 1.0f };
+            li.m_Intensity = 1.0f;
+            li.m_Range = 12.0f;
+            li.m_InnerCone = 15.0f;   // °
+            li.m_OuterCone = 25.0f;   // °
+            li.m_LightShadows = true;
+        }*/
     }
 
     void Application::setupSDL() {

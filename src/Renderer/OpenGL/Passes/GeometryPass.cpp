@@ -1,4 +1,4 @@
-#include <glm/glm.hpp>
+﻿#include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
@@ -9,6 +9,7 @@
 
 #include "Components/TransformComponent.hpp"
 #include "Components/MeshRendererComponent.hpp"
+#include "Components/LightComponent.hpp"
 
 using namespace Nova::Components;
 
@@ -52,18 +53,83 @@ namespace Nova::Renderer::OpenGL {
         glUniform3fv      (uCam,1,glm::value_ptr(ctx.m_CameraPos));
         glUniformMatrix4fv(uLVP,1,GL_FALSE,glm::value_ptr(ctx.m_LightVP));
 
-        // light
-        glUniform3fv(glGetUniformLocation(m_Program,"u_LightPos"),1,glm::value_ptr(ctx.m_LightPos));
-        glUniform3fv(glGetUniformLocation(m_Program,"u_LightColor"),1,glm::value_ptr(ctx.m_LightColor));
-        glUniform1f (glGetUniformLocation(m_Program,"u_LightIntensity"), ctx.m_LightIntensity);
+        // ------------------------------------------------------------
+        // LIGHT BINDING — support Directional / Spot / Point
+        // ------------------------------------------------------------
 
-        // shadow samplers
-        glUniform1i(glGetUniformLocation(m_Program,"u_UseShadowMap"), ctx.m_HasLight ? 1 : 0);
-        glUniform1f(glGetUniformLocation(m_Program,"u_ShadowBias"), ctx.m_ShadowBias);
-        glUniform1f(glGetUniformLocation(m_Program,"u_ShadowTexelSize"), 1.0f/float(ctx.m_ShadowSize));
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, ctx.m_ShadowTex);
-        glUniform1i(glGetUniformLocation(m_Program,"u_ShadowMap"),5);
+        // Valeurs par défaut (fallback sur ce que le RenderContext fournit déjà)
+        glm::vec3  lightPos = ctx.m_LightPos;
+        glm::vec3  lightDir = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.3f));
+        glm::vec3  lightColor = ctx.m_LightColor;
+        float      lightIntensity = ctx.m_LightIntensity;
+        int        lightType = 0; // 0=Directional, 1=Spot, 2=Point
+        float      lightRange = 10.0f;
+        float      spotInnerCos = std::cos(glm::radians(15.0f));
+        float      spotOuterCos = std::cos(glm::radians(25.0f));
+        bool       lightShadows = ctx.m_HasLight; // compat: ancien flag → utilisé comme défaut
+
+        // On essaie de récupérer la 1ère lumière de la scène (Transform + LightComponent)
+        bool found = false;
+        ctx.m_Scene->forEach<Nova::Components::TransformComponent, Nova::Components::LightComponent>(
+            [&](entt::entity e, Nova::Components::TransformComponent& tf, Nova::Components::LightComponent& li)
+            {
+                if (found) return; // on prend la première
+                found = true;
+
+                // Position + direction (rotations stockées en DEGRÉS)
+                lightPos = tf.m_Position;
+                glm::quat q = glm::quat(glm::radians(tf.m_Rotation));
+                lightDir = glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)); // -Z local
+
+                // Couleur / intensité
+                lightColor = li.m_Color;
+                lightIntensity = li.m_Intensity;
+                lightShadows = li.m_LightShadows;
+
+                // Type + paramètres spécifiques
+                switch (li.m_Type) {
+                case Nova::Components::LightType::Directional:
+                    lightType = 0;
+                    break;
+                case Nova::Components::LightType::Spot:
+                    lightType = 1;
+                    lightRange = li.m_Range;
+                    spotInnerCos = std::cos(glm::radians(li.m_InnerCone));
+                    spotOuterCos = std::cos(glm::radians(li.m_OuterCone));
+                    break;
+                case Nova::Components::LightType::Point:
+                    lightType = 2;
+                    lightRange = li.m_Range;
+                    break;
+                }
+            });
+
+        // Envoi des uniforms communs
+        glUniform1i(glGetUniformLocation(m_Program, "u_LightType"), lightType);
+        glUniform3fv(glGetUniformLocation(m_Program, "u_LightColor"), 1, glm::value_ptr(lightColor));
+        glUniform1f(glGetUniformLocation(m_Program, "u_LightIntensity"), lightIntensity);
+        glUniform1i(glGetUniformLocation(m_Program, "u_LightShadows"), lightShadows ? 1 : 0);
+
+        // Envoi des uniforms par type
+        glUniform3fv(glGetUniformLocation(m_Program, "u_LightPos"), 1, glm::value_ptr(lightPos)); // Spot/Point (ok si non utilisés)
+        glUniform3fv(glGetUniformLocation(m_Program, "u_LightDir"), 1, glm::value_ptr(lightDir)); // Directional/Spot
+        glUniform1f(glGetUniformLocation(m_Program, "u_LightRange"), lightRange);            // Spot/Point
+        glUniform1f(glGetUniformLocation(m_Program, "u_SpotInnerCos"), spotInnerCos);          // Spot
+        glUniform1f(glGetUniformLocation(m_Program, "u_SpotOuterCos"), spotOuterCos);          // Spot
+
+        // ------------------------------------------------------------
+        // SHADOW MAP — on n’applique les ombres que pour la Directionnelle
+        // (conforme au fragment.frag que je t’ai donné)
+        // ------------------------------------------------------------
+        if (lightShadows && lightType == 0) {
+            glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_2D, ctx.m_ShadowTex);
+            glUniform1i(glGetUniformLocation(m_Program, "u_ShadowMap"), 5);
+
+            // NB: dans le nouveau fragment.frag, u_ShadowTexelSize est un vec2
+            const float ts = 1.0f / float(ctx.m_ShadowSize);
+            glUniform2f(glGetUniformLocation(m_Program, "u_ShadowTexelSize"), ts, ts);
+        }
 
         ctx.m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity e, TransformComponent& tf, MeshComponent& mesh){
             const auto* mr = ctx.m_Scene->registry().try_get<MeshRendererComponent>(e);

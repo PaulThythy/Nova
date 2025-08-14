@@ -4,11 +4,10 @@ in vec3 v_FragPos;
 in vec3 v_Normal;
 in vec4 v_LightClip;
 
-uniform vec3 u_CameraPos;
+out vec4 FragColor;
 
-uniform vec3  u_LightPos;
-uniform vec3  u_LightColor;
-uniform float u_LightIntensity;
+// Camera / material
+uniform vec3  u_CameraPos;
 
 uniform vec3  u_BaseColor;
 uniform float u_Roughness;
@@ -16,109 +15,94 @@ uniform float u_Metallic;
 uniform vec3  u_EmissiveColor;
 uniform float u_EmissiveStrength;
 
-// --- Shadow ---
+// Light types
+#define LIGHT_DIRECTIONAL 0
+#define LIGHT_SPOT        1
+#define LIGHT_POINT       2
+
+// Light (common)
+uniform int   u_LightType;
+uniform vec3  u_LightColor;
+uniform float u_LightIntensity;
+uniform bool  u_LightShadows;
+
+// Light (per-type)
+uniform vec3  u_LightPos;      // Spot/Point (world)
+uniform vec3  u_LightDir;      // Directional/Spot (world, normalized)
+uniform float u_LightRange;    // Spot/Point
+uniform float u_SpotInnerCos;  // Spot (cos(InnerAngle))
+uniform float u_SpotOuterCos;  // Spot (cos(OuterAngle))
+
+// Shadow map (directional only)
 uniform sampler2DShadow u_ShadowMap;
-uniform float           u_ShadowBias;
-uniform float           u_ShadowTexelSize;
+uniform vec2            u_ShadowTexelSize; // 1/textureSize
 
-out vec4 FragColor;
-
-float saturate(float x) { return clamp(x, 0.0, 1.0); }
-vec3  saturate(vec3  x) { return clamp(x, 0.0, 1.0); }
-
-float D_GGX(float NdotH, float a)
-{
-    float a2 = a * a;
-    float d  = (NdotH*NdotH) * (a2 - 1.0) + 1.0;
-    return a2 / (3.14159265 * d * d + 1e-7);
+// ----------------- Helpers -----------------
+float attenuationDistance(float d, float range) {
+    float x = clamp(1.0 - (d*d)/(range*range), 0.0, 1.0);
+    return x * x;
 }
-
-float G_SmithGGXCorrelated(float NdotV, float NdotL, float a)
-{
-    float a2  = a * a;
-    float gv  = NdotV + sqrt(NdotV * (NdotV - NdotV*a2) + a2);
-    float gl  = NdotL + sqrt(NdotL * (NdotL - NdotL*a2) + a2);
-    return 1.0 / (gv * gl + 1e-7);
+float spotFactor(vec3 L, vec3 spotDir, float innerCos, float outerCos) {
+    float cd = dot(normalize(-L), normalize(spotDir));
+    return smoothstep(outerCos, innerCos, cd);
 }
-
-vec3 F_Schlick(vec3 F0, float VdotH)
-{
-    return F0 + (1.0 - F0) * pow(1.0 - VdotH, 5.0);
-}
-
-// --- Shadow sampling (PCF 3x3) ---
-float computeShadow(float NdotL)
-{
-    // Clip -> NDC -> [0,1]
+float computeShadow(float NdotL) {
+    if (!u_LightShadows) return 1.0;
     vec3 proj = v_LightClip.xyz / v_LightClip.w;
     proj = proj * 0.5 + 0.5;
-
-    // Hors de la shadow map => éclairé
-    if (proj.z > 1.0 || proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0)
-        return 1.0;
-
-    // Petit bias dépendant du slope pour réduire l'acné
-    float bias = max(u_ShadowBias * (1.0 - NdotL), 0.0005);
-
+    if (proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0) return 1.0;
+    float bias = max(0.001, 0.0005 * (1.0 - NdotL));
     float sum = 0.0;
-    for (int y = -1; y <= 1; ++y) {
-        for (int x = -1; x <= 1; ++x) {
-            vec2 off = vec2(float(x), float(y)) * u_ShadowTexelSize;
-            // sampler2DShadow fait la comparaison depthRef <= texDepth
-            sum += texture(u_ShadowMap, vec3(proj.xy + off, proj.z - bias));
-        }
-    }
-    return sum / 9.0; // visibilité (1 = éclairé, 0 = dans l'ombre)
+    for (int y = -1; y <= 1; ++y)
+      for (int x = -1; x <= 1; ++x) {
+        vec2 off = vec2(float(x), float(y)) * u_ShadowTexelSize;
+        sum += texture(u_ShadowMap, vec3(proj.xy + off, proj.z - bias));
+      }
+    return sum / 9.0;
 }
 
-void main()
-{
-    // Basis
+void main() {
     vec3 N = normalize(v_Normal);
     vec3 V = normalize(u_CameraPos - v_FragPos);
 
-    // light direction
-    vec3 L = normalize(u_LightPos - v_FragPos);
-    vec3 H = normalize(V + L);
+    vec3 L;
+    float atten = 1.0;
+    float sf = 1.0;
 
-    float NdotL = saturate(dot(N, L));
-    float NdotV = saturate(dot(N, V));
-    float NdotH = saturate(dot(N, H));
-    float VdotH = saturate(dot(V, H));
-
-    if (NdotL <= 0.0 || NdotV <= 0.0) {
-        vec3 emissive = u_EmissiveColor * u_EmissiveStrength;
-        FragColor = vec4(emissive, 1.0);
-        return;
+    if (u_LightType == LIGHT_DIRECTIONAL) {
+        L = -normalize(u_LightDir);
+    } else if (u_LightType == LIGHT_POINT) {
+        vec3 Lvec = u_LightPos - v_FragPos;
+        float d = length(Lvec);
+        L = Lvec / max(d, 1e-5);
+        atten = attenuationDistance(d, u_LightRange);
+    } else { // SPOT
+        vec3 Lvec = u_LightPos - v_FragPos;
+        float d = length(Lvec);
+        L = Lvec / max(d, 1e-5);
+        atten = attenuationDistance(d, u_LightRange);
+        sf = spotFactor(L, u_LightDir, u_SpotInnerCos, u_SpotOuterCos);
     }
 
-    // material properties
-    float rough = clamp(u_Roughness, 0.04, 1.0);   // clamp to avoid artifacts
-    float metal = saturate(u_Metallic);
-    float a     = rough * rough;
+    float NdotL = max(dot(N, L), 0.0);
 
-    vec3  albedo = saturate(u_BaseColor);
-    vec3  F0     = mix(vec3(0.04), albedo, metal);
+    // Diffuse
+    vec3 albedo = u_BaseColor;
+    vec3 diffuse = albedo * NdotL;
 
-    float  D = D_GGX(NdotH, a);
-    float  G = G_SmithGGXCorrelated(NdotV, NdotL, a);
-    vec3   F = F_Schlick(F0, VdotH);
+    // Spec (Blinn-Phong like)
+    float shininess = mix(8.0, 256.0, 1.0 - clamp(u_Roughness, 0.0, 1.0));
+    vec3  F0 = mix(vec3(0.04), albedo, clamp(u_Metallic, 0.0, 1.0));
+    vec3  H = normalize(L + V);
+    float NdotH = max(dot(N, H), 0.0);
+    vec3  specular = F0 * pow(NdotH, shininess);
 
-    vec3  specular = (D * G) * F / (4.0 * NdotV * NdotL + 1e-7);
-    vec3  kd = (1.0 - F) * (1.0 - metal);
-    vec3  diffuse = kd * albedo / 3.14159265;
+    float visibility = (u_LightType == LIGHT_DIRECTIONAL) ? computeShadow(NdotL) : 1.0;
 
-    vec3 light = u_LightColor * u_LightIntensity;
+    vec3 lightScale = u_LightColor * u_LightIntensity * atten * sf * visibility;
+    vec3 color = (diffuse + specular) * lightScale;
 
-    // --- Shadow visibility ---
-    float visibility = computeShadow(NdotL);
-
-    // Combine diffuse and specular contributions (shadow appliquée ici)
-    vec3 color = (diffuse + specular) * light * NdotL * visibility;
-
-    // Add emissive contribution
     color += u_EmissiveColor * u_EmissiveStrength;
 
-    color = max(color, vec3(0.0));
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(max(color, vec3(0.0)), 1.0);
 }
