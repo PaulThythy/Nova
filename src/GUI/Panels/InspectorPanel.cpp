@@ -12,8 +12,9 @@ namespace Nova::GUI {
         ImGui::Spacing();
 
         ImGuiIO& io = ImGui::GetIO();
-        const float base = 0.01f;
-        const float speed = base * (io.KeyShift ? 10.0f : (io.KeyAlt ? 0.1f : 1.0f));
+        const float speed = 0.1f;
+        //TODO add snaping
+        //const float speed = base * (io.KeyShift ? 2.0f : (io.KeyAlt ? 0.1f : 1.0f));
 
         // X
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1,0,0,1));

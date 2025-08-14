@@ -13,8 +13,9 @@ namespace Nova::Components {
         glm::vec3 m_Scale    = {1.0f, 1.0f, 1.0f};
 
         glm::mat4 GetTransform() const {
+            glm::vec3 radians = glm::radians(m_Rotation);
             return glm::translate(glm::mat4(1.0f), m_Position)
-                * glm::mat4_cast(glm::quat(m_Rotation))
+                * glm::mat4_cast(glm::quat(radians))
                 * glm::scale(glm::mat4(1.0f), m_Scale);
         }
     };

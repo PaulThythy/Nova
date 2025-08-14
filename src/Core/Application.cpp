@@ -71,7 +71,7 @@ namespace Nova::Core {
         auto capsuleEntity = m_Scene.createEntity("Capsule");
         m_Scene.registry().emplace<Nova::Components::TransformComponent>(capsuleEntity);
         auto& capsuleTf = m_Scene.registry().get<Nova::Components::TransformComponent>(capsuleEntity);
-        capsuleTf.m_Position = { 1.0f, 0.5f, 2.2f }; capsuleTf.m_Rotation = { -1.5f, -3.17f, 1.5f };
+        capsuleTf.m_Position = { 1.0f, 0.5f, 2.2f }; capsuleTf.m_Rotation = { 0.0f, 0.0f, -90.0f };
 
         Nova::Components::MeshComponent capsuleMesh;
         capsuleMesh.initCapsule();
