@@ -192,5 +192,11 @@ namespace Nova::Renderer::OpenGL {
 
         // Delete shadow-map resources
         if (m_ShadowFBO) { glDeleteFramebuffers(1, &m_ShadowFBO);  m_ShadowFBO = 0; }
+
+        // viewport
+        if (m_DepthStencil) { glDeleteRenderbuffers(1, &m_DepthStencil); m_DepthStencil = 0; }
+
+        // shadow-map
+        if (m_ShadowDepth) { glDeleteTextures(1, &m_ShadowDepth); m_ShadowDepth = 0; }
     }
 } // namespace Nova::Renderer::OpenGL
