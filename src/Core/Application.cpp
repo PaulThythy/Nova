@@ -118,8 +118,8 @@ namespace Nova::Core {
             li.m_Color = { 1.0f, 1.0f, 1.0f };
             li.m_Intensity = 1.0f;
             li.m_Range = 12.0f;
-            li.m_InnerCone = 15.0f;   // °
-            li.m_OuterCone = 25.0f;   // °
+            li.m_InnerCone = 15.0f;
+            li.m_OuterCone = 25.0f;
             li.m_LightShadows = true;
         }*/
     }
