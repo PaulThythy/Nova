@@ -22,7 +22,7 @@ namespace Nova::Components {
         float     m_InnerCone{ 15.0f };   // Spot, degre
         float     m_OuterCone{ 25.0f };   // Spot, degre
 
-        // Helpers (pour éviter de recalculer hors shader)
+        // Helpers
         float innerCos() const { return std::cos(glm::radians(m_InnerCone)); }
         float outerCos() const { return std::cos(glm::radians(m_OuterCone)); }
     };
