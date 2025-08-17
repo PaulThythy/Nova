@@ -83,6 +83,7 @@ namespace Nova::Core {
             auto e = m_Scene.createEntity("Sun");
             auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
             tf.m_Rotation = { -45.0f, 45.0f, 0.0f };
+            tf.m_Position = {0.0f, 4.0f, 0.0f};
 
             auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
             li.m_Type = Nova::Components::LightType::Directional;
