@@ -51,24 +51,24 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void OpenGLRenderer::buildShadowFBO(){
-    if(m_ShadowFBO){ glDeleteFramebuffers(1,&m_ShadowFBO); glDeleteTextures(1,&m_ShadowDepth);}    
-        glGenFramebuffers(1,&m_ShadowFBO);
-        glGenTextures(1,&m_ShadowDepth);
-        glBindTexture(GL_TEXTURE_2D,m_ShadowDepth);
-        glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,m_ShadowSize,m_ShadowSize,0,GL_DEPTH_COMPONENT,GL_FLOAT,nullptr);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
-        const float border[4]={1,1,1,1};
-        glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,border);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_FUNC,GL_LEQUAL);
+        if(m_ShadowFBO){ glDeleteFramebuffers(1,&m_ShadowFBO); glDeleteTextures(1,&m_ShadowDepth);}
+            glGenFramebuffers(1,&m_ShadowFBO);
+            glGenTextures(1,&m_ShadowDepth);
+            glBindTexture(GL_TEXTURE_2D,m_ShadowDepth);
+            glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,m_ShadowSize,m_ShadowSize,0,GL_DEPTH_COMPONENT,GL_FLOAT,nullptr);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
+            const float border[4]={1,1,1,1};
+            glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,border);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,GL_COMPARE_REF_TO_TEXTURE);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_FUNC,GL_LEQUAL);
 
-        glBindFramebuffer(GL_FRAMEBUFFER,m_ShadowFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,m_ShadowDepth,0);
-        glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
-        glBindFramebuffer(GL_FRAMEBUFFER,0);
+            glBindFramebuffer(GL_FRAMEBUFFER,m_ShadowFBO);
+            glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,m_ShadowDepth,0);
+            glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER,0);
     }
 
     void OpenGLRenderer::updateViewportSize(int w,int h){
