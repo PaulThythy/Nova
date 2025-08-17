@@ -96,32 +96,31 @@ namespace Nova::Renderer::OpenGL {
         glm::mat4 lightVP(1.0f);
 
         m_Scene->forEach<LightComponent, TransformComponent>([&](entt::entity, LightComponent& l, TransformComponent& t) {
-            if (hasLight) return; // keep the first light only
+            if (hasLight) return;
             hasLight = true;
+
             Lpos = t.m_Position;
             Lcol = l.m_Color;
             Lint = l.m_Intensity;
 
-            // --- Safe lookAt (avoid colinearity with up) ---
-            glm::vec3 target(0.0f, 0.0f, 0.0f);
+            // === Direction de la lumière issue de la ROTATION (degrés) ===
+            glm::quat q = glm::quat(glm::radians(t.m_Rotation));
+            glm::vec3 Ldir = glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)); // -Z local
+
+            // === View de la lumière alignée avec Ldir ===
+            // Cam "placée" à Lpos, regardant Lpos + Ldir
+            glm::vec3 target = Lpos + Ldir;
+
+            // up robuste (évite colinéarités)
             glm::vec3 up(0.0f, 1.0f, 0.0f);
-
-            glm::vec3 fwd = target - Lpos;
-            float fwdLen2 = glm::dot(fwd, fwd);
-            if (fwdLen2 < 1e-8f) {
-                // Light exactly at target: pick a default forward
-                fwd = glm::vec3(0.0f, -1.0f, 0.0f);
-            }
-            else {
-                fwd *= glm::inversesqrt(fwdLen2);
-            }
-
-            // If forward ~ colinear with up, pick another up
-            if (std::abs(glm::dot(fwd, up)) > 0.999f) up = glm::vec3(0.0f, 0.0f, 1.0f);
-            if (std::abs(glm::dot(fwd, up)) > 0.999f) up = glm::vec3(1.0f, 0.0f, 0.0f);
+            if (std::abs(glm::dot(Ldir, up)) > 0.999f) up = glm::vec3(0,0,1);
+            if (std::abs(glm::dot(Ldir, up)) > 0.999f) up = glm::vec3(1,0,0);
 
             glm::mat4 V = glm::lookAt(Lpos, target, up);
+
+            // === Ortho box : garde tes bornes, ou ajuste selon ta scène ===
             glm::mat4 P = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.1f, 50.f);
+
             lightVP = P * V;
         });
 

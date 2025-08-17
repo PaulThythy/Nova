@@ -1,6 +1,28 @@
 #include "GUI/EditorUI.hpp"
+#include "Renderer/Renderer.hpp"
+#include "imgui.h"
 
 #include <cstdint>
+#include <GL/glew.h>
+
+#if NOVA_DEBUG
+    // Petit helper RAII pour désactiver temporairement le compare mode d'une depth texture
+    struct CompareModeScope {
+        GLuint tex = 0;
+        GLint  prevBinding = 0;
+        GLint  prevCompare = 0;
+        explicit CompareModeScope(GLuint texture) : tex(texture) {
+            glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevBinding);
+            glBindTexture(GL_TEXTURE_2D, tex);
+            glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, &prevCompare);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        }
+        ~CompareModeScope() {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, prevCompare);
+            glBindTexture(GL_TEXTURE_2D, (GLuint)prevBinding);
+        }
+    };
+#endif
 
 namespace Nova::GUI {
 
@@ -61,6 +83,45 @@ namespace Nova::GUI {
         renderInspectorPanel(scene);
         renderAssetBrowserPanel(scene);
         renderMainMenuBar(scene);
+
+        // ===== DEBUG =====
+#if NOVA_DEBUG
+        if (renderer) {
+            static bool s_ShowShadowMap = true; // menu/shortcut possible si tu veux
+
+            if (s_ShowShadowMap) {
+                ImGui::SetNextWindowSize(ImVec2(320, 360), ImGuiCond_FirstUseEver);
+                if (ImGui::Begin("Shadow Map", &s_ShowShadowMap)) {
+                    const GLuint shadowTex = renderer->getShadowMapTexture();
+                    const int    shadowSz  = renderer->getShadowMapSize();
+
+                    ImGui::Text("Texture ID: %u", shadowTex);
+                    ImGui::Text("Size: %d x %d", shadowSz, shadowSz);
+                    ImGui::Separator();
+
+                    if (shadowTex != 0) {
+                        // Affichage carré au mieux de l'espace disponible
+                        ImVec2 avail = ImGui::GetContentRegionAvail();
+                        float  side  = (float)std::min((int)avail.x, (int)avail.y);
+                        if (side <= 0.0f) side = 256.0f;
+
+                        // Désactive le compare mode pour lire la depth en niveaux de gris
+                        CompareModeScope scope(shadowTex);
+
+                        // Flip vertical (selon ton pipeline, ajuste si besoin)
+                        const ImVec2 uv0(0.0f, 1.0f);
+                        const ImVec2 uv1(1.0f, 0.0f);
+
+                        ImGui::Image((ImTextureID)(intptr_t)shadowTex, ImVec2(side, side), uv0, uv1);
+                        ImGui::TextUnformatted("Zones claires = loin de la lumière");
+                    } else {
+                        ImGui::TextUnformatted("Aucune shadow map bindée.");
+                    }
+                }
+                ImGui::End();
+            }
+        }
+#endif // NOVA_DEBUG
     }
 
 } // namespace Nova::GUI

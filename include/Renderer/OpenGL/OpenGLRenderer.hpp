@@ -30,6 +30,8 @@ namespace Nova::Renderer::OpenGL {
 
         void* getImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
 
+        unsigned int getShadowMapTexture() const override { return m_ShadowDepth;}
+        int getShadowMapSize() const override {return m_ShadowSize;}
     private:
         // scene
         Nova::Scene* m_Scene = nullptr;
