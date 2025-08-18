@@ -31,9 +31,10 @@ namespace Nova::GUI {
     }
 
     void controls(Nova::Scene& scene) {
-        constexpr float ROTATE_SPEED = 0.005f;
-        constexpr float PAN_SPEED = 0.002f;
-        constexpr float ZOOM_SPEED = 1.0f;
+        // Tunables (per second / per pixel)
+        constexpr float ROTATE_SPEED = 0.005f;   // radians per pixel per second
+        constexpr float PAN_SPEED    = 0.002f;   // world units per pixel per second (scaled by distance)
+        constexpr float MOVE_SPEED   = 5.0f;     // world units per second (ZQSD)
 
         static ImVec2 lastMousePos{ 0,0 };
 
@@ -41,100 +42,124 @@ namespace Nova::GUI {
         Nova::Components::CameraComponent* camPtr = nullptr;
         if (camE != entt::null)
             camPtr = &scene.registry().get<Nova::Components::CameraComponent>(camE);
+        if (!camPtr) return;
 
         ImGuiIO& io = ImGui::GetIO();
+        const float dt = (io.DeltaTime > 0.f ? io.DeltaTime : 1.f/60.f);
+
+        // Mouse delta (in pixels) this frame
         ImVec2 mousePos = io.MousePos;
-        ImVec2 delta = { mousePos.x - lastMousePos.x,
-                            mousePos.y - lastMousePos.y };
+        ImVec2 delta = { mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y };
         lastMousePos = mousePos;
 
-        if (camPtr && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered())
+        // We only act when the viewport window is both focused and hovered.
+        // (Do NOT rely on IsItemHovered(): it depends on the last item call site.)
+        const bool focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+        const bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_ChildWindows);
+        if (!focused || !hovered)
+            return;
+
+        // Build camera basis
+        glm::vec3 forward = camPtr->m_LookAt - camPtr->m_LookFrom;
+        if (glm::length2(forward) < 1e-12f) forward = glm::vec3(0.f, 0.f, -1.f);
+        forward = glm::normalize(forward);
+
+        glm::vec3 right = glm::cross(forward, camPtr->m_Up);
+        if (glm::length2(right) < 1e-12f) right = glm::vec3(1.f, 0.f, 0.f);
+        else right = glm::normalize(right);
+
+        glm::vec3 up = camPtr->m_Up;
+        if (glm::length2(up) < 1e-12f) up = glm::vec3(0.f, 1.f, 0.f);
+
+        float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
+
+        // ------------------------------- ROTATE (RMB) -------------------------------
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+            const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
+
+            float yaw   = -delta.x * ROTATE_SPEED;
+            float pitch = -delta.y * ROTATE_SPEED;
+
+            // Yaw around world up (no roll)
+            glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), yaw, WORLD_UP);
+            glm::vec3 fwdAfterYaw = glm::normalize(glm::vec3(yawRot * glm::vec4(forward, 0.0f)));
+
+            // Stable right; reuse last valid right if near poles
+            static glm::vec3 s_lastRight = glm::vec3(1, 0, 0);
+            glm::vec3 rightAfterYaw = glm::cross(fwdAfterYaw, WORLD_UP);
+            float rl2 = glm::dot(rightAfterYaw, rightAfterYaw);
+            if (rl2 < 1e-10f) rightAfterYaw = s_lastRight;
+            else { rightAfterYaw *= glm::inversesqrt(rl2); s_lastRight = rightAfterYaw; }
+
+            // Clamp pitch to avoid colinearity with WORLD_UP
+            float elevation = std::asin(glm::clamp(glm::dot(fwdAfterYaw, WORLD_UP), -1.0f, 1.0f));
+            const float epsDeg = 0.8f;
+            const float maxEl = glm::radians(90.0f - epsDeg);
+            float newElevation = glm::clamp(elevation + pitch, -maxEl, +maxEl);
+            float clampedPitch = newElevation - elevation;
+
+            glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), clampedPitch, rightAfterYaw);
+            glm::vec3 newForward = glm::normalize(glm::vec3(pitchRot * glm::vec4(fwdAfterYaw, 0.0f)));
+
+            glm::vec3 newRight = glm::normalize(glm::cross(newForward, WORLD_UP));
+            glm::vec3 newUp    = glm::normalize(glm::cross(newRight, newForward));
+
+            camPtr->m_LookAt = camPtr->m_LookFrom + newForward * distance;
+            camPtr->m_Up     = newUp;
+
+            // Refresh basis for subsequent ops this frame
+            forward = newForward; right = newRight; up = newUp;
+        }
+
+        // -------------------------------- PAN (MMB) --------------------------------
+        // Use dt so panning is framerate-independent.
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
+            glm::vec3 pan = (-delta.x * right + delta.y * up) * (PAN_SPEED * distance * dt);
+            camPtr->m_LookFrom += pan;
+            camPtr->m_LookAt   += pan;
+        }
+
+        // ------------------------------- ZOOM (wheel) ------------------------------
+        // Wheel is event-based; usually not scaled by dt (keeps consistent feel).
+        if (std::abs(io.MouseWheel) > 0.0f) {
+            const float zoomSens = 0.12f;
+            const float minDist = 0.05f;
+            const float maxDist = 500.0f;
+
+            glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
+            float     dist   = glm::max(1e-6f, glm::length(offset));
+            glm::vec3 dir    = offset / dist;
+
+            float factor  = std::exp(-io.MouseWheel * zoomSens);
+            float newDist = glm::clamp(dist * factor, minDist, maxDist);
+
+            camPtr->m_LookFrom = camPtr->m_LookAt + dir * newDist;
+
+            // Refresh cached values for keyboard move
+            distance = newDist;
+            forward  = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
+            right    = glm::normalize(glm::cross(forward, camPtr->m_Up));
+            up       = glm::normalize(glm::cross(right, forward));
+        }
+
+        // ----------------------------- MOVE (Z/Q/S/D) ------------------------------
+        // Uses dt for framerate-independent motion. Ignore WantCaptureKeyboard here,
+        // since the viewport is focused+hovered (prevents "dead" controls).
         {
-            glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
-            glm::vec3 right = glm::normalize(glm::cross(forward, camPtr->m_Up));
-            glm::vec3 up = camPtr->m_Up;
+            float speed = MOVE_SPEED;
+            if (ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift)) speed *= 3.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)  || ImGui::IsKeyDown(ImGuiKey_RightCtrl))  speed *= 0.25f;
 
-            float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
+            glm::vec3 move(0.0f);
+            if (ImGui::IsKeyDown(ImGuiKey_Z)) move += forward; // forward
+            if (ImGui::IsKeyDown(ImGuiKey_S)) move -= forward; // backward
+            if (ImGui::IsKeyDown(ImGuiKey_Q)) move -= right;   // left
+            if (ImGui::IsKeyDown(ImGuiKey_D)) move += right;   // right
 
-            // ------------------------------------------------------------- ROTATE
-            if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
-            {
-                float yaw = -delta.x * ROTATE_SPEED;
-                float pitch = -delta.y * ROTATE_SPEED;
-
-                const glm::vec3 WORLD_UP(0.0f, 1.0f, 0.0f);
-                float distance = glm::length(camPtr->m_LookAt - camPtr->m_LookFrom);
-
-                // Current forward
-                glm::vec3 forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
-
-                // 1) Yaw around WORLD_UP (no roll)
-                glm::mat4 yawRot = glm::rotate(glm::mat4(1.0f), yaw, WORLD_UP);
-                glm::vec3 fwdAfterYaw = glm::normalize(glm::vec3(yawRot * glm::vec4(forward, 0.0f)));
-
-                // Stable right; reuse last valid right if near the pole
-                static glm::vec3 s_lastRight = glm::vec3(1, 0, 0);
-                glm::vec3 right = glm::cross(fwdAfterYaw, WORLD_UP);
-                float rl2 = glm::dot(right, right);
-                if (rl2 < 1e-10f) {
-                    right = s_lastRight; // fallback
-                }
-                else {
-                    right *= glm::inversesqrt(rl2);
-                    s_lastRight = right;
-                }
-
-                // 2) Clamp pitch so we never hit colinearity with WORLD_UP
-                //    elevation = asin(dot(fwd, WORLD_UP)) in [-pi/2, +pi/2]
-                float elevation = std::asin(glm::clamp(glm::dot(fwdAfterYaw, WORLD_UP), -1.0f, 1.0f));
-                const float epsDeg = 0.8f;                       // "safety margin" from the pole
-                const float maxEl = glm::radians(90.0f - epsDeg);
-                float newElevation = glm::clamp(elevation + pitch, -maxEl, +maxEl);
-                float clampedPitch = newElevation - elevation;
-
-                // 3) Apply clamped pitch around right
-                glm::mat4 pitchRot = glm::rotate(glm::mat4(1.0f), clampedPitch, right);
-                glm::vec3 newForward = glm::normalize(glm::vec3(pitchRot * glm::vec4(fwdAfterYaw, 0.0f)));
-
-                // Rebuild ortho-normal basis (no roll): up is derived from WORLD_UP
-                glm::vec3 newRight = glm::normalize(glm::cross(newForward, WORLD_UP));
-                glm::vec3 newUp = glm::normalize(glm::cross(newRight, newForward));
-
-                // Update camera (pivot at LookFrom)
-                camPtr->m_LookAt = camPtr->m_LookFrom + newForward * distance;
-                camPtr->m_Up = newUp;
-            }
-
-            // --------------------------------------------------------------- PAN
-            if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
-            {
-                glm::vec3 pan = (-delta.x * right + delta.y * up) * PAN_SPEED * distance;
-                camPtr->m_LookFrom += pan;
-                camPtr->m_LookAt += pan;
-            }
-
-            // -------------------------------------------------------------- ZOOM
-            if (std::abs(io.MouseWheel) > 0.0f)
-            {
-                const float zoomSens = 0.12f;               // wheel sensitivity per notch
-                const float minDist = 0.05f;                // clamp: don't get stuck on target
-                const float maxDist = 500.0f;               // optional far clamp
-
-                glm::vec3 offset = camPtr->m_LookFrom - camPtr->m_LookAt;
-                float     dist = glm::max(1e-6f, glm::length(offset));
-                glm::vec3 dir = offset / dist;
-
-                // scale distance exponentially (wheel>0 => factor<1 => zoom in)
-                float factor = std::exp(-io.MouseWheel * zoomSens);
-                float newDist = glm::clamp(dist * factor, minDist, maxDist);
-
-                camPtr->m_LookFrom = camPtr->m_LookAt + dir * newDist;
-
-                // update cached values for next pan the same frame
-                distance = newDist;
-                forward = glm::normalize(camPtr->m_LookAt - camPtr->m_LookFrom);
-                right = glm::normalize(glm::cross(forward, camPtr->m_Up));
-                up = glm::normalize(glm::cross(right, forward));
+            if (glm::length2(move) > 0.0f) {
+                move = glm::normalize(move) * (speed * dt);
+                camPtr->m_LookFrom += move;
+                camPtr->m_LookAt   += move;
             }
         }
     }
