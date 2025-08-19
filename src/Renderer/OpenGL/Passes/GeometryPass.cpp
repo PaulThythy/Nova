@@ -16,8 +16,8 @@ using namespace Nova::Components;
 namespace Nova::Renderer::OpenGL {
 
     GeometryPass::GeometryPass(std::unordered_map<entt::entity, GLMeshBuffers>* c) : m_Cache(c) {
-        std::string vertexPath = std::string(SHADER_DIR) + "/vertex.vert";
-        std::string fragmentPath = std::string(SHADER_DIR) + "/fragment.frag";
+        std::string vertexPath = std::string(SHADER_DIR) + "/standard.vert";
+        std::string fragmentPath = std::string(SHADER_DIR) + "/standard.frag";
         m_Program = loadRenderShader(vertexPath, fragmentPath);
 
         if (m_Program == 0) {
@@ -119,14 +119,14 @@ namespace Nova::Renderer::OpenGL {
 
         // ------------------------------------------------------------
         // SHADOW MAP — on n’applique les ombres que pour la Directionnelle
-        // (conforme au fragment.frag que je t’ai donné)
+        // (conforme au standard.frag que je t’ai donné)
         // ------------------------------------------------------------
         if (lightShadows && lightType == 0) {
             glActiveTexture(GL_TEXTURE5);
             glBindTexture(GL_TEXTURE_2D, ctx.m_ShadowTex);
             glUniform1i(glGetUniformLocation(m_Program, "u_ShadowMap"), 5);
 
-            // NB: dans le nouveau fragment.frag, u_ShadowTexelSize est un vec2
+            // NB: dans le nouveau standard.frag, u_ShadowTexelSize est un vec2
             const float ts = 1.0f / float(ctx.m_ShadowSize);
             glUniform2f(glGetUniformLocation(m_Program, "u_ShadowTexelSize"), ts, ts);
         }
