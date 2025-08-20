@@ -39,8 +39,8 @@ namespace Nova::Renderer::OpenGL {
         const GLint uM   = glGetUniformLocation(m_Program, "u_Model");
         glUniformMatrix4fv(uLVP,1,GL_FALSE,glm::value_ptr(ctx.m_LightVP));
 
-        ctx.m_Scene->forEach<TransformComponent, MeshComponent, MeshRendererComponent>([
-            &](entt::entity e, TransformComponent& tf, MeshComponent& mesh, MeshRendererComponent& mr){
+        ctx.m_Scene->forEach<TransformComponent, MeshComponent, MeshRendererComponent>([&]
+            (entt::entity e, TransformComponent& tf, MeshComponent& mesh, MeshRendererComponent& mr){
                 if(!mr.m_CastShadows) return;
                 if(mesh.m_Indices.empty()) return;
                 auto it = m_Cache->find(e); if(it==m_Cache->end()) return;
