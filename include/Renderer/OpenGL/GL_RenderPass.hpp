@@ -32,8 +32,8 @@ namespace Nova::Renderer::OpenGL {
 		int m_ViewportHeight = 1;
 	};
 
-	struct IRenderPass {
-		virtual ~IRenderPass() = default;
+	struct IGL_RenderPass {
+		virtual ~IGL_RenderPass() = default;
 		virtual void execute(const RenderContext& ctx) = 0;
 	};
 

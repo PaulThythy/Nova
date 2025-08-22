@@ -4,7 +4,7 @@
 #include <cstdint>
 
 namespace Nova::Renderer::OpenGL {
-    struct GLMeshBuffers {
+    struct GL_MeshBuffers {
         unsigned m_VAO = 0;
         unsigned m_VBO = 0;
         unsigned m_IBO = 0;

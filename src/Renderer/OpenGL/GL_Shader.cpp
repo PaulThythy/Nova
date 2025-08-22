@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 
-#include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/GL_Shader.hpp"
 
 namespace Nova::Renderer::OpenGL {
 

@@ -6,19 +6,19 @@
 #include <unordered_map>
 
 #include "Renderer/Renderer.hpp"
-#include "Renderer/OpenGL/RenderPass.hpp"
-#include "Renderer/OpenGL/GLMeshBuffers.hpp"
-#include "Renderer/OpenGL/Passes/ShadowPass.hpp"
-#include "Renderer/OpenGL/Passes/GeometryPass.hpp"
-#include "Renderer/OpenGL/Passes/OutlinePass.hpp"
+#include "Renderer/OpenGL/GL_RenderPass.hpp"
+#include "Renderer/OpenGL/GL_MeshBuffers.hpp"
+#include "Renderer/OpenGL/Passes/GL_ShadowPass.hpp"
+#include "Renderer/OpenGL/Passes/GL_GeometryPass.hpp"
+#include "Renderer/OpenGL/Passes/GL_OutlinePass.hpp"
 
 namespace Nova { class Scene; }
 
 namespace Nova::Renderer::OpenGL {
 
-    class ShadowPass;
-    class GeometryPass;
-    class OutlinePass;
+    class GL_ShadowPass;
+    class GL_GeometryPass;
+    class GL_OutlinePass;
 
     class OpenGLRenderer : public IRenderer {
     public:
@@ -45,14 +45,14 @@ namespace Nova::Renderer::OpenGL {
         int      m_ShadowSize = 2048;
 
         // caches
-        std::unordered_map<entt::entity, GLMeshBuffers> m_MeshCache;
+        std::unordered_map<entt::entity, GL_MeshBuffers> m_MeshCache;
 
         // passes
-        std::unique_ptr<ShadowPass>   m_ShadowPass;
-        std::unique_ptr<GeometryPass> m_GeometryPass;
-        std::unique_ptr<OutlinePass>  m_OutlinePass;
+        std::unique_ptr<GL_ShadowPass>   m_ShadowPass;
+        std::unique_ptr<GL_GeometryPass> m_GeometryPass;
+        std::unique_ptr<GL_OutlinePass>  m_OutlinePass;
 
-        GLMeshBuffers createGLMeshBuffers(const Nova::Components::MeshComponent& mesh);
+        GL_MeshBuffers createGLMeshBuffers(const Nova::Components::MeshComponent& mesh);
 
         // utils
         void buildViewportFBO(int w, int h);

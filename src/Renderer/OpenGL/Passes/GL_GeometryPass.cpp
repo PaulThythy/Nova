@@ -2,10 +2,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
-#include "Renderer/OpenGL/RenderPass.hpp"
-#include "Renderer/OpenGL/Passes/GeometryPass.hpp"
+#include "Renderer/OpenGL/GL_RenderPass.hpp"
+#include "Renderer/OpenGL/Passes/GL_GeometryPass.hpp"
 
-#include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/GL_Shader.hpp"
 
 #include "Components/TransformComponent.hpp"
 #include "Components/MeshRendererComponent.hpp"
@@ -15,7 +15,7 @@ using namespace Nova::Components;
 
 namespace Nova::Renderer::OpenGL {
 
-    GeometryPass::GeometryPass(std::unordered_map<entt::entity, GLMeshBuffers>* c) : m_Cache(c) {
+    GL_GeometryPass::GL_GeometryPass(std::unordered_map<entt::entity, GL_MeshBuffers>* c) : m_Cache(c) {
         std::string vertexPath = std::string(SHADER_DIR) + "/standard.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/standard.frag";
         m_Program = loadRenderShader(vertexPath, fragmentPath);
@@ -29,7 +29,7 @@ namespace Nova::Renderer::OpenGL {
         return glm::mat3(glm::transpose(glm::inverse(M)));
     }
 
-    void GeometryPass::execute(const RenderContext& ctx){
+    void GL_GeometryPass::execute(const RenderContext& ctx){
         glBindFramebuffer(GL_FRAMEBUFFER, ctx.m_FBO);
         glViewport(0,0,ctx.m_ViewportWidth,ctx.m_ViewportHeight);
         glEnable(GL_DEPTH_TEST);

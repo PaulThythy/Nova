@@ -2,16 +2,16 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
-#include "Renderer/OpenGL/RenderPass.hpp"
-#include "Renderer/OpenGL/Passes/OutlinePass.hpp"
+#include "Renderer/OpenGL/GL_RenderPass.hpp"
+#include "Renderer/OpenGL/Passes/GL_OutlinePass.hpp"
 
-#include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/GL_Shader.hpp"
 
 using namespace Nova::Components;
 
 namespace Nova::Renderer::OpenGL {
 
-    OutlinePass::OutlinePass(std::unordered_map<entt::entity, GLMeshBuffers>* c) : m_Cache(c) {
+    GL_OutlinePass::GL_OutlinePass(std::unordered_map<entt::entity, GL_MeshBuffers>* c) : m_Cache(c) {
         std::string vertexPath = std::string(SHADER_DIR) + "/outline.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/outline.frag";
         m_OutlineProgram = loadRenderShader(vertexPath, fragmentPath);
@@ -21,7 +21,7 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void OutlinePass::execute(const RenderContext& ctx){
+    void GL_OutlinePass::execute(const RenderContext& ctx){
         if (!ctx.m_Scene || !ctx.m_Scene->hasSelection() || m_OutlineProgram == 0)
             return;
 

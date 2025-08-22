@@ -2,9 +2,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
-#include "Renderer/OpenGL/RenderPass.hpp"
-#include "Renderer/OpenGL/Passes/ShadowPass.hpp"
-#include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/GL_RenderPass.hpp"
+#include "Renderer/OpenGL/Passes/GL_ShadowPass.hpp"
+#include "Renderer/OpenGL/GL_Shader.hpp"
 
 #include "Components/TransformComponent.hpp"
 #include "Components/MeshComponent.hpp"
@@ -14,7 +14,7 @@ using namespace Nova::Components;
 
 namespace Nova::Renderer::OpenGL {
 
-    ShadowPass::ShadowPass(std::unordered_map<entt::entity, GLMeshBuffers>* c, unsigned* fbo, unsigned* tex, int* size) : m_Cache(c), m_FBO(fbo), m_Tex(tex), m_Size(size) {
+    GL_ShadowPass::GL_ShadowPass(std::unordered_map<entt::entity, GL_MeshBuffers>* c, unsigned* fbo, unsigned* tex, int* size) : m_Cache(c), m_FBO(fbo), m_Tex(tex), m_Size(size) {
 
         std::string vertexPath = std::string(SHADER_DIR) + "/shadowDepth.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/shadowDepth.frag";
@@ -25,7 +25,7 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void ShadowPass::execute(const RenderContext& ctx){
+    void GL_ShadowPass::execute(const RenderContext& ctx){
         glViewport(0,0,*m_Size,*m_Size);
         glBindFramebuffer(GL_FRAMEBUFFER,*m_FBO);
         glClear(GL_DEPTH_BUFFER_BIT);

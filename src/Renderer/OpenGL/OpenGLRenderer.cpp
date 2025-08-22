@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Renderer/OpenGL/OpenGLRenderer.hpp"
-#include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/GL_Shader.hpp"
 #include "Components/TransformComponent.hpp"
 #include "Components/LightComponent.hpp"
 
@@ -25,9 +25,9 @@ namespace Nova::Renderer::OpenGL {
         buildViewportFBO(m_W, m_H);
         buildShadowFBO();
 
-        m_ShadowPass   = std::make_unique<ShadowPass>(&m_MeshCache, &m_ShadowFBO, &m_ShadowDepth, &m_ShadowSize);
-        m_GeometryPass = std::make_unique<GeometryPass>(&m_MeshCache);
-        m_OutlinePass  = std::make_unique<OutlinePass>(&m_MeshCache);
+        m_ShadowPass   = std::make_unique<GL_ShadowPass>(&m_MeshCache, &m_ShadowFBO, &m_ShadowDepth, &m_ShadowSize);
+        m_GeometryPass = std::make_unique<GL_GeometryPass>(&m_MeshCache);
+        m_OutlinePass  = std::make_unique<GL_OutlinePass>(&m_MeshCache);
     }
 
     void OpenGLRenderer::buildViewportFBO(int w,int h){
@@ -149,13 +149,13 @@ namespace Nova::Renderer::OpenGL {
 
     void OpenGLRenderer::onMeshConstructed(entt::registry& reg, entt::entity ent) {
         auto& mesh = reg.get<Components::MeshComponent>(ent);
-        GLMeshBuffers entry = createGLMeshBuffers(mesh);
+        GL_MeshBuffers entry = createGLMeshBuffers(mesh);
         m_MeshCache[ent] = entry;
     }
 
-    Renderer::OpenGL::GLMeshBuffers OpenGLRenderer::createGLMeshBuffers(const MeshComponent& mesh) {
+    Renderer::OpenGL::GL_MeshBuffers OpenGLRenderer::createGLMeshBuffers(const MeshComponent& mesh) {
         // Upload vertices/normals + indices, configure VAO
-        Renderer::OpenGL::GLMeshBuffers e{};
+        Renderer::OpenGL::GL_MeshBuffers e{};
         glGenVertexArrays(1, &e.m_VAO);
         glBindVertexArray(e.m_VAO);
 
