@@ -3,7 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Renderer/OpenGL/OpenGLRenderer.hpp"
+#include "Renderer/OpenGL/GL_Renderer.hpp"
 #include "Renderer/OpenGL/GL_Shader.hpp"
 #include "Components/TransformComponent.hpp"
 #include "Components/LightComponent.hpp"
@@ -12,15 +12,15 @@ using namespace Nova::Components;
 
 namespace Nova::Renderer::OpenGL {
 
-    void OpenGLRenderer::init(Nova::Scene& scene) {
+    void GL_Renderer::init(Nova::Scene& scene) {
         m_Scene = &scene;
 
         if (glewInit() != GLEW_OK) {
             std::cerr << "Failed to initialize GLEW\n";
         }
 
-        m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshDestroyed>(this);
-        m_Scene->registry().on_construct<Nova::Components::MeshComponent>().connect<&OpenGLRenderer::onMeshConstructed>(this);
+        m_Scene->registry().on_destroy<Nova::Components::MeshComponent>().connect<&GL_Renderer::onMeshDestroyed>(this);
+        m_Scene->registry().on_construct<Nova::Components::MeshComponent>().connect<&GL_Renderer::onMeshConstructed>(this);
 
         buildViewportFBO(m_W, m_H);
         buildShadowFBO();
@@ -30,7 +30,7 @@ namespace Nova::Renderer::OpenGL {
         m_OutlinePass  = std::make_unique<GL_OutlinePass>(&m_MeshCache);
     }
 
-    void OpenGLRenderer::buildViewportFBO(int w,int h){
+    void GL_Renderer::buildViewportFBO(int w,int h){
         if(m_FBO){ glDeleteFramebuffers(1,&m_FBO); glDeleteTextures(1,&m_ColorTexture); glDeleteRenderbuffers(1,&m_DepthStencil);}    
         glGenFramebuffers(1,&m_FBO);
         glBindFramebuffer(GL_FRAMEBUFFER,m_FBO);
@@ -50,7 +50,7 @@ namespace Nova::Renderer::OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER,0);
     }
 
-    void OpenGLRenderer::buildShadowFBO(){
+    void GL_Renderer::buildShadowFBO(){
         if(m_ShadowFBO){ glDeleteFramebuffers(1,&m_ShadowFBO); glDeleteTextures(1,&m_ShadowDepth);}
 
         glGenFramebuffers(1,&m_ShadowFBO);
@@ -72,7 +72,7 @@ namespace Nova::Renderer::OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER,0);
     }
 
-    void OpenGLRenderer::updateViewportSize(int w,int h){
+    void GL_Renderer::updateViewportSize(int w,int h){
         if(w==m_W && h==m_H) return; m_W=w; m_H=h; buildViewportFBO(w,h);
         // keep camera aspect synced
         if(auto camE = m_Scene->getViewportCamera(); camE!=entt::null){
@@ -81,7 +81,7 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void OpenGLRenderer::render() {
+    void GL_Renderer::render() {
         // fetch camera
         glm::mat4 view(1.0f), proj(1.0f); glm::vec3 camPos(0.0f);
         if(auto camE = m_Scene->getViewportCamera(); camE!=entt::null){
@@ -138,7 +138,7 @@ namespace Nova::Renderer::OpenGL {
         m_OutlinePass->execute(ctx);
     }
 
-    void OpenGLRenderer::onMeshDestroyed(entt::registry& reg, entt::entity ent) {
+    void GL_Renderer::onMeshDestroyed(entt::registry& reg, entt::entity ent) {
         if (auto it = m_MeshCache.find(ent); it != m_MeshCache.end()) {
             glDeleteBuffers  (1, &it->second.m_VBO);
             glDeleteBuffers  (1, &it->second.m_IBO);
@@ -147,13 +147,13 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void OpenGLRenderer::onMeshConstructed(entt::registry& reg, entt::entity ent) {
+    void GL_Renderer::onMeshConstructed(entt::registry& reg, entt::entity ent) {
         auto& mesh = reg.get<Components::MeshComponent>(ent);
         GL_MeshBuffers entry = createGLMeshBuffers(mesh);
         m_MeshCache[ent] = entry;
     }
 
-    Renderer::OpenGL::GL_MeshBuffers OpenGLRenderer::createGLMeshBuffers(const MeshComponent& mesh) {
+    Renderer::OpenGL::GL_MeshBuffers GL_Renderer::createGLMeshBuffers(const MeshComponent& mesh) {
         // Upload vertices/normals + indices, configure VAO
         Renderer::OpenGL::GL_MeshBuffers e{};
         glGenVertexArrays(1, &e.m_VAO);
@@ -185,7 +185,7 @@ namespace Nova::Renderer::OpenGL {
         return e;
     }
 
-    void OpenGLRenderer::destroy() {
+    void GL_Renderer::destroy() {
         // Delete viewport FBO resources
         glDeleteFramebuffers(1, &m_FBO);
         glDeleteTextures(1, &m_ColorTexture);

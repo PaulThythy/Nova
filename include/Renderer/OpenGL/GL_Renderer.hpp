@@ -1,5 +1,5 @@
-#ifndef OPENGL_RENDERER_HPP
-#define OPENGL_RENDERER_HPP
+#ifndef GL_RENDERER_HPP
+#define GL_RENDERER_HPP
 
 #include <GL/glew.h>
 #include <entt/entt.hpp>
@@ -20,7 +20,7 @@ namespace Nova::Renderer::OpenGL {
     class GL_GeometryPass;
     class GL_OutlinePass;
 
-    class OpenGLRenderer : public IRenderer {
+    class GL_Renderer : public IRenderer {
     public:
         void init(Nova::Scene& scene) override;
         void render() override;
@@ -62,4 +62,4 @@ namespace Nova::Renderer::OpenGL {
     };
 } // namespace Nova::Renderer::OpenGL
 
-#endif // OPENGL_RENDERER_HPP
+#endif // GL_RENDERER_HPP
