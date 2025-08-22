@@ -1,5 +1,5 @@
-#ifndef SHADOW_PASS_HPP
-#define SHADOW_PASS_HPP
+#ifndef GL_SHADOW_PASS_HPP
+#define GL_SHADOW_PASS_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -22,4 +22,4 @@ namespace Nova::Renderer::OpenGL {
     };
 }
 
-#endif // SHADOW_PASS_HPP
+#endif // GL_SHADOW_PASS_HPP

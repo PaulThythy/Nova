@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_HPP
-#define RENDER_PASS_HPP
+#ifndef GL_RENDER_PASS_HPP
+#define GL_RENDER_PASS_HPP
 
 #include <glm/glm.hpp>
 
@@ -39,5 +39,5 @@ namespace Nova::Renderer::OpenGL {
 
 } // namespace Nova::Renderer::OpenGL
 
-#endif // RENDER_PASS_HPP
+#endif // GL_RENDER_PASS_HPP
 

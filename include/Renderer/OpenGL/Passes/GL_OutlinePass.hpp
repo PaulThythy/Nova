@@ -1,5 +1,5 @@
-#ifndef OUTLINE_PASS_HPP
-#define OUTLINE_PASS_HPP
+#ifndef GL_OUTLINE_PASS_HPP
+#define GL_OUTLINE_PASS_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -21,4 +21,4 @@ namespace Nova::Renderer::OpenGL {
 
 }
 
-#endif // OUTLINE_PASS_HPP
+#endif // GL_OUTLINE_PASS_HPP

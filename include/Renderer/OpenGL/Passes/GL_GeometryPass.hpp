@@ -1,5 +1,5 @@
-#ifndef GEOMETRY_PASS_HPP
-#define GEOMETRY_PASS_HPP
+#ifndef GL_GEOMETRY_PASS_HPP
+#define GL_GEOMETRY_PASS_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -20,4 +20,4 @@ namespace Nova::Renderer::OpenGL {
 
 }
 
-#endif // GEOMETRY_PASS_HPP
+#endif // GL_GEOMETRY_PASS_HPP

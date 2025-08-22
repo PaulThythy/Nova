@@ -1,5 +1,5 @@
-#ifndef SHADER_HPP
-#define SHADER_HPP
+#ifndef GL_SHADER_HPP
+#define GL_SHADER_HPP
 
 #include <GL/glew.h>
 
@@ -15,4 +15,4 @@ namespace Nova::Renderer::OpenGL {
 
 } // namespace Nova::Renderer::OpenGL
 
-#endif // SHADER_HPP
+#endif // GL_SHADER_HPP
