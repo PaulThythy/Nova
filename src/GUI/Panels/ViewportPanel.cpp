@@ -32,9 +32,9 @@ namespace Nova::GUI {
 
     void controls(Nova::Scene& scene) {
         // Tunables (per second / per pixel)
-        constexpr float ROTATE_SPEED = 0.005f;   // radians per pixel per second
-        constexpr float PAN_SPEED    = 0.002f;   // world units per pixel per second (scaled by distance)
-        constexpr float MOVE_SPEED   = 5.0f;     // world units per second (ZQSD)
+        constexpr float ROTATE_SPEED = 0.005f;      // radians per pixel per second
+        constexpr float PAN_SPEED    = 0.2f;        // world units per pixel per second (scaled by distance)
+        constexpr float MOVE_SPEED   = 5.0f;        // world units per second (ZQSD)
 
         static ImVec2 lastMousePos{ 0,0 };
 
