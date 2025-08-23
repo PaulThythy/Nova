@@ -18,14 +18,14 @@ namespace Nova::Renderer::OpenGL {
     GL_GeometryPass::GL_GeometryPass(std::unordered_map<entt::entity, GL_MeshBuffers>* c) : m_Cache(c) {
         std::string vertexPath = std::string(SHADER_DIR) + "/standard.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/standard.frag";
-        m_Program = loadRenderShader(vertexPath, fragmentPath);
+        m_Program = LoadRenderShader(vertexPath, fragmentPath);
 
         if (m_Program == 0) {
             std::cerr << "Failed to load/compile shaders!" << std::endl;
         }
     }
 
-    static inline glm::mat3 normalMatrix(const glm::mat4& M){
+    static inline glm::mat3 NormalMatrix(const glm::mat4& M){
         return glm::mat3(glm::transpose(glm::inverse(M)));
     }
 
@@ -137,7 +137,7 @@ namespace Nova::Renderer::OpenGL {
 
             auto it = m_Cache->find(e); if(it==m_Cache->end()) return;
 
-            glm::mat4 M = tf.GetTransform(); glm::mat3 N = normalMatrix(M);
+            glm::mat4 M = tf.GetTransform(); glm::mat3 N = NormalMatrix(M);
             glUniformMatrix4fv(uM,1,GL_FALSE,glm::value_ptr(M));
             glUniformMatrix3fv(uN,1,GL_FALSE,glm::value_ptr(N));
 

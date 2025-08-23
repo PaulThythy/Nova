@@ -14,7 +14,7 @@ namespace Nova::Renderer::OpenGL {
     GL_OutlinePass::GL_OutlinePass(std::unordered_map<entt::entity, GL_MeshBuffers>* c) : m_Cache(c) {
         std::string vertexPath = std::string(SHADER_DIR) + "/outline.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/outline.frag";
-        m_OutlineProgram = loadRenderShader(vertexPath, fragmentPath);
+        m_OutlineProgram = LoadRenderShader(vertexPath, fragmentPath);
 
         if (m_OutlineProgram == 0) {
             std::cerr << "Failed to load/compile shaders!" << std::endl;

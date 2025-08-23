@@ -18,7 +18,7 @@ namespace Nova::Renderer::OpenGL {
 
         std::string vertexPath = std::string(SHADER_DIR) + "/shadowDepth.vert";
         std::string fragmentPath = std::string(SHADER_DIR) + "/shadowDepth.frag";
-        m_Program = loadRenderShader(vertexPath, fragmentPath);
+        m_Program = LoadRenderShader(vertexPath, fragmentPath);
 
         if (m_Program == 0) {
             std::cerr << "Failed to load/compile shaders!" << std::endl;

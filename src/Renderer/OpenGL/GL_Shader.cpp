@@ -7,7 +7,7 @@
 
 namespace Nova::Renderer::OpenGL {
 
-    std::string readFile(const std::string& filePath) {
+    std::string ReadFile(const std::string& filePath) {
         std::ifstream file(filePath);
         if (!file.is_open()) 
         {
@@ -20,7 +20,7 @@ namespace Nova::Renderer::OpenGL {
         return buffer.str();
     }
 
-    GLuint compileShader(GLenum shaderType, const std::string& shaderCode) {
+    GLuint CompileShader(GLenum shaderType, const std::string& shaderCode) {
         if (shaderCode.empty())
             return 0;
 
@@ -45,7 +45,7 @@ namespace Nova::Renderer::OpenGL {
         return shaderID;
     }
 
-    GLuint linkProgram(const std::initializer_list<GLuint>& shaderIDs) {
+    GLuint LinkProgram(const std::initializer_list<GLuint>& shaderIDs) {
         GLuint programID = glCreateProgram();
 
         for (auto sid : shaderIDs) 
@@ -83,28 +83,28 @@ namespace Nova::Renderer::OpenGL {
         return programID;
     }
 
-    GLuint loadRenderShader(const std::string& vertexPath, const std::string& fragmentPath) {
-        std::string vertexCode = readFile(vertexPath);
-        GLuint vertexID = compileShader(GL_VERTEX_SHADER, vertexCode);
+    GLuint LoadRenderShader(const std::string& vertexPath, const std::string& fragmentPath) {
+        std::string vertexCode = ReadFile(vertexPath);
+        GLuint vertexID = CompileShader(GL_VERTEX_SHADER, vertexCode);
         if (!vertexID)
             return 0;
 
-        std::string fragmentCode = readFile(fragmentPath);
-        GLuint fragmentID = compileShader(GL_FRAGMENT_SHADER, fragmentCode);
+        std::string fragmentCode = ReadFile(fragmentPath);
+        GLuint fragmentID = CompileShader(GL_FRAGMENT_SHADER, fragmentCode);
         if (!fragmentID)
             return 0;
 
-        GLuint programID = linkProgram({ vertexID, fragmentID });
+        GLuint programID = LinkProgram({ vertexID, fragmentID });
         return programID;
     }
 
-    GLuint loadComputeShader(const std::string& computePath) {
-        std::string computeCode = readFile(computePath);
-        GLuint computeID = compileShader(GL_COMPUTE_SHADER, computeCode);
+    GLuint LoadComputeShader(const std::string& computePath) {
+        std::string computeCode = ReadFile(computePath);
+        GLuint computeID = CompileShader(GL_COMPUTE_SHADER, computeCode);
         if (!computeID)
             return 0;
 
-        GLuint programID = linkProgram({ computeID });
+        GLuint programID = LinkProgram({ computeID });
         return programID;
     }
 } // namespace Nova::Renderer::OpenGL
