@@ -26,7 +26,7 @@
 
 namespace Nova::GUI {
 
-    void setupDockSpace(bool useIni, ImGuiID dockspace_id) {
+    void SetupDockSpace(bool useIni, ImGuiID dockspace_id) {
         static bool dock_initialized = false;
         if (!dock_initialized && !useIni && ImGui::DockBuilderGetNode(dockspace_id)) {
             dock_initialized = true;
@@ -52,7 +52,7 @@ namespace Nova::GUI {
         }
     }
 
-    void render(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene) {
+    void Render(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene) {
         bool useIni = (bool)(intptr_t)ImGui::GetIO().UserData;
 
         // ------ DockSpace ------
@@ -73,16 +73,16 @@ namespace Nova::GUI {
         ImGuiID dockspace_id = ImGui::GetID("NovaDockspace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
 
-        setupDockSpace(useIni, dockspace_id);
+        SetupDockSpace(useIni, dockspace_id);
 
         ImGui::End();
 
         // ------ Panels ------
-        renderHierarchyPanel(scene);
-        renderViewportPanel(renderer, scene);
-        renderInspectorPanel(scene);
-        renderAssetBrowserPanel(scene);
-        renderMainMenuBar(scene);
+        HierarchyPanel::Render(scene);
+        ViewportPanel::Render(renderer, scene);
+        InspectorPanel::Render(scene);
+        AssetBrowserPanel::Render(scene);
+        MainMenuBar::Render(scene);
 
         // ===== DEBUG =====
 #if NOVA_DEBUG

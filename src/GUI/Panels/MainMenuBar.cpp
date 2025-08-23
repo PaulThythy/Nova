@@ -1,9 +1,9 @@
 #include "GUI/Panels/MainMenuBar.hpp"
 #include "imgui.h"
 
-namespace Nova::GUI {
+namespace Nova::GUI::MainMenuBar {
 
-    void renderMainMenuBar(Nova::Scene& scene) {
+    void Render(Nova::Scene& scene) {
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0,0,0,0));
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {

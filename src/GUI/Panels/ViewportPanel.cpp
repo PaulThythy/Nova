@@ -7,9 +7,9 @@
 
 #include <iostream>
 
-namespace Nova::GUI {
+namespace Nova::GUI::ViewportPanel {
 
-    void renderViewportPanel(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene) {
+    void Render(Nova::Renderer::IRenderer* renderer, Nova::Scene& scene) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -18,22 +18,22 @@ namespace Nova::GUI {
 
         ImGui::Image((ImTextureID)renderer->getImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
 
-        controls(scene);
+        Controls(scene);
 
-        deleteSelection(scene);
+        DeleteSelection(scene);
 
-        clearSelection(scene);
+        ClearSelection(scene);
 
-        picking(scene, size);
+        Picking(scene, size);
 
         ImGui::End();
         ImGui::PopStyleVar();
     }
 
-    void controls(Nova::Scene& scene) {
+    void Controls(Nova::Scene& scene) {
         // Tunables (per second / per pixel)
-        constexpr float ROTATE_SPEED = 0.005f;      // radians per pixel per second
-        constexpr float PAN_SPEED    = 0.2f;        // world units per pixel per second (scaled by distance)
+        constexpr float ROTATE_SPEED = 0.002f;      // radians per pixel per second
+        constexpr float PAN_SPEED    = 0.1f;        // world units per pixel per second (scaled by distance)
         constexpr float MOVE_SPEED   = 5.0f;        // world units per second (ZQSD)
 
         static ImVec2 lastMousePos{ 0,0 };
@@ -164,12 +164,12 @@ namespace Nova::GUI {
         }
     }
 
-    void clearSelection(Nova::Scene& scene) {
+    void ClearSelection(Nova::Scene& scene) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Escape))
             scene.clearSelection();
     }
     
-    void deleteSelection(Nova::Scene& scene) {
+    void DeleteSelection(Nova::Scene& scene) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
             auto selected = scene.getSelected();
             if (!selected.empty()) {
@@ -180,7 +180,7 @@ namespace Nova::GUI {
         }
     }
 
-    void picking(Nova::Scene& scene, ImVec2 size) {
+    void Picking(Nova::Scene& scene, ImVec2 size) {
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             // mouse position relative to image quad
             ImVec2 mouse = ImGui::GetMousePos();

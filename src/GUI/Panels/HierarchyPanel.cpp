@@ -1,9 +1,9 @@
 #include "GUI/Panels/HierarchyPanel.hpp"
 #include "imgui.h"
 
-namespace Nova::GUI {
+namespace Nova::GUI::HierarchyPanel {
 
-    void renderHierarchyPanel(Nova::Scene& scene) {
+    void Render(Nova::Scene& scene) {
         ImGui::Begin("Hierarchy");
 
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape))

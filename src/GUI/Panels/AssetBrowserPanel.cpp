@@ -1,9 +1,9 @@
 #include "GUI/Panels/InspectorPanel.hpp"
 #include "imgui.h"
 
-namespace Nova::GUI {
+namespace Nova::GUI::AssetBrowserPanel {
 
-    void renderAssetBrowserPanel(Nova::Scene& scene) {
+    void Render(Nova::Scene& scene) {
         ImGui::Begin("Asset Browser");
         ImGui::Text("asset_1.obj");
         ImGui::Text("material_wood.mat");

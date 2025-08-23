@@ -3,8 +3,8 @@
 
 #include "Scene/Scene.hpp"
 
-namespace Nova::GUI {
-    void renderAssetBrowserPanel(Nova::Scene& scene);
+namespace Nova::GUI::AssetBrowserPanel {
+    void Render(Nova::Scene& scene);
 }
 
 #endif //ASSETBROWSER_PANEL_HPP

@@ -2,9 +2,9 @@
 #include "imgui.h"
 #include "Components/MeshRendererComponent.hpp"
 
-namespace Nova::GUI {
+namespace Nova::GUI::InspectorPanel {
 
-    void drawTRSvectors(const char* label, const char* xButtonLabel, const char* xInputLabel,
+    void DrawTRSvectors(const char* label, const char* xButtonLabel, const char* xInputLabel,
                         const char* yButtonLabel, const char* yInputLabel,
                         const char* zButtonLabel, const char* zInputLabel,
                         glm::vec3& values, float inputW, float badgeW, float groupSpacing) {
@@ -52,17 +52,17 @@ namespace Nova::GUI {
         ImGui::PopItemWidth();
     }
 
-    void drawTransform(entt::registry& reg, entt::entity e, float inputW, float badgeW, float groupSpacing) {
+    void DrawTransform(entt::registry& reg, entt::entity e, float inputW, float badgeW, float groupSpacing) {
         if (!reg.any_of<Nova::Components::TransformComponent>(e)) return;
         if(ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-            drawTRSvectors("Position", "X###posXBadge", "##posX", "Y###posYBadge", "##posY", "Z###posZBadge", "##posZ", reg.get<Nova::Components::TransformComponent>(e).m_Position, inputW, badgeW, groupSpacing);
-            drawTRSvectors("Rotation", "X###rotXBadge", "##rotX", "Y###rotYBadge", "##rotY", "Z###rotZBadge", "##rotZ", reg.get<Nova::Components::TransformComponent>(e).m_Rotation, inputW, badgeW, groupSpacing);
-            drawTRSvectors("Scale", "X###scaleXBadge", "##scaleX", "Y###scaleYBadge", "##scaleY", "Z###scaleZBadge", "##scaleZ", reg.get<Nova::Components::TransformComponent>(e).m_Scale, inputW, badgeW, groupSpacing);
+            DrawTRSvectors("Position", "X###posXBadge", "##posX", "Y###posYBadge", "##posY", "Z###posZBadge", "##posZ", reg.get<Nova::Components::TransformComponent>(e).m_Position, inputW, badgeW, groupSpacing);
+            DrawTRSvectors("Rotation", "X###rotXBadge", "##rotX", "Y###rotYBadge", "##rotY", "Z###rotZBadge", "##rotZ", reg.get<Nova::Components::TransformComponent>(e).m_Rotation, inputW, badgeW, groupSpacing);
+            DrawTRSvectors("Scale", "X###scaleXBadge", "##scaleX", "Y###scaleYBadge", "##scaleY", "Z###scaleZBadge", "##scaleZ", reg.get<Nova::Components::TransformComponent>(e).m_Scale, inputW, badgeW, groupSpacing);
         }
     }
 
-    void drawMeshRenderer(entt::registry& reg, entt::entity e) {
+    void DrawMeshRenderer(entt::registry& reg, entt::entity e) {
         if (auto* mr = reg.try_get<Components::MeshRendererComponent>(e)) {
             if(ImGui::CollapsingHeader("Mesh Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Checkbox("Visible", &mr->m_Visible);
@@ -85,7 +85,7 @@ namespace Nova::GUI {
         }
     }
 
-    void renderInspectorPanel(Nova::Scene& scene) {
+    void Render(Nova::Scene& scene) {
         ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::Separator();
@@ -112,8 +112,8 @@ namespace Nova::GUI {
         entt::entity selectedEntity = *selectedEntities.begin();            //take first element
         auto& reg = scene.registry();
 
-        drawTransform(reg, selectedEntity, inputW, badgeW, groupSpacing);
-        drawMeshRenderer(reg, selectedEntity);
+        DrawTransform(reg, selectedEntity, inputW, badgeW, groupSpacing);
+        DrawMeshRenderer(reg, selectedEntity);
 
         ImGui::End();
     }
