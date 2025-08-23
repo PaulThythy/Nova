@@ -26,15 +26,15 @@ namespace Nova::Core {
         Application();
         ~Application();
 
-        void run();
+        void Run();
 
         enum class RunMode {
             Editor,
             Game
         };
-        void    setRunMode(RunMode m) {
+        void    SetRunMode(RunMode m) {
             m_RunMode = m;
-            m_InputManager.setRunMode(m);
+            m_InputManager.SetRunMode(m);
         }
         RunMode runMode() const         { return m_RunMode; }
 
@@ -44,15 +44,15 @@ namespace Nova::Core {
         bool m_ShowDemoWindow       = true;
         bool m_ShowAnotherWindow    = true;
 
-        void initEngine();
-        void destroyEngine();
+        void InitEngine();
+        void DestroyEngine();
 
-        void setupSDL();
-        void initSDL();
-        void destroySDL();
+        void SetupSDL();
+        void InitSDL();
+        void DestroySDL();
 
-        void initImGui();
-        void destroyImGui();
+        void InitImGui();
+        void DestroyImGui();
 
         SDL_Window* m_Window        = nullptr;
         SDL_GLContext m_GLContext   = nullptr;
@@ -62,7 +62,7 @@ namespace Nova::Core {
 
         RunMode m_RunMode;
 
-        Nova::Input::InputManager& m_InputManager = Nova::Input::InputManager::instance();
+        Nova::Input::InputManager& m_InputManager = Nova::Input::InputManager::Instance();
     };
 } // namespace Nova::Core
 

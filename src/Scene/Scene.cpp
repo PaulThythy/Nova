@@ -2,7 +2,7 @@
 
 namespace Nova {
 
-    std::optional<Scene::RayHitEntity> Scene::pickEntity(const Math::Ray& rayWorld, entt::registry&  reg) {
+    std::optional<Scene::RayHitEntity> Scene::PickEntity(const Math::Ray& rayWorld, entt::registry&  reg) {
         std::optional<Scene::RayHitEntity> best;
 
         auto view = reg.view<Nova::Components::MeshComponent, Nova::Components::TransformComponent>();
@@ -29,7 +29,7 @@ namespace Nova {
                 const glm::vec3& v1 = mesh.m_Vertices[ mesh.m_Indices[i+1] ];
                 const glm::vec3& v2 = mesh.m_Vertices[ mesh.m_Indices[i+2] ];
                 float t;
-                if(Math::rayTriangle(ray, v0,v1,v2, t))
+                if(Math::RayTriangle(ray, v0,v1,v2, t))
                     if (t > 0.0f && t < closestT) {
                         closestT = t;
                     }
@@ -43,7 +43,7 @@ namespace Nova {
 
             float tWorld = glm::dot(hitWorld - rayWorld.m_Origin, dirW); // dirW normalisé
             if (tWorld > 0.0f) {
-                if (!best || tWorld < best->distance) {
+                if (!best || tWorld < best->m_Distance) {
                     best = Scene::RayHitEntity{ e, tWorld };
                 }
             }

@@ -34,7 +34,7 @@ namespace Nova::Renderer::OpenGL {
 
 	struct IGL_RenderPass {
 		virtual ~IGL_RenderPass() = default;
-		virtual void execute(const RenderContext& ctx) = 0;
+		virtual void Execute(const RenderContext& ctx) = 0;
 	};
 
 } // namespace Nova::Renderer::OpenGL

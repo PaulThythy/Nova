@@ -18,17 +18,17 @@ namespace Nova {
         Scene() = default;
         ~Scene() = default;
     
-        entt::registry& registry() { return m_Registry; }
-        const entt::registry& registry() const { return m_Registry; }
+        entt::registry& Registry() { return m_Registry; }
+        const entt::registry& Registry() const { return m_Registry; }
 
         struct RayHitEntity {
-            entt::entity  entity;
-            float         distance;
+            entt::entity  m_Entity;
+            float         m_Distance;
         };
 
-        std::optional<RayHitEntity> pickEntity(const Math::Ray& rayWorld, entt::registry&  reg);
+        std::optional<RayHitEntity> PickEntity(const Math::Ray& rayWorld, entt::registry&  reg);
 
-        entt::entity createEntity(const std::string& tag = "") {
+        entt::entity CreateEntity(const std::string& tag = "") {
             entt::entity entity = m_Registry.create();
             if (!tag.empty()) {
                 m_Registry.emplace<Nova::Components::TagComponent>(entity, tag);
@@ -36,32 +36,32 @@ namespace Nova {
             return entity;
         }
 
-        entt::entity getViewportCamera() const { return m_ViewportCamera; }
+        entt::entity GetViewportCamera() const { return m_ViewportCamera; }
 
-        entt::entity createViewportCamera(const std::string& tag = "ViewportCamera") {
-            entt::entity cam = createEntity(tag);
+        entt::entity CreateViewportCamera(const std::string& tag = "ViewportCamera") {
+            entt::entity cam = CreateEntity(tag);
             m_Registry.emplace<Nova::Components::CameraComponent>(cam);
-            auto &camera = registry().get<Nova::Components::CameraComponent>(cam);
+            auto &camera = Registry().get<Nova::Components::CameraComponent>(cam);
             camera.m_IsViewportCamera= true;
             m_ViewportCamera = cam;
             return cam;
         }
 
         template<typename... Comps, typename Func>
-        void forEach(Func&& system) {
+        void ForEach(Func&& system) {
             m_Registry.view<Comps...>().each(std::forward<Func>(system));
         }
 
-        void addToSelection(entt::entity e)      {m_Selected.insert(e);}
-        void removeFromSelection(entt::entity e) { m_Selected.erase(e); }
-        void clearSelection()                    { m_Selected.clear(); }
-        bool isSelected(entt::entity e) const    { return m_Selected.count(e) > 0; }
-        bool hasSelection() const               { return !m_Selected.empty(); }
-        void destroyEntity(entt::entity e) {
-            if (isSelected(e)) removeFromSelection(e);
+        void AddToSelection(entt::entity e)      {m_Selected.insert(e);}
+        void RemoveFromSelection(entt::entity e) { m_Selected.erase(e); }
+        void ClearSelection()                    { m_Selected.clear(); }
+        bool IsSelected(entt::entity e) const    { return m_Selected.count(e) > 0; }
+        bool HasSelection() const               { return !m_Selected.empty(); }
+        void DestroyEntity(entt::entity e) {
+            if (IsSelected(e)) RemoveFromSelection(e);
             if (m_Registry.valid(e)) m_Registry.destroy(e);
         }
-        const std::unordered_set<entt::entity>& getSelected() const { return m_Selected; }
+        const std::unordered_set<entt::entity>& GetSelected() const { return m_Selected; }
 
     private:
 

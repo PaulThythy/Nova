@@ -12,7 +12,7 @@ namespace Nova::Renderer::OpenGL {
     class GL_OutlinePass : public IGL_RenderPass {
     public:
         explicit GL_OutlinePass(std::unordered_map<entt::entity, GL_MeshBuffers>* cache);
-        void execute(const RenderContext& ctx) override;
+        void Execute(const RenderContext& ctx) override;
 
     private:
         std::unordered_map<entt::entity, GL_MeshBuffers>* m_Cache;

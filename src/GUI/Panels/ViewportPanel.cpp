@@ -14,9 +14,9 @@ namespace Nova::GUI::ViewportPanel {
         ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImVec2 size = ImGui::GetContentRegionAvail();
-        renderer->updateViewportSize((int)size.x, (int)size.y);
+        renderer->UpdateViewportSize((int)size.x, (int)size.y);
 
-        ImGui::Image((ImTextureID)renderer->getImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::Image((ImTextureID)renderer->GetImGuiTextureID(), size, ImVec2(0, 1), ImVec2(1, 0));
 
         Controls(scene);
 
@@ -38,10 +38,10 @@ namespace Nova::GUI::ViewportPanel {
 
         static ImVec2 lastMousePos{ 0,0 };
 
-        auto camE = scene.getViewportCamera();
+        auto camE = scene.GetViewportCamera();
         Nova::Components::CameraComponent* camPtr = nullptr;
         if (camE != entt::null)
-            camPtr = &scene.registry().get<Nova::Components::CameraComponent>(camE);
+            camPtr = &scene.Registry().get<Nova::Components::CameraComponent>(camE);
         if (!camPtr) return;
 
         ImGuiIO& io = ImGui::GetIO();
@@ -166,16 +166,16 @@ namespace Nova::GUI::ViewportPanel {
 
     void ClearSelection(Nova::Scene& scene) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Escape))
-            scene.clearSelection();
+            scene.ClearSelection();
     }
     
     void DeleteSelection(Nova::Scene& scene) {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-            auto selected = scene.getSelected();
+            auto selected = scene.GetSelected();
             if (!selected.empty()) {
                 for (auto entity : selected)
-                    scene.destroyEntity(entity);
-                scene.clearSelection();
+                    scene.DestroyEntity(entity);
+                scene.ClearSelection();
             }
         }
     }
@@ -188,44 +188,44 @@ namespace Nova::GUI::ViewportPanel {
             ImVec2 rel = ImVec2(mouse.x - rmin.x, mouse.y - rmin.y);
 
             // camera
-            auto camE = scene.getViewportCamera();
+            auto camE = scene.GetViewportCamera();
             if (camE != entt::null) {
-                const auto& cam = scene.registry().get<Nova::Components::CameraComponent>(camE);
+                const auto& cam = scene.Registry().get<Nova::Components::CameraComponent>(camE);
 
                 glm::vec2 mouseViewport(rel.x, rel.y);
                 glm::vec2 vpSize(size.x, size.y);
 
-                Nova::Math::Ray ray = Nova::Math::mouseClickRayCast(
+                Nova::Math::Ray ray = Nova::Math::MouseClickRayCast(
                     mouseViewport, vpSize,
-                    cam.getViewMatrix(),
-                    cam.getProjectionMatrix(),
+                    cam.GetViewMatrix(),
+                    cam.GetProjectionMatrix(),
                     cam.m_LookFrom
                 );
 
                 ImGuiIO& io = ImGui::GetIO();
 
-                if (auto hit = scene.pickEntity(ray, scene.registry())) {
+                if (auto hit = scene.PickEntity(ray, scene.Registry())) {
 
                     if (io.KeyShift || io.KeyCtrl) {
                         // Ajout à la sélection existante si Maj/Ctrl est enfoncé
-                        if (scene.isSelected(hit->entity)) {
+                        if (scene.IsSelected(hit->m_Entity)) {
                             // Si déjà sélectionné, on le retire
-                            scene.removeFromSelection(hit->entity);
+                            scene.RemoveFromSelection(hit->m_Entity);
                         }
                         else {
                             // Sinon on l'ajoute
-                            scene.addToSelection(hit->entity);
+                            scene.AddToSelection(hit->m_Entity);
                         }
                     }
                     else {
                         // Pas de Maj/Ctrl - sélection simple (remplace la sélection actuelle)
-                        scene.clearSelection();
-                        scene.addToSelection(hit->entity);
+                        scene.ClearSelection();
+                        scene.AddToSelection(hit->m_Entity);
                     }
                 }
                 else {
                     if (!(io.KeyShift || io.KeyCtrl)) {
-                        scene.clearSelection();
+                        scene.ClearSelection();
                     }
                 }
             }

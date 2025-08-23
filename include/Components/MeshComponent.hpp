@@ -14,7 +14,7 @@ namespace Nova::Components {
 
         MeshComponent() = default;
 
-        void initPlane() {
+        void InitPlane() {
             m_Vertices.clear();
             m_Normals.clear();
             m_Indices.clear();
@@ -32,7 +32,7 @@ namespace Nova::Components {
             };
         }
 
-        void initSphere(int latitudeSegments = 16, int longitudeSegments = 32) {
+        void InitSphere(int latitudeSegments = 16, int longitudeSegments = 32) {
             m_Vertices.clear();
             m_Normals.clear();
             m_Indices.clear();
@@ -69,7 +69,7 @@ namespace Nova::Components {
             }
         }
 
-        void initCube(float halfExtent = 0.5f) {
+        void InitCube(float halfExtent = 0.5f) {
             m_Vertices.clear();
             m_Normals.clear();
             m_Indices.clear();
@@ -117,7 +117,7 @@ namespace Nova::Components {
                 { -h, -h,  h }, { h, -h,  h }, { h, -h, -h }, { -h, -h, -h });
         }
 
-        void initCylinder(float radius = 0.5f, float height = 1.0f, int radialSegments = 32, int heightSegments = 1) {
+        void InitCylinder(float radius = 0.5f, float height = 1.0f, int radialSegments = 32, int heightSegments = 1) {
             m_Vertices.clear();
             m_Normals.clear();
             m_Indices.clear();
@@ -220,7 +220,7 @@ namespace Nova::Components {
             }
         }
 
-        void initCapsule(float radius = 0.5f, float cylinderHeight = 1.0f, int radialSegments = 32, int heightSegments = 1, int hemisphereRings = 8) {
+        void InitCapsule(float radius = 0.5f, float cylinderHeight = 1.0f, int radialSegments = 32, int heightSegments = 1, int hemisphereRings = 8) {
             m_Vertices.clear();
             m_Normals.clear();
             m_Indices.clear();

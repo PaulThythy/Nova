@@ -25,7 +25,7 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void GL_ShadowPass::execute(const RenderContext& ctx){
+    void GL_ShadowPass::Execute(const RenderContext& ctx){
         glViewport(0,0,*m_Size,*m_Size);
         glBindFramebuffer(GL_FRAMEBUFFER,*m_FBO);
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -39,7 +39,7 @@ namespace Nova::Renderer::OpenGL {
         const GLint uM   = glGetUniformLocation(m_Program, "u_Model");
         glUniformMatrix4fv(uLVP,1,GL_FALSE,glm::value_ptr(ctx.m_LightVP));
 
-        ctx.m_Scene->forEach<TransformComponent, MeshComponent, MeshRendererComponent>([&]
+        ctx.m_Scene->ForEach<TransformComponent, MeshComponent, MeshRendererComponent>([&]
             (entt::entity e, TransformComponent& tf, MeshComponent& mesh, MeshRendererComponent& mr){
                 if(!mr.m_CastShadows) return;
                 if(mesh.m_Indices.empty()) return;

@@ -12,7 +12,7 @@ namespace Nova::Renderer::OpenGL {
     class GL_GeometryPass : public IGL_RenderPass {
     public:
         explicit GL_GeometryPass(std::unordered_map<entt::entity, GL_MeshBuffers>* cache);
-        void execute(const RenderContext& ctx) override;
+        void Execute(const RenderContext& ctx) override;
     private:
         std::unordered_map<entt::entity, GL_MeshBuffers>* m_Cache;
         unsigned m_Program=0; // lit PBR-ish

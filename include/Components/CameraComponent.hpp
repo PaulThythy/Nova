@@ -22,11 +22,11 @@ namespace Nova::Components {
         CameraComponent() = default;
         ~CameraComponent() = default;
 
-        glm::mat4 getViewMatrix() const {
+        glm::mat4 GetViewMatrix() const {
             return glm::lookAt(m_LookFrom, m_LookAt, m_Up);
         }
 
-        glm::mat4 getProjectionMatrix() const {
+        glm::mat4 GetProjectionMatrix() const {
             return glm::perspective(glm::radians(m_Fov), m_AspectRatio, m_NearPlane, m_FarPlane);
         }
     };

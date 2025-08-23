@@ -3,7 +3,7 @@
 
 namespace Nova::Renderer {
 
-    IRenderer* createRenderer(GraphicsAPI api) {
+    IRenderer* CreateRenderer(GraphicsAPI api) {
         switch(api) {
             case GraphicsAPI::OpenGL:
                 return new OpenGL::GL_Renderer();

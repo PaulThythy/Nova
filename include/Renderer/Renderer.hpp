@@ -11,18 +11,18 @@ namespace Nova::Renderer {
 
     class IRenderer {
     public:
-        virtual void init(Nova::Scene& scene) = 0;
-        virtual void render() = 0;
-        virtual void destroy() = 0;
-        virtual void updateViewportSize(int width, int height) = 0;
-        virtual void* getImGuiTextureID() const = 0;
+        virtual void Init(Nova::Scene& scene) = 0;
+        virtual void Render() = 0;
+        virtual void Destroy() = 0;
+        virtual void UpdateViewportSize(int width, int height) = 0;
+        virtual void* GetImGuiTextureID() const = 0;
         virtual ~IRenderer() = default;
 
-        virtual unsigned int getShadowMapTexture() const = 0;
-        virtual int          getShadowMapSize()   const = 0;
+        virtual unsigned int GetShadowMapTexture() const = 0;
+        virtual int          GetShadowMapSize()   const = 0;
     };
 
-    IRenderer* createRenderer(GraphicsAPI api);
+    IRenderer* CreateRenderer(GraphicsAPI api);
 
 } // namespace Nova::Renderer
 

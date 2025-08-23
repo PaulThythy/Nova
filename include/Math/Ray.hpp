@@ -16,10 +16,10 @@ namespace Nova::Math {
         Ray(const glm::vec3& origin, const glm::vec3& direction) : m_Origin(origin), m_Direction(glm::normalize(direction)) {}
         ~Ray() = default;
 
-        glm::vec3 at(float t) const { return m_Origin + t * m_Direction; }
+        glm::vec3 At(float t) const { return m_Origin + t * m_Direction; }
     };
 
-    static inline bool rayTriangle( const Ray& ray,
+    static inline bool RayTriangle( const Ray& ray,
                                     const glm::vec3& v0,
                                     const glm::vec3& v1,
                                     const glm::vec3& v2,
@@ -47,7 +47,7 @@ namespace Nova::Math {
     }
 
 
-    inline bool rayAABB(const Ray& ray,
+    inline bool RayAABB(const Ray& ray,
                         const glm::vec3& bmin,
                         const glm::vec3& bmax,
                         float& outTmin, float& outTmax)
@@ -68,7 +68,7 @@ namespace Nova::Math {
         return true;
     }
 
-    inline bool rayOBB(const Ray& ray,
+    inline bool RayOBB(const Ray& ray,
                        const glm::mat4& model,          // OBB transform (TRS)
                        const glm::vec3& localMin,       // AABB local min
                        const glm::vec3& localMax,       // AABB local max
@@ -77,10 +77,10 @@ namespace Nova::Math {
         glm::mat4 inv = glm::inverse(model);
         glm::vec3 rO = glm::vec3(inv * glm::vec4(ray.m_Origin, 1.0f));
         glm::vec3 rD = glm::normalize(glm::vec3(inv * glm::vec4(ray.m_Direction, 0.0f)));
-        return rayAABB(Ray{rO, rD}, localMin, localMax, outTmin, outTmax);
+        return RayAABB(Ray{rO, rD}, localMin, localMax, outTmin, outTmax);
     }
 
-    inline Ray mouseClickRayCast(const glm::vec2& mousePx,
+    inline Ray MouseClickRayCast(const glm::vec2& mousePx,
                                  const glm::vec2& viewportPx,
                                  const glm::mat4& view,
                                  const glm::mat4& proj,

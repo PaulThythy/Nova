@@ -8,27 +8,27 @@ namespace Nova::GUI::HierarchyPanel {
 
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape))
         {
-            scene.clearSelection();
+            scene.ClearSelection();
         }
 
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)) {
 
             if (ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-                auto selected = scene.getSelected();
+                auto selected = scene.GetSelected();
                 if (!selected.empty()) {
                     for (auto entity : selected) {
-                        scene.destroyEntity(entity);
+                        scene.DestroyEntity(entity);
                     }
-                    scene.clearSelection();
+                    scene.ClearSelection();
                 }
             }
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-                scene.clearSelection();
+                scene.ClearSelection();
             }
         }
 
-        auto& reg = scene.registry();
+        auto& reg = scene.Registry();
 
         for (auto e : reg.storage<entt::entity>()) {
             if (!reg.valid(e))
@@ -43,7 +43,7 @@ namespace Nova::GUI::HierarchyPanel {
                 if (!tag->m_Tag.empty()) name = tag->m_Tag.c_str();
             }
 
-            const bool isSelected = scene.isSelected(e);
+            const bool isSelected = scene.IsSelected(e);
 
             ImGuiTreeNodeFlags flags =
                 ImGuiTreeNodeFlags_Leaf |
@@ -60,15 +60,15 @@ namespace Nova::GUI::HierarchyPanel {
 
                 if (ctrlPressed || shiftPressed) {
                     // multiple selection 
-                    if(scene.isSelected(e)) {
-                        scene.removeFromSelection(e);
+                    if(scene.IsSelected(e)) {
+                        scene.RemoveFromSelection(e);
                     } else {
-                        scene.addToSelection(e);
+                        scene.AddToSelection(e);
                     }
                 } else {
                     // simple selection
-                    scene.clearSelection();
-                    scene.addToSelection(e);
+                    scene.ClearSelection();
+                    scene.AddToSelection(e);
                 }
             }
 

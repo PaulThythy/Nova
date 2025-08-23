@@ -21,8 +21,8 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void GL_OutlinePass::execute(const RenderContext& ctx){
-        if (!ctx.m_Scene || !ctx.m_Scene->hasSelection() || m_OutlineProgram == 0)
+    void GL_OutlinePass::Execute(const RenderContext& ctx){
+        if (!ctx.m_Scene || !ctx.m_Scene->HasSelection() || m_OutlineProgram == 0)
             return;
 
         // 2.1 write stencil with selected geometry (no color, no depth)
@@ -43,9 +43,9 @@ namespace Nova::Renderer::OpenGL {
         glUniformMatrix4fv(glGetUniformLocation(m_OutlineProgram,"u_Projection"),1,GL_FALSE,glm::value_ptr(ctx.m_Proj));
         glUniform1f(glGetUniformLocation(m_OutlineProgram, "u_OutlineWorld"), 0.0f);
 
-        for(auto e: ctx.m_Scene->getSelected()){
-            auto* tf = ctx.m_Scene->registry().try_get<TransformComponent>(e);
-            auto* me = ctx.m_Scene->registry().try_get<MeshComponent>(e);
+        for(auto e: ctx.m_Scene->GetSelected()){
+            auto* tf = ctx.m_Scene->Registry().try_get<TransformComponent>(e);
+            auto* me = ctx.m_Scene->Registry().try_get<MeshComponent>(e);
             if(!tf||!me||me->m_Indices.empty()) continue;
             auto it = m_Cache->find(e); if(it==m_Cache->end()) continue;
             glm::mat4 M = tf->GetTransform();
@@ -64,9 +64,9 @@ namespace Nova::Renderer::OpenGL {
         glUniform3f(glGetUniformLocation(m_OutlineProgram,"u_OutlineColor"), 1.0f,1.0f,0.0f);
         glUniform1f(glGetUniformLocation(m_OutlineProgram,"u_OutlineWorld"), 0.01f);
 
-        for(auto e: ctx.m_Scene->getSelected()){
-            auto* tf = ctx.m_Scene->registry().try_get<TransformComponent>(e);
-            auto* me = ctx.m_Scene->registry().try_get<MeshComponent>(e);
+        for(auto e: ctx.m_Scene->GetSelected()){
+            auto* tf = ctx.m_Scene->Registry().try_get<TransformComponent>(e);
+            auto* me = ctx.m_Scene->Registry().try_get<MeshComponent>(e);
             if(!tf||!me||me->m_Indices.empty()) continue;
             auto it = m_Cache->find(e); if(it==m_Cache->end()) continue;
             glm::mat4 M = tf->GetTransform();

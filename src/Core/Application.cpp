@@ -14,78 +14,78 @@ namespace Nova::Core {
 
     Application::Application(){
         m_IsRunning = false;
-        initEngine();
+        InitEngine();
     }
 
-    void Application::initEngine() {
-        setupSDL();
-        initSDL();
-        initImGui();
-        setRunMode(RunMode::Editor);
+    void Application::InitEngine() {
+        SetupSDL();
+        InitSDL();
+        InitImGui();
+        SetRunMode(RunMode::Editor);
 
-        m_Renderer = createRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
-        m_Renderer->init(m_Scene);
+        m_Renderer = CreateRenderer(Nova::Renderer::GraphicsAPI::OpenGL);
+        m_Renderer->Init(m_Scene);
 
-        auto cam = m_Scene.createViewportCamera("MainCamera");
+        auto cam = m_Scene.CreateViewportCamera("MainCamera");
 
-        auto sphereEntity = m_Scene.createEntity("Sphere");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
-        auto& sphereTf = m_Scene.registry().get<Nova::Components::TransformComponent>(sphereEntity);
+        auto sphereEntity = m_Scene.CreateEntity("Sphere");
+        m_Scene.Registry().emplace<Nova::Components::TransformComponent>(sphereEntity);
+        auto& sphereTf = m_Scene.Registry().get<Nova::Components::TransformComponent>(sphereEntity);
         sphereTf.m_Position = { 0.0f, 1.0f, 0.0f };
 
         Nova::Components::MeshComponent sphereMesh;
-        sphereMesh.initSphere(24, 48);
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(sphereEntity, std::move(sphereMesh));
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(sphereEntity);
+        sphereMesh.InitSphere(24, 48);
+        m_Scene.Registry().emplace<Nova::Components::MeshComponent>(sphereEntity, std::move(sphereMesh));
+        m_Scene.Registry().emplace<Nova::Components::MeshRendererComponent>(sphereEntity);
 
-        auto planeEntity = m_Scene.createEntity("Ground");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(planeEntity);
-        auto& planeTf = m_Scene.registry().get<Nova::Components::TransformComponent>(planeEntity);
+        auto planeEntity = m_Scene.CreateEntity("Ground");
+        m_Scene.Registry().emplace<Nova::Components::TransformComponent>(planeEntity);
+        auto& planeTf = m_Scene.Registry().get<Nova::Components::TransformComponent>(planeEntity);
         planeTf.m_Scale = { 10.0f, 10.0f, 10.0f };
 
         Nova::Components::MeshComponent planeMesh;
-        planeMesh.initPlane();
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(planeEntity, std::move(planeMesh));
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
+        planeMesh.InitPlane();
+        m_Scene.Registry().emplace<Nova::Components::MeshComponent>(planeEntity, std::move(planeMesh));
+        m_Scene.Registry().emplace<Nova::Components::MeshRendererComponent>(planeEntity);
 
-        auto cubeEntity = m_Scene.createEntity("Cube");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(cubeEntity);
-        auto& cubeTf = m_Scene.registry().get<Nova::Components::TransformComponent>(cubeEntity);
+        auto cubeEntity = m_Scene.CreateEntity("Cube");
+        m_Scene.Registry().emplace<Nova::Components::TransformComponent>(cubeEntity);
+        auto& cubeTf = m_Scene.Registry().get<Nova::Components::TransformComponent>(cubeEntity);
         cubeTf.m_Position = { -2.8f, 0.5f, 3.0f }; cubeTf.m_Rotation = { 0.0f, -0.7f, 0.0f };
 
         Nova::Components::MeshComponent cubeMesh;
-        cubeMesh.initCube();
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(cubeEntity, std::move(cubeMesh));
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(cubeEntity);
+        cubeMesh.InitCube();
+        m_Scene.Registry().emplace<Nova::Components::MeshComponent>(cubeEntity, std::move(cubeMesh));
+        m_Scene.Registry().emplace<Nova::Components::MeshRendererComponent>(cubeEntity);
 
-        auto cylinderEntity = m_Scene.createEntity("Cylinder");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(cylinderEntity);
-        auto& cylinderTf = m_Scene.registry().get<Nova::Components::TransformComponent>(cylinderEntity);
+        auto cylinderEntity = m_Scene.CreateEntity("Cylinder");
+        m_Scene.Registry().emplace<Nova::Components::TransformComponent>(cylinderEntity);
+        auto& cylinderTf = m_Scene.Registry().get<Nova::Components::TransformComponent>(cylinderEntity);
         cylinderTf.m_Position = { 3.0f, 0.5f, 1.5f };
 
         Nova::Components::MeshComponent cylinderMesh;
-        cylinderMesh.initCylinder();
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(cylinderEntity, std::move(cylinderMesh));
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(cylinderEntity);
+        cylinderMesh.InitCylinder();
+        m_Scene.Registry().emplace<Nova::Components::MeshComponent>(cylinderEntity, std::move(cylinderMesh));
+        m_Scene.Registry().emplace<Nova::Components::MeshRendererComponent>(cylinderEntity);
 
-        auto capsuleEntity = m_Scene.createEntity("Capsule");
-        m_Scene.registry().emplace<Nova::Components::TransformComponent>(capsuleEntity);
-        auto& capsuleTf = m_Scene.registry().get<Nova::Components::TransformComponent>(capsuleEntity);
+        auto capsuleEntity = m_Scene.CreateEntity("Capsule");
+        m_Scene.Registry().emplace<Nova::Components::TransformComponent>(capsuleEntity);
+        auto& capsuleTf = m_Scene.Registry().get<Nova::Components::TransformComponent>(capsuleEntity);
         capsuleTf.m_Position = { 1.0f, 0.5f, 2.2f }; capsuleTf.m_Rotation = { 0.0f, 0.0f, -90.0f };
 
         Nova::Components::MeshComponent capsuleMesh;
-        capsuleMesh.initCapsule();
-        m_Scene.registry().emplace<Nova::Components::MeshComponent>(capsuleEntity, std::move(capsuleMesh));
-        m_Scene.registry().emplace<Nova::Components::MeshRendererComponent>(capsuleEntity);
+        capsuleMesh.InitCapsule();
+        m_Scene.Registry().emplace<Nova::Components::MeshComponent>(capsuleEntity, std::move(capsuleMesh));
+        m_Scene.Registry().emplace<Nova::Components::MeshRendererComponent>(capsuleEntity);
 
         // ---------- Directional ----------
         {
-            auto e = m_Scene.createEntity("Sun");
-            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+            auto e = m_Scene.CreateEntity("Sun");
+            auto& tf = m_Scene.Registry().emplace<Nova::Components::TransformComponent>(e);
             tf.m_Rotation = { -45.0f, 45.0f, 0.0f };
             tf.m_Position = {0.0f, 4.0f, 0.0f};
 
-            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            auto& li = m_Scene.Registry().emplace<Nova::Components::LightComponent>(e);
             li.m_Type = Nova::Components::LightType::Directional;
             li.m_Color = { 1.0f, 0.97f, 0.9f };
             li.m_Intensity = 1.0f;
@@ -95,11 +95,11 @@ namespace Nova::Core {
 
         // ---------- Point ----------
         /*{
-            auto e = m_Scene.createEntity("Lamp");
-            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+            auto e = m_Scene.CreateEntity("Lamp");
+            auto& tf = m_Scene.Registry().emplace<Nova::Components::TransformComponent>(e);
             tf.m_Position = { 2.0f, 2.0f, 2.0f };
 
-            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            auto& li = m_Scene.Registry().emplace<Nova::Components::LightComponent>(e);
             li.m_Type = Nova::Components::LightType::Point;
             li.m_Color = { 1.0f, 0.7f, 0.5f };
             li.m_Intensity = 1.0f;
@@ -108,13 +108,13 @@ namespace Nova::Core {
         }*/
 
         // ---------- Spot ----------
-        /* {
-            auto e = m_Scene.createEntity("SpotLight");
-            auto& tf = m_Scene.registry().emplace<Nova::Components::TransformComponent>(e);
+        /*{
+            auto e = m_Scene.CreateEntity("SpotLight");
+            auto& tf = m_Scene.Registry().emplace<Nova::Components::TransformComponent>(e);
             tf.m_Position = { 0.0f, 3.0f, 0.0f };
             tf.m_Rotation = { -60.0f, 0.0f, 0.0f };
 
-            auto& li = m_Scene.registry().emplace<Nova::Components::LightComponent>(e);
+            auto& li = m_Scene.Registry().emplace<Nova::Components::LightComponent>(e);
             li.m_Type = Nova::Components::LightType::Spot;
             li.m_Color = { 1.0f, 1.0f, 1.0f };
             li.m_Intensity = 1.0f;
@@ -125,14 +125,14 @@ namespace Nova::Core {
         }*/
     }
 
-    void Application::setupSDL() {
+    void Application::SetupSDL() {
         if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
             std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
             return;
         }
     }
 
-    void Application::initSDL() {
+    void Application::InitSDL() {
         Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
         m_Window = SDL_CreateWindow("Nova Engine", 1280, 720, windowFlags);
         if (!m_Window) {
@@ -152,7 +152,7 @@ namespace Nova::Core {
         SDL_ShowWindow(m_Window);
     }
 
-    void Application::initImGui() {
+    void Application::InitImGui() {
         
         // Decide GL+GLSL versions
         #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -213,7 +213,7 @@ namespace Nova::Core {
         ImGui_ImplOpenGL3_Init(glslVersion); // Use the same GLSL
     }
 
-    void Application::run() {
+    void Application::Run() {
         ImVec4 clearColor(0.45f, 0.55f, 0.60f, 1.00f);
         m_IsRunning = true;
         while(m_IsRunning) {
@@ -255,7 +255,7 @@ namespace Nova::Core {
             glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            m_Renderer->render();
+            m_Renderer->Render();
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -277,21 +277,21 @@ namespace Nova::Core {
     }
 
     Application::~Application() {
-        destroyEngine();
+        DestroyEngine();
     }
 
-    void Application::destroyEngine() {
-        destroyImGui();
-        destroySDL();
+    void Application::DestroyEngine() {
+        DestroyImGui();
+        DestroySDL();
     }
 
-    void Application::destroyImGui() {
+    void Application::DestroyImGui() {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
         ImGui::DestroyContext();
     }
 
-    void Application::destroySDL() {
+    void Application::DestroySDL() {
         SDL_GL_DestroyContext(m_GLContext);
         SDL_DestroyWindow(m_Window);
         SDL_Quit();

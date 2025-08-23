@@ -92,8 +92,8 @@ namespace Nova::GUI {
             if (s_ShowShadowMap) {
                 ImGui::SetNextWindowSize(ImVec2(320, 360), ImGuiCond_FirstUseEver);
                 if (ImGui::Begin("Shadow Map", &s_ShowShadowMap)) {
-                    const GLuint shadowTex = renderer->getShadowMapTexture();
-                    const int    shadowSz  = renderer->getShadowMapSize();
+                    const GLuint shadowTex = renderer->GetShadowMapTexture();
+                    const int    shadowSz  = renderer->GetShadowMapSize();
 
                     ImGui::Text("Texture ID: %u", shadowTex);
                     ImGui::Text("Size: %d x %d", shadowSz, shadowSz);

@@ -12,7 +12,7 @@ namespace Nova::Renderer::OpenGL {
     class GL_ShadowPass : public IGL_RenderPass {
     public:
         GL_ShadowPass(std::unordered_map<entt::entity, GL_MeshBuffers>* cache, unsigned* fbo, unsigned* depthTex, int* size);
-        void execute(const RenderContext& ctx) override;
+        void Execute(const RenderContext& ctx) override;
     private:
         std::unordered_map<entt::entity, GL_MeshBuffers>* m_Cache;
         unsigned* m_FBO; 

@@ -22,16 +22,16 @@ namespace Nova::Renderer::OpenGL {
 
     class GL_Renderer : public IRenderer {
     public:
-        void init(Nova::Scene& scene) override;
-        void render() override;
-        void destroy() override;
+        void Init(Nova::Scene& scene) override;
+        void Render() override;
+        void Destroy() override;
 
-        void updateViewportSize(int width, int height) override;
+        void UpdateViewportSize(int width, int height) override;
 
-        void* getImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
+        void* GetImGuiTextureID() const override { return reinterpret_cast<void*>(m_ColorTexture); }
 
-        unsigned int getShadowMapTexture() const override { return m_ShadowDepth;}
-        int getShadowMapSize() const override {return m_ShadowSize;}
+        unsigned int GetShadowMapTexture() const override { return m_ShadowDepth;}
+        int GetShadowMapSize() const override {return m_ShadowSize;}
     private:
         // scene
         Nova::Scene* m_Scene = nullptr;
@@ -52,13 +52,13 @@ namespace Nova::Renderer::OpenGL {
         std::unique_ptr<GL_GeometryPass> m_GeometryPass;
         std::unique_ptr<GL_OutlinePass>  m_OutlinePass;
 
-        GL_MeshBuffers createGLMeshBuffers(const Nova::Components::MeshComponent& mesh);
+        GL_MeshBuffers CreateGLMeshBuffers(const Nova::Components::MeshComponent& mesh);
 
         // utils
-        void buildViewportFBO(int w, int h);
-        void buildShadowFBO();
-        void onMeshConstructed(entt::registry&, entt::entity);
-        void onMeshDestroyed (entt::registry&, entt::entity);
+        void BuildViewportFBO(int w, int h);
+        void BuildShadowFBO();
+        void OnMeshConstructed(entt::registry&, entt::entity);
+        void OnMeshDestroyed (entt::registry&, entt::entity);
     };
 } // namespace Nova::Renderer::OpenGL
 

@@ -102,15 +102,15 @@ namespace Nova::GUI::InspectorPanel {
         float totalBadgesW  = badgeW * 3;
         float inputW        = (usableW - totalBadgesW - totalGapsX) / 3.0f;
 
-        if (!scene.hasSelection()) {
+        if (!scene.HasSelection()) {
             ImGui::TextDisabled("No selection");
             ImGui::End();
             return;
         }
 
-        auto selectedEntities = scene.getSelected();
+        auto selectedEntities = scene.GetSelected();
         entt::entity selectedEntity = *selectedEntities.begin();            //take first element
-        auto& reg = scene.registry();
+        auto& reg = scene.Registry();
 
         DrawTransform(reg, selectedEntity, inputW, badgeW, groupSpacing);
         DrawMeshRenderer(reg, selectedEntity);

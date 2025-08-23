@@ -3,6 +3,6 @@
 int main(int argc, char** argv)
 {
     Nova::Core::Application app;
-    app.run();
+    app.Run();
     return 0;
 }

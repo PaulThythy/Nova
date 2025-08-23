@@ -14,7 +14,7 @@ namespace Nova::Input {
 
     class InputManager {
     public:
-        static InputManager& instance() {
+        static InputManager& Instance() {
             static InputManager inst;
             return inst;
         }
@@ -29,36 +29,36 @@ namespace Nova::Input {
             m_ActionCallbacks[InputAction::CameraRotateRight]  = [] { std::cout << "[Input] CameraRotateRight"  << std::endl; };
         }
 
-        void dispatch(InputAction action) { trigger(action); }
+        void Dispatch(InputAction action) { Trigger(action); }
 
         /** Update RunMode (0 = Editor, 1 = Game). */
         template<typename Enum>
-        void setRunMode(Enum mode) { m_CurrentMode = static_cast<int>(mode); }
+        void SetRunMode(Enum mode) { m_CurrentMode = static_cast<int>(mode); }
 
-        void update() {
+        void Update() {
             m_MouseDelta = m_MousePosition - m_LastMousePosition;
             m_LastMousePosition = m_MousePosition;
             m_MouseWheelDelta = 0.0f;
 
             //EDITOR ONLY
             if (m_CurrentMode == 0) {
-                const bool rmbDown   = isMouseButtonDown(SDL_BUTTON_RIGHT);
-                const bool lmbDown   = isMouseButtonDown(SDL_BUTTON_LEFT);
-                const bool shiftHeld = isKeyDown(SDLK_LSHIFT) || isKeyDown(SDLK_RSHIFT);
+                const bool rmbDown   = IsMouseButtonDown(SDL_BUTTON_RIGHT);
+                const bool lmbDown   = IsMouseButtonDown(SDL_BUTTON_LEFT);
+                const bool shiftHeld = IsKeyDown(SDLK_LSHIFT) || IsKeyDown(SDLK_RSHIFT);
 
-                if (rmbDown)                      trigger(InputAction::CameraRotate);
-                if (lmbDown && shiftHeld)         trigger(InputAction::Camera2DTranslate);
+                if (rmbDown)                      Trigger(InputAction::CameraRotate);
+                if (lmbDown && shiftHeld)         Trigger(InputAction::Camera2DTranslate);
             }
 
             std::cout << m_CurrentMode << std::endl;
         }
 
-        void processEvent(const SDL_Event& event) {
+        void ProcessEvent(const SDL_Event& event) {
             switch (event.type) {
                 // --------------------- KEYBOARD ---------------------
                 case SDL_EVENT_KEY_DOWN:
                     m_KeyStates[event.key.key] = true;
-                    handleKeyEvent(event.key.key);
+                    HandleKeyEvent(event.key.key);
                     break;
                 case SDL_EVENT_KEY_UP:
                     m_KeyStates[event.key.key] = false;
@@ -77,7 +77,7 @@ namespace Nova::Input {
                     break;
                 case SDL_EVENT_MOUSE_WHEEL:
                     m_MouseWheelDelta = event.wheel.y;
-                    handleMouseWheel();
+                    HandleMouseWheel();
                     break;
             }
         }
@@ -85,42 +85,42 @@ namespace Nova::Input {
         // ------------------------------------------------------------
         //                       PUBLIC HELPERS
         // ------------------------------------------------------------
-        void bindAction(InputAction action, const std::function<void()>& callback) {
+        void BindAction(InputAction action, const std::function<void()>& callback) {
             m_ActionCallbacks[action] = callback;
         }
 
-        bool isKeyDown(SDL_Keycode code) const {
+        bool IsKeyDown(SDL_Keycode code) const {
             auto it = m_KeyStates.find(code);
             return it != m_KeyStates.end() && it->second;
         }
 
-        bool isMouseButtonDown(Uint8 button) const {
+        bool IsMouseButtonDown(Uint8 button) const {
             auto it = m_MouseButtonStates.find(button);
             return it != m_MouseButtonStates.end() && it->second;
         }
 
-        glm::vec2 mouseDelta() const { return m_MouseDelta; }
-        float     wheelDelta() const { return m_MouseWheelDelta; }
+        glm::vec2 MouseDelta() const { return m_MouseDelta; }
+        float     WheelDelta() const { return m_MouseWheelDelta; }
     private:
         int m_CurrentMode = 0;                      // 0 = Editor, 1 = Game
 
         // ---------- Helpers ----------
-        void trigger(InputAction action) {
+        void Trigger(InputAction action) {
             if (auto it = m_ActionCallbacks.find(action); it != m_ActionCallbacks.end()) {
                 it->second();
             }
         }
 
         // ---------- Concrete handlers ----------
-        void handleKeyEvent(SDL_Keycode code) {
+        void HandleKeyEvent(SDL_Keycode code) {
             if (m_CurrentMode != 0 /*Editor*/) return;
 
             switch (code) {
                 case SDLK_A:
-                    trigger(InputAction::CameraRotateLeft);
+                    Trigger(InputAction::CameraRotateLeft);
                     break;
                 case SDLK_E:
-                    trigger(InputAction::CameraRotateRight);
+                    Trigger(InputAction::CameraRotateRight);
                     break;
                 default:
                     break;
@@ -129,18 +129,18 @@ namespace Nova::Input {
 
         void handleMouseButton(Uint8 button) {
             if (m_CurrentMode != 0 /*Editor*/) return;
-            const bool shiftHeld = isKeyDown(SDLK_LSHIFT) || isKeyDown(SDLK_RSHIFT);
+            const bool shiftHeld = IsKeyDown(SDLK_LSHIFT) || IsKeyDown(SDLK_RSHIFT);
             if (button == SDL_BUTTON_RIGHT) {
-                trigger(InputAction::CameraRotate);
+                Trigger(InputAction::CameraRotate);
             } else if (button == SDL_BUTTON_LEFT && shiftHeld) {
-                trigger(InputAction::Camera2DTranslate);
+                Trigger(InputAction::Camera2DTranslate);
             }
         }
 
-        void handleMouseWheel() {
+        void HandleMouseWheel() {
             if (m_CurrentMode != 0 /*Editor*/) return;
-            if (m_MouseWheelDelta > 0) trigger(InputAction::CameraMoveForward);
-            else if (m_MouseWheelDelta < 0) trigger(InputAction::CameraMoveBackward);
+            if (m_MouseWheelDelta > 0) Trigger(InputAction::CameraMoveForward);
+            else if (m_MouseWheelDelta < 0) Trigger(InputAction::CameraMoveBackward);
         }
 
         std::unordered_map<SDL_Keycode, bool>   m_KeyStates;

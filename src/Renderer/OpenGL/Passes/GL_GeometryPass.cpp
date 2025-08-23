@@ -29,7 +29,7 @@ namespace Nova::Renderer::OpenGL {
         return glm::mat3(glm::transpose(glm::inverse(M)));
     }
 
-    void GL_GeometryPass::execute(const RenderContext& ctx){
+    void GL_GeometryPass::Execute(const RenderContext& ctx){
         glBindFramebuffer(GL_FRAMEBUFFER, ctx.m_FBO);
         glViewport(0,0,ctx.m_ViewportWidth,ctx.m_ViewportHeight);
         glEnable(GL_DEPTH_TEST);
@@ -70,7 +70,7 @@ namespace Nova::Renderer::OpenGL {
 
         // On essaie de récupérer la 1ère lumière de la scène (Transform + LightComponent)
         bool found = false;
-        ctx.m_Scene->forEach<Nova::Components::TransformComponent, Nova::Components::LightComponent>(
+        ctx.m_Scene->ForEach<Nova::Components::TransformComponent, Nova::Components::LightComponent>(
             [&](entt::entity e, Nova::Components::TransformComponent& tf, Nova::Components::LightComponent& li)
             {
                 if (found) return; // on prend la première
@@ -131,8 +131,8 @@ namespace Nova::Renderer::OpenGL {
             glUniform2f(glGetUniformLocation(m_Program, "u_ShadowTexelSize"), ts, ts);
         }
 
-        ctx.m_Scene->forEach<TransformComponent, MeshComponent>([&](entt::entity e, TransformComponent& tf, MeshComponent& mesh){
-            const auto* mr = ctx.m_Scene->registry().try_get<MeshRendererComponent>(e);
+        ctx.m_Scene->ForEach<TransformComponent, MeshComponent>([&](entt::entity e, TransformComponent& tf, MeshComponent& mesh){
+            const auto* mr = ctx.m_Scene->Registry().try_get<MeshRendererComponent>(e);
             if(mr && !mr->m_Visible) return; if(mesh.m_Indices.empty()) return;
 
             auto it = m_Cache->find(e); if(it==m_Cache->end()) return;
