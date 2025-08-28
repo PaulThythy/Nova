@@ -39,6 +39,10 @@ namespace Nova::Renderer::OpenGL {
         const GLint uM   = glGetUniformLocation(m_Program, "u_Model");
         glUniformMatrix4fv(uLVP,1,GL_FALSE,glm::value_ptr(ctx.m_LightVP));
 
+        // to prevent peter panning
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.5f, 1.0f);
+
         ctx.m_Scene->ForEach<TransformComponent, MeshComponent, MeshRendererComponent>([&]
             (entt::entity e, TransformComponent& tf, MeshComponent& mesh, MeshRendererComponent& mr){
                 if(!mr.m_CastShadows) return;
@@ -49,6 +53,8 @@ namespace Nova::Renderer::OpenGL {
                 glBindVertexArray(it->second.m_VAO);
                 glDrawElements(GL_TRIANGLES, (GLsizei)mesh.m_Indices.size(), GL_UNSIGNED_INT, 0);
         });
+
+        glDisable(GL_POLYGON_OFFSET_FILL);
 
         glBindVertexArray(0);
         glUseProgram(0);

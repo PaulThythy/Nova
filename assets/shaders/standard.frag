@@ -51,7 +51,7 @@ float computeShadow(float NdotL) {
     vec3 proj = v_LightClip.xyz / v_LightClip.w;
     proj = proj * 0.5 + 0.5;
     if (proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0) return 1.0;
-    float bias = max(0.001, 0.0005 * (1.0 - NdotL));
+    float bias = 0.0001;
     float sum = 0.0;
     for (int y = -1; y <= 1; ++y)
       for (int x = -1; x <= 1; ++x) {

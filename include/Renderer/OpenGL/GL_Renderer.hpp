@@ -42,7 +42,7 @@ namespace Nova::Renderer::OpenGL {
 
         // shadow target
         unsigned m_ShadowFBO=0, m_ShadowDepth=0; // sampler2DShadow
-        int      m_ShadowSize = 2048;
+        int      m_ShadowSize = 4096;
 
         // caches
         std::unordered_map<entt::entity, GL_MeshBuffers> m_MeshCache;
