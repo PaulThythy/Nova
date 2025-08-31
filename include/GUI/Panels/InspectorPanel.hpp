@@ -14,6 +14,8 @@ namespace Nova::GUI::InspectorPanel {
     void DrawTransform(entt::registry& reg, entt::entity e, float inputW, float badgeW, float groupSpacing);
 
     void DrawMeshRenderer(entt::registry& reg, entt::entity e);
+
+    void DrawLightComponent(entt::registry& reg, entt::entity e);
 }
 
 #endif //INSPECTOR_PANEL_HPP

@@ -1,6 +1,8 @@
 #include "GUI/Panels/InspectorPanel.hpp"
 #include "imgui.h"
 #include "Components/MeshRendererComponent.hpp"
+#include "Components/TransformComponent.hpp"
+#include "Components/LightComponent.hpp"
 
 namespace Nova::GUI::InspectorPanel {
 
@@ -85,6 +87,45 @@ namespace Nova::GUI::InspectorPanel {
         }
     }
 
+    void DrawLightComponent(entt::registry& reg, entt::entity e) {
+        if (auto* light = reg.try_get<Components::LightComponent>(e)) {
+            if(ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+                
+                // Type selection
+                const char* items[] = { "Directional", "Spot", "Point" };
+                int currentType = static_cast<int>(light->m_Type);
+                if (ImGui::Combo("Type", &currentType, items, IM_ARRAYSIZE(items))) {
+                    light->m_Type = static_cast<Components::LightType>(currentType);
+                }
+                ImGui::Separator();
+
+                // Common parameters
+                ImGui::ColorEdit3("Color", &light->m_Color.x);
+                ImGui::SliderFloat("Intensity", &light->m_Intensity, 0.0f, 5.0f);
+                ImGui::Checkbox("Cast Shadows", &light->m_LightShadows);
+                ImGui::Separator();
+
+                // Type-specific parameters
+                switch (light->m_Type) {
+                    case Components::LightType::Directional:
+                        // No specific parameters to display
+                        break;
+                    case Components::LightType::Point:
+                        ImGui::SliderFloat("Range", &light->m_Range, 0.1f, 100.0f);
+                        break;
+                    case Components::LightType::Spot:
+                        ImGui::SliderFloat("Range", &light->m_Range, 0.1f, 100.0f);
+                        ImGui::SliderFloat("Inner Cone (deg)", &light->m_InnerCone, 0.0f, 180.0f);
+                        ImGui::SliderFloat("Outer Cone (deg)", &light->m_OuterCone, 0.0f, 180.0f);
+                        if (light->m_InnerCone > light->m_OuterCone) {
+                            light->m_OuterCone = light->m_InnerCone;
+                        }
+                        break;
+                }
+            }
+        }
+    }
+
     void Render(Nova::Scene& scene) {
         ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -114,6 +155,7 @@ namespace Nova::GUI::InspectorPanel {
 
         DrawTransform(reg, selectedEntity, inputW, badgeW, groupSpacing);
         DrawMeshRenderer(reg, selectedEntity);
+        DrawLightComponent(reg, selectedEntity);
 
         ImGui::End();
     }
