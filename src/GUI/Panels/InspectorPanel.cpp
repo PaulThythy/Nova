@@ -127,7 +127,7 @@ namespace Nova::GUI::InspectorPanel {
     }
 
     void Render(Nova::Scene& scene) {
-        ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoScrollbar);
 
         ImGui::Separator();
 
