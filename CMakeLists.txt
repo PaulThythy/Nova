@@ -137,5 +137,5 @@ foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
     )
 endforeach()
 
-file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/assets/shaders" SHADER_DIR)
+file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/shaders/glsl" SHADER_DIR)
 target_compile_definitions(${PROJECT_NAME} PRIVATE SHADER_DIR="${SHADER_DIR}")
