@@ -15,6 +15,7 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_opengl3.h"
 
+#include "Core/Window.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Scene/Scene.hpp"
 #include "Input/InputManager.hpp"
@@ -47,15 +48,13 @@ namespace Nova::Core {
         void InitEngine();
         void DestroyEngine();
 
-        void SetupSDL();
-        void InitSDL();
-        void DestroySDL();
+        void InitWindow();
+        void DestroyWindow();
 
         void InitImGui();
         void DestroyImGui();
 
-        SDL_Window* m_Window        = nullptr;
-        SDL_GLContext m_GLContext   = nullptr;
+        Window* m_Window = nullptr;
 
         Nova::Renderer::IRenderer* m_Renderer = nullptr;
         Nova::Scene m_Scene;
