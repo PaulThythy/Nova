@@ -3,8 +3,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <GL/glew.h>
-
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL3/SDL_opengles2.h>
 #else
@@ -41,9 +39,6 @@ namespace Nova::Core {
 
     private:
         bool m_IsRunning;
-
-        bool m_ShowDemoWindow       = true;
-        bool m_ShowAnotherWindow    = true;
 
         void InitEngine();
         void DestroyEngine();
