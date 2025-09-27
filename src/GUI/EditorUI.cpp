@@ -1,6 +1,5 @@
 #include "GUI/EditorUI.hpp"
 #include "Renderer/Renderer.hpp"
-#include "imgui.h"
 
 #include <cstdint>
 
