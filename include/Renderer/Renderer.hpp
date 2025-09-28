@@ -17,9 +17,6 @@ namespace Nova::Renderer {
         virtual void UpdateViewportSize(int width, int height) = 0;
         virtual void* GetImGuiTextureID() const = 0;
         virtual ~IRenderer() = default;
-
-        virtual unsigned int GetShadowMapTexture() const = 0;
-        virtual int          GetShadowMapSize()   const = 0;
     };
 
     IRenderer* CreateRenderer(GraphicsAPI api);

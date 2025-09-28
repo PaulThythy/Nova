@@ -20,14 +20,16 @@ namespace Nova::Renderer::OpenGL {
         }
 
         m_Scene->Registry().on_destroy<Nova::Components::MeshComponent>().connect<&GL_Renderer::OnMeshDestroyed>(this);
-        m_Scene->Registry().on_construct<Nova::Components::MeshComponent>().connect<&GL_Renderer::OnMeshConstructed>(this);
+        m_Scene->Registry().on_construct<Nova::Components::MeshComponent>().connect<&GL_Renderer::OnMeshCreated>(this);
+
+        //m_Scene->Registry().on_construct<Nova::Components::LightComponent>().connect<&GL_Renderer::OnLightCreated>(this);
+        //m_Scene->Registry().on_destroy<Nova::Components::LightComponent>().connect<&GL_Renderer::OnLightDestroyed>(this);
+
+        //passes
+        m_DepthPrePass = new GL_DepthPrePass();
+        m_DepthPrePass->Init();
 
         BuildViewportFBO(m_W, m_H);
-        BuildShadowFBO();
-
-        m_ShadowPass   = std::make_unique<GL_ShadowPass>(&m_MeshCache, &m_ShadowFBO, &m_ShadowDepth, &m_ShadowSize);
-        m_GeometryPass = std::make_unique<GL_GeometryPass>(&m_MeshCache);
-        m_OutlinePass  = std::make_unique<GL_OutlinePass>(&m_MeshCache);
     }
 
     void GL_Renderer::BuildViewportFBO(int w,int h){
@@ -50,28 +52,6 @@ namespace Nova::Renderer::OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER,0);
     }
 
-    void GL_Renderer::BuildShadowFBO(){
-        if(m_ShadowFBO){ glDeleteFramebuffers(1,&m_ShadowFBO); glDeleteTextures(1,&m_ShadowDepth);}
-
-        glGenFramebuffers(1,&m_ShadowFBO);
-        glGenTextures(1,&m_ShadowDepth);
-        glBindTexture(GL_TEXTURE_2D,m_ShadowDepth);
-        glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,m_ShadowSize,m_ShadowSize,0,GL_DEPTH_COMPONENT,GL_FLOAT,nullptr);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_BORDER);
-        const float border[4]={1,1,1,1};
-        glTexParameterfv(GL_TEXTURE_2D,GL_TEXTURE_BORDER_COLOR,border);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_MODE,GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_COMPARE_FUNC,GL_LEQUAL);
-
-        glBindFramebuffer(GL_FRAMEBUFFER,m_ShadowFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,m_ShadowDepth,0);
-        glDrawBuffer(GL_NONE); glReadBuffer(GL_NONE);
-        glBindFramebuffer(GL_FRAMEBUFFER,0);
-    }
-
     void GL_Renderer::UpdateViewportSize(int w,int h){
         if(w==m_W && h==m_H) return; m_W=w; m_H=h; BuildViewportFBO(w,h);
         // keep camera aspect synced
@@ -82,60 +62,41 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void GL_Renderer::Render() {
-        // fetch camera
-        glm::mat4 view(1.0f), proj(1.0f); glm::vec3 camPos(0.0f);
-        if(auto camE = m_Scene->GetViewportCamera(); camE!=entt::null){
-            auto& cam = m_Scene->Registry().get<CameraComponent>(camE);
-            view = cam.GetViewMatrix(); proj = cam.GetProjectionMatrix(); camPos = cam.m_LookFrom;
+        GL_RenderPassCtx ctx;
+        ctx.m_Scene = m_Scene;
+        ctx.m_FBO   = m_FBO;
+        ctx.m_Width = m_W;
+        ctx.m_Height= m_H;
+
+        if (auto camE = m_Scene->GetViewportCamera(); camE != entt::null) {
+            auto& reg = m_Scene->Registry();
+            auto& cam = reg.get<CameraComponent>(camE);
+
+            ctx.m_View = cam.GetViewMatrix();
+            ctx.m_Projection = cam.GetProjectionMatrix();
+            ctx.m_Near = cam.m_NearPlane;
+            ctx.m_Far  = cam.m_FarPlane;
         }
 
-        // One light (first found)
-        bool hasLight = false;
-        glm::vec3 Lpos(3, 5, 2), Lcol(1.0f);
-        float Lint = 1.0f;
-        glm::mat4 lightVP(1.0f);
+        m_DepthPrePass->Execute(ctx);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
-        m_Scene->ForEach<LightComponent, TransformComponent>([&](entt::entity, LightComponent& l, TransformComponent& t) {
-            if (hasLight) return;
-            hasLight = true;
+    void GL_Renderer::OnLightCreated(entt::registry& reg, entt::entity ent) {
+        auto& light = reg.get<Components::LightComponent>(ent);
+        GL_LightBuffers entry;
+        glGenBuffers(1, &entry.m_BufferID);
+        glBindBuffer(GL_UNIFORM_BUFFER, entry.m_BufferID);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(light), &light, GL_STATIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        m_LightCache[ent] = entry;
+    }
 
-            Lpos = t.m_Position;
-            Lcol = l.m_Color;
-            Lint = l.m_Intensity;
-
-            // === Direction de la lumière issue de la ROTATION (degrés) ===
-            glm::quat q = glm::quat(glm::radians(t.m_Rotation));
-            glm::vec3 Ldir = glm::normalize(q * glm::vec3(0.0f, 0.0f, -1.0f)); // -Z local
-
-            // === View de la lumière alignée avec Ldir ===
-            // Cam "placée" à Lpos, regardant Lpos + Ldir
-            glm::vec3 target = Lpos + Ldir;
-
-            // up robuste (évite colinéarités)
-            glm::vec3 up(0.0f, 1.0f, 0.0f);
-            if (std::abs(glm::dot(Ldir, up)) > 0.999f) up = glm::vec3(0,0,1);
-            if (std::abs(glm::dot(Ldir, up)) > 0.999f) up = glm::vec3(1,0,0);
-
-            glm::mat4 V = glm::lookAt(Lpos, target, up);
-
-            // === Ortho box : garde tes bornes, ou ajuste selon ta scène ===
-            glm::mat4 P = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.1f, 50.f);
-
-            lightVP = P * V;
-        });
-
-        RenderContext ctx; ctx.m_Scene=m_Scene; ctx.m_View=view; ctx.m_Proj=proj; ctx.m_CameraPos=camPos;
-        ctx.m_HasLight=hasLight; ctx.m_LightPos=Lpos; ctx.m_LightColor=Lcol; ctx.m_LightIntensity=Lint; ctx.m_LightVP=lightVP;
-        ctx.m_FBO=m_FBO; ctx.m_ViewportWidth=m_W; ctx.m_ViewportHeight=m_H; ctx.m_ShadowTex=m_ShadowDepth; ctx.m_ShadowSize=m_ShadowSize; ctx.m_ShadowBias=0.0008f;
-
-        // 1) shadow
-        if (hasLight) m_ShadowPass->Execute(ctx);
-
-        // 2) geometry + lighting
-        m_GeometryPass->Execute(ctx);
-
-        // 3) outline of selection
-        m_OutlinePass->Execute(ctx);
+    void GL_Renderer::OnLightDestroyed(entt::registry& reg, entt::entity ent) {
+        if (auto it = m_LightCache.find(ent); it != m_LightCache.end()) {
+            glDeleteBuffers(1, &it->second.m_BufferID);
+            m_LightCache.erase(it);
+        }
     }
 
     void GL_Renderer::OnMeshDestroyed(entt::registry& reg, entt::entity ent) {
@@ -147,42 +108,36 @@ namespace Nova::Renderer::OpenGL {
         }
     }
 
-    void GL_Renderer::OnMeshConstructed(entt::registry& reg, entt::entity ent) {
+    void GL_Renderer::OnMeshCreated(entt::registry& reg, entt::entity ent) {
         auto& mesh = reg.get<Components::MeshComponent>(ent);
-        GL_MeshBuffers entry = CreateGLMeshBuffers(mesh);
-        m_MeshCache[ent] = entry;
-    }
+        GL_MeshBuffers entry;
 
-    Renderer::OpenGL::GL_MeshBuffers GL_Renderer::CreateGLMeshBuffers(const MeshComponent& mesh) {
-        // Upload vertices/normals + indices, configure VAO
-        Renderer::OpenGL::GL_MeshBuffers e{};
-        glGenVertexArrays(1, &e.m_VAO);
-        glBindVertexArray(e.m_VAO);
+        glGenVertexArrays(1, &entry.m_VAO);
+        glBindVertexArray(entry.m_VAO);
 
-        glGenBuffers(1, &e.m_VBO);
-        glBindBuffer(GL_ARRAY_BUFFER, e.m_VBO);
+        glGenBuffers(1, &entry.m_VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, entry.m_VBO);
 
+        //TODO vertex struct in separated file
         struct Vertex { glm::vec3 pos, nrm; };
         std::vector<Vertex> data;
         data.reserve(mesh.m_Vertices.size());
         for (size_t i = 0; i < mesh.m_Vertices.size(); ++i)
             data.push_back({mesh.m_Vertices[i], mesh.m_Normals[i]});
-
+        
         glBufferData(GL_ARRAY_BUFFER, data.size()*sizeof(Vertex), data.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,pos));
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex,nrm));
         glEnableVertexAttribArray(1);
 
-        glGenBuffers(1, &e.m_IBO);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, e.m_IBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     mesh.m_Indices.size()*sizeof(unsigned),
-                     mesh.m_Indices.data(),
-                     GL_STATIC_DRAW);
+        glGenBuffers(1, &entry.m_IBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entry.m_IBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.m_Indices.size()*sizeof(unsigned), mesh.m_Indices.data(), GL_STATIC_DRAW);
 
         glBindVertexArray(0);
-        return e;
+
+        m_MeshCache[ent] = entry;
     }
 
     void GL_Renderer::Destroy() {
@@ -190,13 +145,14 @@ namespace Nova::Renderer::OpenGL {
         glDeleteFramebuffers(1, &m_FBO);
         glDeleteTextures(1, &m_ColorTexture);
 
-        // Delete shadow-map resources
-        if (m_ShadowFBO) { glDeleteFramebuffers(1, &m_ShadowFBO);  m_ShadowFBO = 0; }
+        // Delete passes
+        if (m_DepthPrePass) {
+            m_DepthPrePass->Destroy();
+            delete m_DepthPrePass;
+            m_DepthPrePass = nullptr;
+        }
 
         // viewport
         if (m_DepthStencil) { glDeleteRenderbuffers(1, &m_DepthStencil); m_DepthStencil = 0; }
-
-        // shadow-map
-        if (m_ShadowDepth) { glDeleteTextures(1, &m_ShadowDepth); m_ShadowDepth = 0; }
     }
 } // namespace Nova::Renderer::OpenGL
