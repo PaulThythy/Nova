@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 namespace Nova::Renderer::OpenGL {
+    //TODO test with SSBOs
     struct GL_MeshBuffers {
         unsigned m_VAO = 0;
         unsigned m_VBO = 0;
