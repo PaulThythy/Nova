@@ -7,17 +7,13 @@
 #include "Components/MeshComponent.hpp"
 
 #include <iostream>
-#include <filesystem>
 
 namespace Nova::Renderer::OpenGL {
 
     void GL_DepthPrePass::Init() {
         // Compile shaders
-        std::filesystem::path currentPath = std::filesystem::current_path();
-        std::filesystem::path shaderDir = currentPath / "shaders" / "glsl";
-
-        std::string vertexPath   = (shaderDir / "depthPrePass.vert").string();
-        std::string fragmentPath = (shaderDir / "depthPrePass.frag").string();
+        std::string vertexPath = std::string(SHADER_DIR) + "/depthPrePass.vert";
+        std::string fragmentPath = std::string(SHADER_DIR) + "/depthPrePass.frag";
         m_Program = LoadRenderShader(vertexPath, fragmentPath);
 
         if (m_Program == 0) {

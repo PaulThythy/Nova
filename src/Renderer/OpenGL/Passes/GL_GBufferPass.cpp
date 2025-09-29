@@ -4,17 +4,13 @@
 #include "Renderer/OpenGL/GL_Shader.hpp"
 
 #include <iostream>
-#include <filesystem>
 
 namespace Nova::Renderer::OpenGL {
 
     void GL_GBufferPass::Init() {
         // Compile shaders
-        std::filesystem::path currentPath = std::filesystem::current_path();
-        std::filesystem::path shaderDir = currentPath / "shaders" / "glsl";
-
-        std::string vertexPath   = (shaderDir / "gBufferPass.vert").string();
-        std::string fragmentPath = (shaderDir / "gBufferPass.frag").string();
+        std::string vertexPath = std::string(SHADER_DIR) + "/gBufferPass.vert";
+        std::string fragmentPath = std::string(SHADER_DIR) + "/gBufferPass.frag";
         m_Program = LoadRenderShader(vertexPath, fragmentPath);
 
         if (m_Program == 0) {
