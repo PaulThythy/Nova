@@ -25,7 +25,7 @@ namespace Nova::Renderer::OpenGL {
 
         void UpdateViewportSize(int width, int height) override;
 
-        void* GetImGuiTextureID() const override { return reinterpret_cast<void*>(m_GMetallic); }
+        void* GetImGuiTextureID() const override { return reinterpret_cast<void*>(m_GPosition); }
     private:
         // scene
         Nova::Scene* m_Scene = nullptr;
