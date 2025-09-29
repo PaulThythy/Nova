@@ -29,27 +29,83 @@ namespace Nova::Renderer::OpenGL {
         m_DepthPrePass = new GL_DepthPrePass();
         m_DepthPrePass->Init();
 
+        m_GBufferPass = new GL_GBufferPass();
+        m_GBufferPass->Init();
+
         BuildViewportFBO(m_W, m_H);
     }
 
     void GL_Renderer::BuildViewportFBO(int w,int h){
-        if(m_FBO){ glDeleteFramebuffers(1,&m_FBO); glDeleteTextures(1,&m_ColorTexture); glDeleteRenderbuffers(1,&m_DepthStencil);}    
-        glGenFramebuffers(1,&m_FBO);
-        glBindFramebuffer(GL_FRAMEBUFFER,m_FBO);
+        if (m_FBO) {
+            glDeleteFramebuffers(1, &m_FBO);
+            if (m_GPosition)        glDeleteTextures(1, &m_GPosition);
+            if (m_GNormal)          glDeleteTextures(1, &m_GNormal);
+            if (m_GAlbedoRoughness) glDeleteTextures(1, &m_GAlbedoRoughness);
+            if (m_GMetallic)        glDeleteTextures(1, &m_GMetallic);
+            if (m_DepthTex)         glDeleteTextures(1, &m_DepthTex);
+            m_FBO = m_GPosition = m_GNormal = m_GAlbedoRoughness = m_GMetallic = m_DepthTex = 0;
+        }
 
-        glGenTextures(1,&m_ColorTexture);
-        glBindTexture(GL_TEXTURE_2D,m_ColorTexture);
-        glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,nullptr);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,m_ColorTexture,0);
+        glGenFramebuffers(1, &m_FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
-        glGenRenderbuffers(1,&m_DepthStencil);
-        glBindRenderbuffer(GL_RENDERBUFFER,m_DepthStencil);
-        glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH24_STENCIL8,w,h);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,m_DepthStencil);
+        // G-Position (RGBA16F pour world pos + padding)
+        glGenTextures(1, &m_GPosition);
+        glBindTexture(GL_TEXTURE_2D, m_GPosition);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_GPosition, 0);
 
-        glBindFramebuffer(GL_FRAMEBUFFER,0);
+        // G-Normal (RGBA16F pour normale monde encodée)
+        glGenTextures(1, &m_GNormal);
+        glBindTexture(GL_TEXTURE_2D, m_GNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_GNormal, 0);
+
+        // G-Albedo+Roughness (RGBA8: albedo RGB8, roughness A8)
+        glGenTextures(1, &m_GAlbedoRoughness);
+        glBindTexture(GL_TEXTURE_2D, m_GAlbedoRoughness);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_GAlbedoRoughness, 0);
+
+        // G-Metallic
+        glGenTextures(1, &m_GMetallic);
+        glBindTexture(GL_TEXTURE_2D, m_GMetallic);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, m_GMetallic, 0);
+        
+        GLint swizzle[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+        glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+
+        // Depth (texture)
+        glGenTextures(1, &m_DepthTex);
+        glBindTexture(GL_TEXTURE_2D, m_DepthTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_DepthTex, 0);
+
+        // target list
+        GLenum bufs[4] = {
+            GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+            GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3
+        };
+        glDrawBuffers(4, bufs);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+            std::cerr << "Viewport FBO is not complete!\n";
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void GL_Renderer::UpdateViewportSize(int w,int h){
@@ -79,6 +135,8 @@ namespace Nova::Renderer::OpenGL {
         }
 
         m_DepthPrePass->Execute(ctx);
+        m_GBufferPass->Execute(ctx);
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
@@ -141,18 +199,14 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void GL_Renderer::Destroy() {
-        // Delete viewport FBO resources
-        glDeleteFramebuffers(1, &m_FBO);
-        glDeleteTextures(1, &m_ColorTexture);
-
-        // Delete passes
-        if (m_DepthPrePass) {
-            m_DepthPrePass->Destroy();
-            delete m_DepthPrePass;
-            m_DepthPrePass = nullptr;
+        if (m_FBO) {
+            glDeleteFramebuffers(1, &m_FBO);
+            m_FBO = 0;
         }
-
-        // viewport
-        if (m_DepthStencil) { glDeleteRenderbuffers(1, &m_DepthStencil); m_DepthStencil = 0; }
+        if (m_GPosition)        { glDeleteTextures(1, &m_GPosition);        m_GPosition = 0; }
+        if (m_GNormal)          { glDeleteTextures(1, &m_GNormal);          m_GNormal = 0; }
+        if (m_GAlbedoRoughness) { glDeleteTextures(1, &m_GAlbedoRoughness); m_GAlbedoRoughness = 0; }
+        if (m_GMetallic)        { glDeleteTextures(1, &m_GMetallic);        m_GMetallic = 0; }
+        if (m_DepthTex)         { glDeleteTextures(1, &m_DepthTex);         m_DepthTex = 0; }
     }
 } // namespace Nova::Renderer::OpenGL

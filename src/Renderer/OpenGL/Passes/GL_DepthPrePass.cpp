@@ -33,43 +33,43 @@ namespace Nova::Renderer::OpenGL {
     }
 
     void GL_DepthPrePass::Execute(const GL_RenderPassCtx& ctx) {
-    if (!m_Program || !ctx.m_FBO || !ctx.m_Scene) return;
+        if (!m_Program || !ctx.m_FBO || !ctx.m_Scene) return;
 
-    glBindFramebuffer(GL_FRAMEBUFFER, ctx.m_FBO);
-    glViewport(0, 0, ctx.m_Width, ctx.m_Height);
+        glBindFramebuffer(GL_FRAMEBUFFER, ctx.m_FBO);
+        glViewport(0, 0, ctx.m_Width, ctx.m_Height);
 
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDepthMask(GL_TRUE);
-    glEnable(GL_DEPTH_TEST);
+        // DEPTH-ONLY
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);                   // write the closest fragment
 
-    glClearColor(0,0,0,1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(m_Program);
-    glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_View"), 1, GL_FALSE, &ctx.m_View[0][0]);
-    glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_Projection"), 1, GL_FALSE, &ctx.m_Projection[0][0]);
-    glUniform1f(glGetUniformLocation(m_Program, "u_Near"), ctx.m_Near);
-    glUniform1f(glGetUniformLocation(m_Program, "u_Far"),  ctx.m_Far);
+        glUseProgram(m_Program);
+        glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_View"), 1, GL_FALSE, &ctx.m_View[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_Projection"), 1, GL_FALSE, &ctx.m_Projection[0][0]);
 
-    auto& reg = ctx.m_Scene->Registry();
-    auto view = reg.view<Components::TransformComponent, Components::MeshComponent>();
-    
-    for (auto ent : view) {
-        auto it = m_MeshCache.find(ent);
-        if (it == m_MeshCache.end()) continue;
+        auto& reg = ctx.m_Scene->Registry();
+        auto view = reg.view<Components::TransformComponent, Components::MeshComponent>();
+        
+        view.each([&](auto ent, const auto& tc, const auto& mc) {
+            auto it = m_MeshCache.find(ent);
+            if (it == m_MeshCache.end()) return;
 
-        const auto& tc = view.get<Components::TransformComponent>(ent);
-        const auto& mc = view.get<Components::MeshComponent>(ent);
+            const auto& transformComp = view.get<Components::TransformComponent>(ent);
+            const auto& meshComp = view.get<Components::MeshComponent>(ent);
 
-        glm::mat4 model = tc.GetTransform();
-        glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_Model"), 1, GL_FALSE, &model[0][0]);
+            glm::mat4 model = transformComp.GetTransform();
+            glUniformMatrix4fv(glGetUniformLocation(m_Program, "u_Model"), 1, GL_FALSE, &model[0][0]);
 
-        glBindVertexArray(it->second.m_VAO);
-        glDrawElements(GL_TRIANGLES, (GLsizei)mc.m_Indices.size(), GL_UNSIGNED_INT, 0);
+            glBindVertexArray(it->second.m_VAO);
+            glDrawElements(GL_TRIANGLES, (GLsizei)meshComp.m_Indices.size(), GL_UNSIGNED_INT, 0);
+        });
+
+        glUseProgram(0);
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     }
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-}
 
 } // namespace Nova::Renderer::OpenGL
