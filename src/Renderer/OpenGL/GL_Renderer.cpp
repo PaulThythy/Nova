@@ -32,6 +32,9 @@ namespace Nova::Renderer::OpenGL {
         m_GBufferPass = new GL_GBufferPass();
         m_GBufferPass->Init();
 
+        m_LightCullingPass = new GL_LightCullingPass();
+        m_LightCullingPass->Init();
+
         BuildViewportFBO(m_W, m_H);
     }
 
@@ -133,9 +136,41 @@ namespace Nova::Renderer::OpenGL {
             ctx.m_Near = cam.m_NearPlane;
             ctx.m_Far  = cam.m_FarPlane;
         }
+        // gather lights
+        ctx.m_Lights.clear();
+        auto& reg = m_Scene->Registry();
+        auto viewLights = reg.view<Components::TransformComponent, Components::LightComponent>();
+        ctx.m_Lights.reserve(viewLights.size_hint());
+
+        viewLights.each([&](auto ent, const auto& tc, const auto& lc) {
+            const auto& transformComp = viewLights.get<Components::TransformComponent>(ent);
+            const auto& lightComp = viewLights.get<Components::LightComponent>(ent);
+
+            GL_RenderPassCtx::GPULight L{};
+            L.m_Position     = transformComp.m_Position;            // world-space
+            L.m_Direction    = transformComp.m_Rotation;            // world-space
+            L.m_Color        = lightComp.m_Color;
+            L.m_Intensity    = lightComp.m_Intensity;
+            L.m_LightShadows = lightComp.m_LightShadows ? 1 : 0;
+            // type
+            int type = 1; // default point
+            switch (lightComp.m_Type) {
+                case Components::LightType::Directional: type = 0; break;
+                case Components::LightType::Point:       type = 1; break;
+                case Components::LightType::Spot:        type = 2; break;
+            }
+            L.m_Type = type;
+            L.m_Range    = lightComp.m_Range;
+            L.m_InnerCos = glm::cos(glm::radians(lightComp.m_InnerCone));
+            L.m_OuterCos = glm::cos(glm::radians(lightComp.m_OuterCone));
+
+            ctx.m_Lights.push_back(L);
+        });
+        ctx.m_NumberOfLights = (int)ctx.m_Lights.size();
 
         m_DepthPrePass->Execute(ctx);
         m_GBufferPass->Execute(ctx);
+        m_LightCullingPass->Execute(ctx);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }

@@ -1,0 +1,102 @@
+#version 430 core
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+const uint MAX_LIGHTS_PER_CLUSTER = 128u;
+
+// === Buffers & UBO ===
+
+struct GPULight {
+    vec3  pos; 
+    vec3  rotation;         // for spot
+    vec3  color;
+    float intensity;
+    int shadows;            // bool as int
+    int type;               // 0=dir,1=point,2=spot
+    float range;            // for point/spot
+    float innerCos;         // for spot
+    float outerCos;         // for spot
+};
+
+layout(std430, binding=0) buffer LightsSSBO {
+    GPULight g_Lights[];
+};
+
+struct ClusterAABB { vec3 bmin; vec3 bmax; };
+layout(std430, binding=1) buffer ClustersSSBO {
+    ClusterAABB g_Clusters[];
+};
+
+// Grid: offset,count par cluster
+layout(std430, binding=2) buffer GridSSBO {
+    uvec2 g_Grid[]; // x=offset, y=count
+};
+
+// Index list : indices de lights par cluster (budget fixe)
+// offset = clusterIndex * MAX_PER_CLUSTER
+layout(std430, binding=3) buffer IndexListSSBO {
+    uint g_LightIndexList[];
+};
+
+uniform mat4 u_View;
+uniform mat4 u_Projection;
+uniform ivec3 u_ClusterDims;
+uniform int   u_NumLights;
+uniform float u_NearPlane;
+uniform float u_FarPlane;
+
+// === Utils ===
+
+bool SphereAABB(vec3 center, float radius, vec3 bmin, vec3 bmax) {
+    // clamp point to box and compute distance^2
+    float d2 = 0.0;
+    for (int i=0;i<3;i++){
+        float v = (i==0)?center.x:((i==1)?center.y:center.z);
+        float mn= (i==0)?bmin.x:((i==1)?bmin.y:bmin.z);
+        float mx= (i==0)?bmax.x:((i==1)?bmax.y:bmax.z);
+        float c = clamp(v, mn, mx);
+        float t = v - c;
+        d2 += t*t;
+    }
+    return d2 <= radius*radius;
+}
+
+// Check basique cône vs AABB → approximation par sphère (range) pour commencer.
+// (Tu pourras raffiner par test cône/plan plus tard.)
+bool SpotApproxIntersects(vec3 posVS, float range, vec3 dirVS, float cosOuter, vec3 bmin, vec3 bmax) {
+    return SphereAABB(posVS, range, bmin, bmax);
+}
+
+// === Main ===
+
+void main() {
+    ivec3 dims = u_ClusterDims;
+    int numLights = u_NumLights;
+
+    ivec3 cid = ivec3(gl_GlobalInvocationID.xyz);
+    int idx = (cid.z * dims.x * dims.y) + (cid.y * dims.x) + cid.x;
+
+    ClusterAABB c = g_Clusters[idx];
+    uint base  = uint(idx) * MAX_LIGHTS_PER_CLUSTER;
+    uint count = 0u;
+
+    for (int li = 0; li < numLights; ++li) {
+        GPULight L = g_Lights[li];
+        bool hit = false;
+
+        if (L.type == 1) {
+            hit = SphereAABB(L.pos, L.range, c.bmin, c.bmax);
+        } else if (L.type == 2) {
+            hit = SpotApproxIntersects(L.pos, L.range, L.rotation, L.outerCos, c.bmin, c.bmax);
+        } else {
+            // Directionnelle : gérée globalement en lighting, pas culée ici
+            hit = false;
+        }
+
+        if (hit && count < MAX_LIGHTS_PER_CLUSTER) {
+            g_LightIndexList[base + count] = uint(li);
+            count++;
+        }
+    }
+
+    g_Grid[idx] = uvec2(base, count);
+}
