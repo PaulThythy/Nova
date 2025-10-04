@@ -60,6 +60,33 @@ namespace Nova::Renderer::OpenGL {
 		float LinearToNDC_Z(float zEye, float n, float f, const glm::mat4& proj);
 		void UploadOrResizeBuffers(const GL_RenderPassCtx& ctx, int numClusters);
 	};
+
+	struct GL_DebugAABBPass : public IGL_RenderPass {
+        void Init() override;
+        void Destroy() override;
+        void Execute(const GL_RenderPassCtx& ctx) override;
+
+        // Réglages
+        glm::vec3 m_Color {1.0f, 0.2f, 0.2f};
+        float     m_LineWidth = 1.5f;
+        bool      m_DrawPointLights = true;
+        bool      m_DrawSpotLights  = true;
+        bool      m_DrawDirectional = false; // pas d’AABB pertinente
+
+    private:
+        unsigned m_Program = 0;
+        unsigned m_VAO = 0;
+        unsigned m_VBO = 0;
+
+        // Construit les 24 sommets (12 segments) d’une AABB (en espace vue)
+        static void BuildBoxLineList(const glm::vec3& bmin, const glm::vec3& bmax,
+                                     std::vector<glm::vec3>& out);
+
+        static void AddSegment(const glm::vec3& a, const glm::vec3& b,
+                               std::vector<glm::vec3>& out) {
+            out.push_back(a); out.push_back(b);
+        }
+    };
 	
 	struct GL_LightingPass : public IGL_RenderPass {
 		void Init() override;

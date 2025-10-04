@@ -26,6 +26,7 @@ namespace Nova::Renderer::OpenGL {
         //m_Scene->Registry().on_destroy<Nova::Components::LightComponent>().connect<&GL_Renderer::OnLightDestroyed>(this);
 
         //passes
+        //TODO : destroy passes
         m_DepthPrePass = new GL_DepthPrePass();
         m_DepthPrePass->Init();
 
@@ -34,6 +35,11 @@ namespace Nova::Renderer::OpenGL {
 
         m_LightCullingPass = new GL_LightCullingPass();
         m_LightCullingPass->Init();
+
+        #if NOVA_DEBUG
+            m_DebugAABBPass = new GL_DebugAABBPass();
+            m_DebugAABBPass->Init();
+        #endif
 
         BuildViewportFBO(m_W, m_H);
     }
@@ -171,6 +177,11 @@ namespace Nova::Renderer::OpenGL {
         m_DepthPrePass->Execute(ctx);
         m_GBufferPass->Execute(ctx);
         m_LightCullingPass->Execute(ctx);
+
+        #if NOVA_DEBUG
+            std::cout << "Debug AABB pass enabled in debug build.\n";
+            m_DebugAABBPass->Execute(ctx);
+        #endif
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }

@@ -17,6 +17,7 @@ namespace Nova::Renderer::OpenGL {
     struct GL_DepthPrePass;
     struct GL_GBufferPass;
     struct GL_LightCullingPass;
+    struct GL_DebugAABBPass;
 
     class GL_Renderer : public IRenderer {
     public:
@@ -44,6 +45,7 @@ namespace Nova::Renderer::OpenGL {
         GL_DepthPrePass* m_DepthPrePass = nullptr;
         GL_GBufferPass*  m_GBufferPass  = nullptr;
         GL_LightCullingPass* m_LightCullingPass = nullptr;
+        GL_DebugAABBPass* m_DebugAABBPass = nullptr;
 
         // utils
         void BuildViewportFBO(int w, int h);
