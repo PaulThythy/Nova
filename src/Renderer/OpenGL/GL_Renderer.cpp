@@ -179,7 +179,6 @@ namespace Nova::Renderer::OpenGL {
         m_LightCullingPass->Execute(ctx);
 
         #if NOVA_DEBUG
-            std::cout << "Debug AABB pass enabled in debug build.\n";
             m_DebugAABBPass->Execute(ctx);
         #endif
 
