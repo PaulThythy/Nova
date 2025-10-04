@@ -26,12 +26,12 @@ layout(std430, binding=1) buffer ClustersSSBO {
     ClusterAABB g_Clusters[];
 };
 
-// Grid: offset,count par cluster
+// Grid: offset,count per cluster
 layout(std430, binding=2) buffer GridSSBO {
     uvec2 g_Grid[]; // x=offset, y=count
 };
 
-// Index list : indices de lights par cluster (budget fixe)
+// Index list: indices of lights per cluster (fixed budget)
 // offset = clusterIndex * MAX_PER_CLUSTER
 layout(std430, binding=3) buffer IndexListSSBO {
     uint g_LightIndexList[];
@@ -60,8 +60,8 @@ bool SphereAABB(vec3 center, float radius, vec3 bmin, vec3 bmax) {
     return d2 <= radius*radius;
 }
 
-// Check basique cône vs AABB → approximation par sphère (range) pour commencer.
-// (Tu pourras raffiner par test cône/plan plus tard.)
+// Basic check cone vs AABB → approximation by sphere (range) for now.
+// (You can refine later with cone/plane test.)
 bool SpotApproxIntersects(vec3 posVS, float range, vec3 dirVS, float cosOuter, vec3 bmin, vec3 bmax) {
     return SphereAABB(posVS, range, bmin, bmax);
 }
@@ -88,7 +88,7 @@ void main() {
         } else if (L.type == 2) {
             hit = SpotApproxIntersects(L.pos, L.range, L.rotation, L.outerCos, c.bmin, c.bmax);
         } else {
-            // Directionnelle : gérée globalement en lighting, pas culée ici
+            // Directional: handled globally in lighting, not culled here
             hit = false;
         }
 
