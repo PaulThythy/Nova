@@ -1,0 +1,3 @@
+[submodule "Nova-Core"]
+	path = Nova-Core
+	url = https://github.com/PaulThythy/Nova-Core.git
