@@ -1,6 +1,8 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
 
+#include "Layer/AppLayer.h"
+
 int main() {
     Nova::Core::Window::WindowDesc windowDesc;
     windowDesc.m_Title = "Nova Engine";
@@ -10,5 +12,6 @@ int main() {
     windowDesc.m_VSync = true;
 
     Nova::Core::Application windowedApp(windowDesc);
+    windowedApp.PushLayer<Nova::App::AppLayer>();
     windowedApp.Run();
 }
