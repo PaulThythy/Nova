@@ -2,6 +2,12 @@
 
 namespace Nova::App {
 
+    void AppLayer::OnAttach() {}
+    void AppLayer::OnDetach() {}
+    void AppLayer::OnUpdate(float dt) {}
+    void AppLayer::OnRender() {}
+    void AppLayer::OnEvent() {}
+
     void AppLayer::OnImGuiRender() {
         if (m_ShowDemo) {
             ImGui::ShowDemoWindow(&m_ShowDemo);
@@ -26,10 +32,4 @@ namespace Nova::App {
             ImGui::End();
         }
     }
-
-
-    void AppLayer::OnEvent() {}
-
-    void AppLayer::OnRender() {}
-
 }
