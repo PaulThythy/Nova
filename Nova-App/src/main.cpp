@@ -1,7 +1,7 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
 
-#include "Layer/AppLayer.h"
+#include "App/AppLayer.h"
 
 int main() {
     Nova::Core::Window::WindowDesc windowDesc;
