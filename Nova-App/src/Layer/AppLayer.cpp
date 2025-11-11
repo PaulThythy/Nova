@@ -2,7 +2,7 @@
 
 namespace Nova::App {
 
-    void AppLayer::OnRender() {
+    void AppLayer::OnImGuiRender() {
         if (m_ShowDemo) {
             ImGui::ShowDemoWindow(&m_ShowDemo);
         }
@@ -29,5 +29,7 @@ namespace Nova::App {
 
 
     void AppLayer::OnEvent() {}
+
+    void AppLayer::OnRender() {}
 
 }
