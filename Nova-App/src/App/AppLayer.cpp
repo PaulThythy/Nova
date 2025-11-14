@@ -149,7 +149,12 @@ namespace Nova::App {
         ImGui::SliderFloat("Sea Choppy",  &m_SeaChoppy, 0.0f, 8.0f);
         ImGui::SliderFloat("Sea frequency", &m_SeaFreq, 0.0f, 1.0f);
 
-        ImGui::Text("Time: %.2f", m_Time);
+        ImGuiIO& io = ImGui::GetIO();
+        float fps = io.Framerate;
+        float msPerFrame = fps > 0.0f ? 1000.0f / fps : 0.0f;
+
+        ImGui::Separator();
+        ImGui::Text("Frame time: %.3f ms (%.1f FPS)", msPerFrame, fps);
 
         ImGui::End();
     }
