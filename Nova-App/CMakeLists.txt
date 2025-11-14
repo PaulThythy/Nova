@@ -16,3 +16,7 @@ target_include_directories(Nova-App PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Set working directory for VS debugging
 set_target_properties(Nova-App PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/Nova-App")
+
+target_compile_definitions(Nova-App PRIVATE
+    NOVA_APP_ROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"
+)
