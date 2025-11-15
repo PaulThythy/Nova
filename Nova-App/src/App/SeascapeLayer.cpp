@@ -1,14 +1,14 @@
-#include "App/AppLayer.h"
+#include "App/SeascapeLayer.h"
 
 #include <iostream>
 
 namespace Nova::App {
 
-    AppLayer::~AppLayer() = default;
+    SeascapeLayer::~SeascapeLayer() = default;
 
-    void AppLayer::OnEvent() {}
+    void SeascapeLayer::OnEvent() {}
 
-    void AppLayer::OnAttach() {
+    void SeascapeLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
         m_SeascapeProgram = Nova::Renderer::OpenGL::LoadRenderShader(
@@ -44,7 +44,7 @@ namespace Nova::App {
         glBindVertexArray(0);
     }
 
-    void AppLayer::OnDetach() {
+    void SeascapeLayer::OnDetach() {
         if (m_SeascapeProgram) {
             glDeleteProgram(m_SeascapeProgram);
             m_SeascapeProgram = 0;
@@ -59,7 +59,7 @@ namespace Nova::App {
         }
     }
 
-    void AppLayer::OnUpdate(float dt) {
+    void SeascapeLayer::OnUpdate(float dt) {
         m_Time += dt;
 
         float mx = 0.0f, my = 0.0f;
@@ -85,7 +85,7 @@ namespace Nova::App {
         }
     }
 
-    void AppLayer::OnRender() {
+    void SeascapeLayer::OnRender() {
         if (!m_SeascapeProgram)
             return;
 
@@ -141,7 +141,7 @@ namespace Nova::App {
         glBindVertexArray(0);
     }
 
-    void AppLayer::OnImGuiRender() {
+    void SeascapeLayer::OnImGuiRender() {
         ImGui::Begin("Seascape Controls");
 
         ImGui::SliderFloat("Sea Speed",   &m_SeaSpeed,  0.0f, 3.0f);

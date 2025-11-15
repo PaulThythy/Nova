@@ -1,5 +1,5 @@
-#ifndef APP_LAYER_H
-#define APP_LAYER_H
+#ifndef SEASCAPE_LAYER_H
+#define SEASCAPE_LAYER_H
 
 #include <glad/gl.h>
 #include <SDL3/SDL.h>
@@ -11,10 +11,10 @@
 
 namespace Nova::App {
 
-    class AppLayer : public Nova::Core::Layer {
+    class SeascapeLayer : public Nova::Core::Layer {
     public:
-        explicit AppLayer(Nova::Core::Application& app) : Nova::Core::Layer("AppLayer"), m_App(app) {}
-        ~AppLayer() override;
+        explicit SeascapeLayer(Nova::Core::Application& app) : Nova::Core::Layer("SeascapeLayer"), m_App(app) {}
+        ~SeascapeLayer() override;
 
         void OnAttach() override;
         void OnDetach() override;
@@ -47,4 +47,4 @@ namespace Nova::App {
 
 } // namespace Nova::App
 
-#endif // APP_LAYER_H
+#endif // SEASCAPE_LAYER_H
