@@ -13,7 +13,7 @@ namespace Nova::App {
 
     class SpiralGalaxyLayer : public Nova::Core::Layer {
     public:
-        explicit SpiralGalaxyLayer(Nova::Core::Application& app) : Nova::Core::Layer("SpiralGalaxyLayer"), m_App(app) {}
+        explicit SpiralGalaxyLayer() : Nova::Core::Layer("SpiralGalaxyLayer") {}
         ~SpiralGalaxyLayer() override;
 
         void OnAttach() override;
@@ -24,8 +24,6 @@ namespace Nova::App {
         void OnEvent(/*Nova::Core::Event& e*/) override;
 
     private:
-        Nova::Core::Application& m_App;
-
         GLuint m_VAO = 0;
         GLuint m_VBO = 0;
         GLuint m_SpiralGalaxyProgram = 0;

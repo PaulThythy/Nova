@@ -13,7 +13,7 @@ namespace Nova::App {
 
     class SeascapeLayer : public Nova::Core::Layer {
     public:
-        explicit SeascapeLayer(Nova::Core::Application& app) : Nova::Core::Layer("SeascapeLayer"), m_App(app) {}
+        explicit SeascapeLayer() : Nova::Core::Layer("SeascapeLayer") {}
         ~SeascapeLayer() override;
 
         void OnAttach() override;
@@ -24,8 +24,6 @@ namespace Nova::App {
         void OnEvent(/*Nova::Core::Event& e*/) override;
 
     private:
-        Nova::Core::Application& m_App;
-
         GLuint m_VAO = 0;
         GLuint m_VBO = 0;
         GLuint m_SeascapeProgram = 0;

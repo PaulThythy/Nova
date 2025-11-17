@@ -13,6 +13,6 @@ int main() {
     windowDesc.m_VSync = true;
 
     Nova::Core::Application windowedApp(windowDesc);
-    windowedApp.PushLayer<Nova::App::SeascapeLayer>(windowedApp);
+    windowedApp.PushLayer<Nova::App::SeascapeLayer>();
     windowedApp.Run();
 }

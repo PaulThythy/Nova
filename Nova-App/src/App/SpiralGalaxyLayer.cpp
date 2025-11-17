@@ -67,7 +67,7 @@ namespace Nova::App {
 
         bool leftDown = (buttons & SDL_BUTTON_LMASK) != 0;
 
-        auto& window = m_App.GetWindow();
+        auto& window = Core::Application::Get().GetWindow();
         int w, h;
         window.GetWindowSize(w, h);
 
@@ -90,7 +90,7 @@ namespace Nova::App {
         if (!m_SpiralGalaxyProgram)
             return;
 
-        auto& window = m_App.GetWindow();
+        auto& window = Core::Application::Get().GetWindow();
         int w, h;
         window.GetWindowSize(w, h);
 
