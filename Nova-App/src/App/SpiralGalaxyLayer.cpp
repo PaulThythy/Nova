@@ -1,4 +1,5 @@
 #include "App/SpiralGalaxyLayer.h"
+#include "App/SeascapeLayer.h" 
 
 #include <iostream>
 
@@ -84,6 +85,16 @@ namespace Nova::App {
             // We keep m_MouseClickPos, but the current position for iMouse.xy will be (0,0)
             m_MousePos = ImVec2((float)mx, (float)my);
         }
+
+        const Uint8* keys = (const Uint8*)SDL_GetKeyboardState(nullptr);
+        bool spaceDown = keys[SDL_SCANCODE_SPACE] != 0;
+
+        // Falling edge: key was down last frame but is UP now
+        if (!spaceDown && m_SpaceWasDown) {
+            Core::Application::Get().GetLayerStack().QueueLayerTransition<SeascapeLayer>(this);
+        }
+
+        m_SpaceWasDown = spaceDown;
     }
 
     void SpiralGalaxyLayer::OnRender() {
@@ -113,8 +124,8 @@ namespace Nova::App {
             float curX = 0.0f;
             float curY = 0.0f;
 
-            // Si ImGui ne veut PAS la souris et que le bouton gauche est enfoncé,
-            // alors on laisse la caméra du shader utiliser la souris.
+            // Si ImGui ne veut PAS la souris et que le bouton gauche est enfoncï¿½,
+            // alors on laisse la camï¿½ra du shader utiliser la souris.
             if (!io.WantCaptureMouse && m_MouseDown) {
                 curX = m_MousePos.x;
                 curY = (float)h - m_MousePos.y; // flip Y pour Shadertoy

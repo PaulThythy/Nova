@@ -36,6 +36,8 @@ namespace Nova::App {
         bool  m_MouseDown = false;
         ImVec2 m_MousePos{ 0.0f, 0.0f };
         ImVec2 m_MouseClickPos{ 0.0f, 0.0f };
+
+        bool m_SpaceWasDown = false;
     };
 
 } // namespace Nova::App

@@ -41,6 +41,8 @@ namespace Nova::App {
         float m_SeaChoppy = 4.0f;
         float m_SeaSpeed  = 0.8f;
         float m_SeaFreq   = 0.16f;
+
+        bool m_SpaceWasDown = false;
     };
 
 } // namespace Nova::App

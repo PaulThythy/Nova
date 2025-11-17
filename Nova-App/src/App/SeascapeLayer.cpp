@@ -1,4 +1,5 @@
 #include "App/SeascapeLayer.h"
+#include "App/SpiralGalaxyLayer.h"
 
 #include <iostream>
 
@@ -83,6 +84,18 @@ namespace Nova::App {
             // We keep m_MouseClickPos, but the current position for iMouse.xy will be (0,0)
             m_MousePos = ImVec2((float)mx, (float)my);
         }
+
+        const Uint8* keys = (const Uint8*)SDL_GetKeyboardState(nullptr);
+        bool spaceDown = keys[SDL_SCANCODE_SPACE] != 0;
+
+        // Falling edge: key was down last frame but is UP now
+        if (!spaceDown && m_SpaceWasDown) {
+            Core::Application::Get().GetLayerStack().QueueLayerTransition<SpiralGalaxyLayer>(this);
+
+            std::cout << "SeascapeLayer: Transition to SpiralGalaxyLayer requested." << std::endl;
+        }
+
+        m_SpaceWasDown = spaceDown;
     }
 
     void SeascapeLayer::OnRender() {
