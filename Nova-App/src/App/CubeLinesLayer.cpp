@@ -1,24 +1,24 @@
-#include "App/SpiralGalaxyLayer.h"
-#include "App/CubeLinesLayer.h" 
+#include "App/CubeLinesLayer.h"
+#include "App/SingularityLayer.h"
 
 #include <iostream>
 
 namespace Nova::App {
 
-    SpiralGalaxyLayer::~SpiralGalaxyLayer() = default;
+    CubeLinesLayer::~CubeLinesLayer() = default;
 
-    void SpiralGalaxyLayer::OnEvent() {}
+    void CubeLinesLayer::OnEvent() {}
 
-    void SpiralGalaxyLayer::OnAttach() {
+    void CubeLinesLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
-        m_SpiralGalaxyProgram = Nova::Renderer::OpenGL::LoadRenderShader(
-            novaAppRootDir + "/shaders/OpenGL/spiralGalaxy/spiralGalaxy.vert",
-            novaAppRootDir + "/shaders/OpenGL/spiralGalaxy/spiralGalaxy.frag"
+        m_CubeLinesProgram = Nova::Renderer::OpenGL::LoadRenderShader(
+            novaAppRootDir + "/shaders/OpenGL/cubeLines/cubeLines.vert",
+            novaAppRootDir + "/shaders/OpenGL/cubeLines/cubeLines.frag"
         );
 
-        if (!m_SpiralGalaxyProgram) {
-            std::cerr << "Failed to load seascape shader program\n";
+        if (!m_CubeLinesProgram) {
+            std::cerr << "Failed to load cube lines shader program\n";
         }
 
         float vertices[] = {
@@ -45,10 +45,10 @@ namespace Nova::App {
         glBindVertexArray(0);
     }
 
-    void SpiralGalaxyLayer::OnDetach() {
-        if (m_SpiralGalaxyProgram) {
-            glDeleteProgram(m_SpiralGalaxyProgram);
-            m_SpiralGalaxyProgram = 0;
+    void CubeLinesLayer::OnDetach() {
+        if (m_CubeLinesProgram) {
+            glDeleteProgram(m_CubeLinesProgram);
+            m_CubeLinesProgram = 0;
         }
         if (m_VBO) {
             glDeleteBuffers(1, &m_VBO);
@@ -60,7 +60,7 @@ namespace Nova::App {
         }
     }
 
-    void SpiralGalaxyLayer::OnUpdate(float dt) {
+    void CubeLinesLayer::OnUpdate(float dt) {
         m_Time += dt;
 
         float mx = 0.0f, my = 0.0f;
@@ -91,28 +91,28 @@ namespace Nova::App {
 
         // Falling edge: key was down last frame but is UP now
         if (!spaceDown && m_SpaceWasDown) {
-            Core::Application::Get().GetLayerStack().QueueLayerTransition<CubeLinesLayer>(this);
+            Core::Application::Get().GetLayerStack().QueueLayerTransition<SingularityLayer>(this);
 
-            std::cout << "SpiralLayer: Transition to CubeLinesLayer requested." << std::endl;
+            std::cout << "CubeLinesLayer: Transition to SingularityLayer requested." << std::endl;
         }
 
         m_SpaceWasDown = spaceDown;
     }
 
-    void SpiralGalaxyLayer::OnRender() {
-        if (!m_SpiralGalaxyProgram)
+    void CubeLinesLayer::OnRender() {
+        if (!m_CubeLinesProgram)
             return;
 
         auto& window = Core::Application::Get().GetWindow();
         int w, h;
         window.GetWindowSize(w, h);
 
-        glUseProgram(m_SpiralGalaxyProgram);
+        glUseProgram(m_CubeLinesProgram);
 
         // Uniforms Shadertoy
-        GLint locResolution = glGetUniformLocation(m_SpiralGalaxyProgram, "iResolution");
-        GLint locTime = glGetUniformLocation(m_SpiralGalaxyProgram, "iTime");
-        GLint locMouse = glGetUniformLocation(m_SpiralGalaxyProgram, "iMouse");
+        GLint locResolution = glGetUniformLocation(m_CubeLinesProgram, "iResolution");
+        GLint locTime = glGetUniformLocation(m_CubeLinesProgram, "iTime");
+        GLint locMouse = glGetUniformLocation(m_CubeLinesProgram, "iMouse");
 
         if (locResolution >= 0)
             glUniform3f(locResolution, (float)w, (float)h, 1.0f);
@@ -144,8 +144,8 @@ namespace Nova::App {
         glBindVertexArray(0);
     }
 
-    void SpiralGalaxyLayer::OnImGuiRender() {
-        ImGui::Begin("Spiral galaxy");
+    void CubeLinesLayer::OnImGuiRender() {
+        ImGui::Begin("Cube lines");
 
         ImGuiIO& io = ImGui::GetIO();
         float fps = io.Framerate;

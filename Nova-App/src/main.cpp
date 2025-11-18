@@ -1,8 +1,7 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
 
-#include "App/SeascapeLayer.h"
-#include "App/SpiralGalaxyLayer.h"
+#include "App/SingularityLayer.h"
 
 int main() {
     Nova::Core::Window::WindowDesc windowDesc;
@@ -13,6 +12,6 @@ int main() {
     windowDesc.m_VSync = true;
 
     Nova::Core::Application windowedApp(windowDesc);
-    windowedApp.GetLayerStack().PushLayer<Nova::App::SeascapeLayer>();
+    windowedApp.GetLayerStack().PushLayer<Nova::App::SingularityLayer>();
     windowedApp.Run();
 }
