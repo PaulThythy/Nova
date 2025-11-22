@@ -9,6 +9,11 @@
 #include "Core/Layer.h"
 #include "Renderer/OpenGL/GL_Shader.h"
 
+#include "Events/Event.h"
+#include "Events/InputEvents.h"
+
+using namespace Nova::Events;
+
 namespace Nova::App {
 
     class SingularityLayer : public Nova::Core::Layer {
@@ -21,7 +26,7 @@ namespace Nova::App {
         void OnUpdate(float dt) override;
         void OnRender() override;
         void OnImGuiRender() override;
-        void OnEvent(/*Nova::Core::Event& e*/) override;
+        void OnEvent(Event& e) override;
 
     private:
         GLuint m_VAO = 0;
@@ -37,7 +42,10 @@ namespace Nova::App {
         ImVec2 m_MousePos{ 0.0f, 0.0f };
         ImVec2 m_MouseClickPos{ 0.0f, 0.0f };
 
-        bool m_SpaceWasDown = false;
+        bool OnMouseButtonPressed(Nova::Events::MouseButtonPressedEvent& e);
+        bool OnMouseButtonReleased(Nova::Events::MouseButtonReleasedEvent& e);
+        bool OnMouseMoved(Nova::Events::MouseMovedEvent& e);
+        bool OnKeyReleased(Nova::Events::KeyReleasedEvent& e);
     };
 
 } // namespace Nova::App

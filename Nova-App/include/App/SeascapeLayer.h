@@ -9,6 +9,11 @@
 #include "Core/Layer.h"
 #include "Renderer/OpenGL/GL_Shader.h"
 
+#include "Events/Event.h"
+#include "Events/InputEvents.h"
+
+using namespace Nova::Events;
+
 namespace Nova::App {
 
     class SeascapeLayer : public Nova::Core::Layer {
@@ -21,7 +26,7 @@ namespace Nova::App {
         void OnUpdate(float dt) override;
         void OnRender() override;
         void OnImGuiRender() override;
-        void OnEvent(/*Nova::Core::Event& e*/) override;
+        void OnEvent(Event& e) override;
 
     private:
         GLuint m_VAO = 0;
@@ -42,7 +47,10 @@ namespace Nova::App {
         float m_SeaSpeed  = 0.8f;
         float m_SeaFreq   = 0.16f;
 
-        bool m_SpaceWasDown = false;
+        bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
+        bool OnMouseButtonReleased(MouseButtonReleasedEvent& e);
+        bool OnMouseMoved(MouseMovedEvent& e);
+        bool OnKeyReleased(KeyReleasedEvent& e);
     };
 
 } // namespace Nova::App

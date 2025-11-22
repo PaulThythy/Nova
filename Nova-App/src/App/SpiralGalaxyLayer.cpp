@@ -7,7 +7,17 @@ namespace Nova::App {
 
     SpiralGalaxyLayer::~SpiralGalaxyLayer() = default;
 
-    void SpiralGalaxyLayer::OnEvent() {}
+    void SpiralGalaxyLayer::OnEvent(Nova::Events::Event& e) {
+        EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<MouseButtonPressedEvent>(
+            [this](MouseButtonPressedEvent& ev) { return OnMouseButtonPressed(ev); });
+        dispatcher.Dispatch<MouseButtonReleasedEvent>(
+            [this](MouseButtonReleasedEvent& ev) { return OnMouseButtonReleased(ev); });
+        dispatcher.Dispatch<MouseMovedEvent>(
+            [this](MouseMovedEvent& ev) { return OnMouseMoved(ev); });
+        dispatcher.Dispatch<KeyReleasedEvent>(
+            [this](KeyReleasedEvent& ev) { return OnKeyReleased(ev); });
+    }
 
     void SpiralGalaxyLayer::OnAttach() {
         // Load shader
@@ -61,42 +71,9 @@ namespace Nova::App {
     }
 
     void SpiralGalaxyLayer::OnUpdate(float dt) {
-        m_Time += dt;
-
-        float mx = 0.0f, my = 0.0f;
-        Uint32 buttons = SDL_GetMouseState(&mx, &my);
-
-        bool leftDown = (buttons & SDL_BUTTON_LMASK) != 0;
-
-        auto& window = Core::Application::Get().GetWindow();
-        int w, h;
-        window.GetWindowSize(w, h);
-
-        if (leftDown) {
-            // If we just clicked, record the click position
-            if (!m_MouseDown) {
-                m_MouseClickPos = ImVec2((float)mx, (float)my);
-            }
-            m_MouseDown = true;
-            m_MousePos = ImVec2((float)mx, (float)my);
-        }
-        else {
-            m_MouseDown = false;
-            // We keep m_MouseClickPos, but the current position for iMouse.xy will be (0,0)
-            m_MousePos = ImVec2((float)mx, (float)my);
-        }
-
-        const Uint8* keys = (const Uint8*)SDL_GetKeyboardState(nullptr);
-        bool spaceDown = keys[SDL_SCANCODE_SPACE] != 0;
-
-        // Falling edge: key was down last frame but is UP now
-        if (!spaceDown && m_SpaceWasDown) {
-            Core::Application::Get().GetLayerStack().QueueLayerTransition<CubeLinesLayer>(this);
-
-            std::cout << "SpiralLayer: Transition to CubeLinesLayer requested." << std::endl;
-        }
-
-        m_SpaceWasDown = spaceDown;
+        m_Time      += dt;
+        m_DeltaTime  = dt;
+        ++m_Frame;
     }
 
     void SpiralGalaxyLayer::OnRender() {
@@ -155,5 +132,36 @@ namespace Nova::App {
         ImGui::Text("Frame time: %.3f ms (%.1f FPS)", msPerFrame, fps);
 
         ImGui::End();
+    }
+
+    bool SpiralGalaxyLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
+        if (e.GetMouseButton() == SDL_BUTTON_LEFT) {
+            if (!m_MouseDown) {
+                m_MouseClickPos = m_MousePos;
+            }
+            m_MouseDown = true;
+        }
+        return false;
+    }
+
+    bool SpiralGalaxyLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
+        if (e.GetMouseButton() == SDL_BUTTON_LEFT) {
+            m_MouseDown = false;
+        }
+        return false;
+    }
+
+    bool SpiralGalaxyLayer::OnMouseMoved(MouseMovedEvent& e) {
+        m_MousePos = ImVec2((float)e.GetX(), (float)e.GetY());
+        return false;
+    }
+
+    bool SpiralGalaxyLayer::OnKeyReleased(KeyReleasedEvent& e) {
+        if (e.GetKeyCode() == SDLK_SPACE) {
+            Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<CubeLinesLayer>(this);
+            std::cout << "SpiralGalaxyLayer: Transition to CubeLinesLayer requested." << std::endl;
+            return true;
+        }
+        return false;
     }
 }
