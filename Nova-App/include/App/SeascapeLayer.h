@@ -12,7 +12,7 @@
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
 
-using namespace Nova::Events;
+using namespace Nova::Core::Events;
 
 namespace Nova::App {
 

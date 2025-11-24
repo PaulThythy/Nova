@@ -7,7 +7,7 @@ namespace Nova::App {
 
     SpiralGalaxyLayer::~SpiralGalaxyLayer() = default;
 
-    void SpiralGalaxyLayer::OnEvent(Nova::Events::Event& e) {
+    void SpiralGalaxyLayer::OnEvent(Event& e) {
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<MouseButtonPressedEvent>(
             [this](MouseButtonPressedEvent& ev) { return OnMouseButtonPressed(ev); });
@@ -22,7 +22,7 @@ namespace Nova::App {
     void SpiralGalaxyLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
-        m_SpiralGalaxyProgram = Nova::Renderer::OpenGL::LoadRenderShader(
+        m_SpiralGalaxyProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
             novaAppRootDir + "/shaders/OpenGL/spiralGalaxy/spiralGalaxy.vert",
             novaAppRootDir + "/shaders/OpenGL/spiralGalaxy/spiralGalaxy.frag"
         );

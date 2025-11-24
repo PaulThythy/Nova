@@ -22,7 +22,7 @@ namespace Nova::App {
     void CubeLinesLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
-        m_CubeLinesProgram = Nova::Renderer::OpenGL::LoadRenderShader(
+        m_CubeLinesProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
             novaAppRootDir + "/shaders/OpenGL/cubeLines/cubeLines.vert",
             novaAppRootDir + "/shaders/OpenGL/cubeLines/cubeLines.frag"
         );

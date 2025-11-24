@@ -12,7 +12,7 @@
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
 
-using namespace Nova::Events;
+using namespace Nova::Core::Events;
 
 namespace Nova::App {
 
@@ -42,10 +42,10 @@ namespace Nova::App {
         ImVec2 m_MousePos{ 0.0f, 0.0f };
         ImVec2 m_MouseClickPos{ 0.0f, 0.0f };
 
-        bool OnMouseButtonPressed(Nova::Events::MouseButtonPressedEvent& e);
-        bool OnMouseButtonReleased(Nova::Events::MouseButtonReleasedEvent& e);
-        bool OnMouseMoved(Nova::Events::MouseMovedEvent& e);
-        bool OnKeyReleased(Nova::Events::KeyReleasedEvent& e);
+        bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
+        bool OnMouseButtonReleased(MouseButtonReleasedEvent& e);
+        bool OnMouseMoved(MouseMovedEvent& e);
+        bool OnKeyReleased(KeyReleasedEvent& e);
     };
 
 } // namespace Nova::App

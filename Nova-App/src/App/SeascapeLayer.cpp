@@ -22,7 +22,7 @@ namespace Nova::App {
     void SeascapeLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
-        m_SeascapeProgram = Nova::Renderer::OpenGL::LoadRenderShader(
+        m_SeascapeProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
             novaAppRootDir + "/shaders/OpenGL/seascape/seascape.vert",
             novaAppRootDir + "/shaders/OpenGL/seascape/seascape.frag"
         );

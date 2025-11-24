@@ -22,7 +22,7 @@ namespace Nova::App {
     void SingularityLayer::OnAttach() {
         // Load shader
         std::string novaAppRootDir = NOVA_APP_ROOT_DIR;
-        m_SingularityProgram = Nova::Renderer::OpenGL::LoadRenderShader(
+        m_SingularityProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
             novaAppRootDir + "/shaders/OpenGL/singularity/singularity.vert",
             novaAppRootDir + "/shaders/OpenGL/singularity/singularity.frag"
         );
