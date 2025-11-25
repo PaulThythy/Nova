@@ -1,5 +1,5 @@
 #include "App/CubeLinesLayer.h"
-#include "App/SingularityLayer.h"
+#include "App/SceneLayer.h"
 
 #include <iostream>
 
@@ -137,7 +137,7 @@ namespace Nova::App {
     bool CubeLinesLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
         if (e.GetMouseButton() == SDL_BUTTON_LEFT) {
             if (!m_MouseDown) {
-                // On utilise la dernière position connue (mise à jour par MouseMovedEvent)
+                // We use the last known position (updated by MouseMovedEvent).
                 m_MouseClickPos = m_MousePos;
             }
             m_MouseDown = true;
@@ -159,8 +159,8 @@ namespace Nova::App {
 
     bool CubeLinesLayer::OnKeyReleased(KeyReleasedEvent& e) {
         if (e.GetKeyCode() == SDLK_SPACE) {
-            Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<SingularityLayer>(this);
-            std::cout << "CubeLinesLayer: Transition to SingularityLayer requested." << std::endl;
+            Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<SceneLayer>(this);
+            std::cout << "CubeLinesLayer: Transition to SceneLayer requested." << std::endl;
             return true;
         }
         return false;
