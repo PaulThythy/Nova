@@ -41,8 +41,6 @@ namespace Nova::App {
         GLuint m_SceneProgram{ 0 };
 
         Nova::Core::Scene::Scene m_Scene;
-
-        bool OnKeyReleased(KeyReleasedEvent& e);
     };
 
 } // namespace Nova::App

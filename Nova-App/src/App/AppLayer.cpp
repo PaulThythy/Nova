@@ -12,9 +12,7 @@ namespace Nova::App {
     AppLayer::~AppLayer() = default;
 
     void AppLayer::OnEvent(Event& e) {
-        EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<KeyReleasedEvent>(
-            [this](KeyReleasedEvent& ev) { return OnKeyReleased(ev); });
+
     }
 
     void AppLayer::OnAttach() {
@@ -82,15 +80,6 @@ namespace Nova::App {
         ImGui::Begin("SceneLayer");
         ImGui::Text("Scene shader: %s", m_SceneProgram ? "loaded" : "NOT loaded");
         ImGui::End();
-    }
-
-    bool AppLayer::OnKeyReleased(KeyReleasedEvent& e) {
-        /*if (e.GetKeyCode() == SDLK_SPACE) {
-            Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<SingularityLayer>(this);
-            std::cout << "SceneLayer: Transition to SingularityLayer requested." << std::endl;
-            return true;
-        }*/
-        return false;
     }
 
 } // namespace Nova::App
