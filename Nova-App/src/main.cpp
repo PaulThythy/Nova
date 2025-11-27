@@ -1,7 +1,8 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
 
-#include "App/SingularityLayer.h"
+#include "App/AppLayer.h"
+#include "App/EditorLayer.h"
 
 int main() {
     Nova::Core::Window::WindowDesc windowDesc;
@@ -12,6 +13,7 @@ int main() {
     windowDesc.m_VSync = true;
 
     Nova::Core::Application windowedApp(windowDesc);
-    windowedApp.GetLayerStack().PushLayer<Nova::App::SingularityLayer>();
+    windowedApp.GetLayerStack().PushOverlay<Nova::App::AppLayer>();
+    windowedApp.GetLayerStack().PushLayer<Nova::App::EditorLayer>();
     windowedApp.Run();
 }

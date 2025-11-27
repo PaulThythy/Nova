@@ -1,5 +1,5 @@
-#ifndef SCENELAYER_H
-#define SCENELAYER_H
+#ifndef APPLAYER_H
+#define APPLAYER_H
 
 #include <memory>
 #include <entt/entt.hpp>
@@ -25,10 +25,10 @@ using namespace Nova::Core;
 
 namespace Nova::App {
 
-    class SceneLayer : public Layer {
+    class AppLayer : public Layer {
     public:
-        explicit SceneLayer(): Layer("SceneLayer") {}
-        ~SceneLayer() override;
+        explicit AppLayer(): Layer("AppLayer") {}
+        ~AppLayer() override;
 
         void OnAttach() override;
         void OnDetach() override;
@@ -47,4 +47,4 @@ namespace Nova::App {
 
 } // namespace Nova::App
 
-#endif // SCENELAYER_H
+#endif // APPLAYER_H

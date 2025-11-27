@@ -1,5 +1,4 @@
-#include "App/SceneLayer.h"
-#include "App/SingularityLayer.h"
+#include "App/AppLayer.h"
 
 #include "imgui.h"
 
@@ -10,15 +9,15 @@
 
 namespace Nova::App {
 
-    SceneLayer::~SceneLayer() = default;
+    AppLayer::~AppLayer() = default;
 
-    void SceneLayer::OnEvent(Event& e) {
+    void AppLayer::OnEvent(Event& e) {
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<KeyReleasedEvent>(
             [this](KeyReleasedEvent& ev) { return OnKeyReleased(ev); });
     }
 
-    void SceneLayer::OnAttach() {
+    void AppLayer::OnAttach() {
         std::string root = NOVA_APP_ROOT_DIR;
         m_SceneProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
             root + "/shaders/OpenGL/scene/scene.vert",
@@ -42,7 +41,7 @@ namespace Nova::App {
         glPlane->Upload(*cpuPlane);
     }
 
-    void SceneLayer::OnDetach() {
+    void AppLayer::OnDetach() {
         auto& registry = m_Scene.GetRegistry();
         registry.clear();
 
@@ -52,12 +51,12 @@ namespace Nova::App {
         }
     }
 
-    void SceneLayer::OnUpdate(float dt) {
+    void AppLayer::OnUpdate(float dt) {
         (void)dt;
         //later
     }
 
-    void SceneLayer::OnRender() {
+    void AppLayer::OnRender() {
         if (!m_SceneProgram)
             return;
 
@@ -79,18 +78,18 @@ namespace Nova::App {
         }
     }
 
-    void SceneLayer::OnImGuiRender() {
+    void AppLayer::OnImGuiRender() {
         ImGui::Begin("SceneLayer");
         ImGui::Text("Scene shader: %s", m_SceneProgram ? "loaded" : "NOT loaded");
         ImGui::End();
     }
 
-    bool SceneLayer::OnKeyReleased(KeyReleasedEvent& e) {
-        if (e.GetKeyCode() == SDLK_SPACE) {
+    bool AppLayer::OnKeyReleased(KeyReleasedEvent& e) {
+        /*if (e.GetKeyCode() == SDLK_SPACE) {
             Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<SingularityLayer>(this);
             std::cout << "SceneLayer: Transition to SingularityLayer requested." << std::endl;
             return true;
-        }
+        }*/
         return false;
     }
 
