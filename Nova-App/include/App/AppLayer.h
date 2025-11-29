@@ -36,12 +36,9 @@ namespace Nova::App {
         void OnRender() override;
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
-
-    private:
-        GLuint m_SceneProgram{ 0 };
-
-        Nova::Core::Scene::Scene m_Scene;
     };
+
+    extern Nova::Core::Scene::Scene g_Scene;
 
 } // namespace Nova::App
 
