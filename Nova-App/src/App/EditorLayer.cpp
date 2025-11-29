@@ -45,15 +45,21 @@ namespace Nova::App {
         // Y axis : green
         m_YAxis = std::make_unique<Line>(
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, axisLength, 0.0f),
+            glm::vec3(0.0f, 0.0f, axisLength),
             glm::vec3(0.0f, 1.0f, 0.0f)
         );
 
         // Z axis : blue
         m_ZAxis = std::make_unique<Line>(
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, axisLength),
+            glm::vec3(0.0f, axisLength, 0.0f),
             glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+
+        m_Grid = std::make_unique<Grid>(
+            10,
+            1.0f,
+            glm::vec3(0.3f)
         );
     }
 
@@ -130,6 +136,10 @@ namespace Nova::App {
 
         glm::mat4 mvp = viewProj;
 
+        if (m_Grid) {
+            m_Grid->m_MVP = mvp;
+            m_Grid->draw();
+        }
         if (m_XAxis) {
             m_XAxis->m_MVP = mvp;
             m_XAxis->draw();
