@@ -6,6 +6,11 @@
 #include <glad/gl.h>
 #include <SDL3/SDL.h>
 
+#include <glm/glm.hpp>
+
+#include "imgui.h"
+#include "imgui_internal.h"
+
 #include "Core/Application.h"
 #include "Core/Layer.h"
 #include "Scene/Scene.h"
@@ -19,6 +24,12 @@
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
+
+#include "UI/Panels/HierarchyPanel.h"
+#include "UI/Panels/ViewportPanel.h"
+#include "UI/Panels/InspectorPanel.h"
+#include "UI/Panels/AssetBrowserPanel.h"
+#include "UI/Panels/MainMenuBar.h"
 
 using namespace Nova::Core::Events;
 using namespace Nova::Core;
@@ -36,9 +47,30 @@ namespace Nova::App {
         void OnRender() override;
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
+
+        void BeginScene();
+        void RenderScene(const glm::mat4& viewProj);
+        void EndScene();
+
+        void SetViewportSize(float width, float height);
+        GLuint GetViewportTexture() const { return m_ColorAttachment; }
+
+    private: 
+        void SetupDockSpace(ImGuiID dockspace_id);
+
+        GLuint m_SceneProgram{ 0 };
+
+        glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
+        GLuint    m_Framebuffer{ 0 };
+        GLuint    m_ColorAttachment{ 0 };
+        GLuint    m_DepthAttachment{ 0 };
+
+        void InvalidateFramebuffer();
+        void ReleaseFramebuffer();
     };
 
-    extern Nova::Core::Scene::Scene g_Scene;
+    extern Scene::Scene g_Scene;
+    extern AppLayer* g_AppLayer;
 
 } // namespace Nova::App
 

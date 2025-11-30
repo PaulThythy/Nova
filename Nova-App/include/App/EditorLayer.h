@@ -33,9 +33,6 @@ namespace Nova::App {
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
 
-        void SetViewportSize(float width, float height);
-        GLuint GetViewportTexture() const { return m_ColorAttachment; }
-
         struct Line {
             GLuint m_LineProgram;
             GLuint m_VBO, m_VAO;
@@ -221,16 +218,6 @@ namespace Nova::App {
         std::unique_ptr<Line> m_ZAxis;
 
         std::unique_ptr<Grid> m_Grid;
-
-        GLuint m_SceneProgram{ 0 };
-
-        glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
-        GLuint    m_Framebuffer{ 0 };
-        GLuint    m_ColorAttachment{ 0 };
-        GLuint    m_DepthAttachment{ 0 };
-
-        void InvalidateFramebuffer();
-        void ReleaseFramebuffer();
     };
 
 } // namespace Nova::App
