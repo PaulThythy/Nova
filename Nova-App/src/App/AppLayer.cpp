@@ -101,7 +101,11 @@ namespace Nova::App {
 
         auto& registry = g_Scene.GetRegistry();
 
-        registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity);
+        const glm::vec3 t{ 0.0f,0.0f,0.0f };
+        const glm::vec3 r{ 0.0f,0.0f,0.0f };
+        const glm::vec3 s{ 3.0f,3.0f,3.0f };
+
+        registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity, t, r, s);
         registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
 
         auto camera = std::make_shared<Renderer::Camera>(

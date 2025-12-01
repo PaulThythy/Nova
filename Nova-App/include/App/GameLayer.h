@@ -33,8 +33,6 @@ namespace Nova::App {
 
     private:
         bool OnKeyReleased(KeyReleasedEvent& e);
-
-        GLuint m_SceneProgram{ 0 };
     };
 
 } // namespace Nova::App
