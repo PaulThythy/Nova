@@ -24,6 +24,7 @@
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
+#include "Events/ApplicationEvents.h"
 
 #include "UI/Panels/HierarchyPanel.h"
 #include "UI/Panels/ViewportPanel.h"
@@ -61,12 +62,17 @@ namespace Nova::App {
         GLuint m_SceneProgram{ 0 };
 
         glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
+        glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
+        bool      m_ViewportResizePending{ false };
+
         GLuint    m_Framebuffer{ 0 };
         GLuint    m_ColorAttachment{ 0 };
         GLuint    m_DepthAttachment{ 0 };
 
         void InvalidateFramebuffer();
         void ReleaseFramebuffer();
+        
+        bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
     };
 
     extern Scene::Scene g_Scene;

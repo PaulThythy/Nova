@@ -14,9 +14,18 @@ namespace Nova::App::UI::Panels::ViewportPanel {
 
         ImVec2 size = ImGui::GetContentRegionAvail();
 
-        if (Nova::App::g_AppLayer) {
-            Nova::App::g_AppLayer->SetViewportSize(size.x, size.y);
+        static ImVec2 s_LastSize = ImVec2(-1.0f, -1.0f);
+        if (size.x > 0.0f && size.y > 0.0f &&
+            (size.x != s_LastSize.x || size.y != s_LastSize.y)) {
 
+            s_LastSize = size;
+
+            using namespace Nova::Core::Events;
+            ImGuiPanelResizeEvent e("Viewport", size.x, size.y);
+            Nova::Core::Application::Get().OnEvent(e);
+        }
+
+        if (Nova::App::g_AppLayer) {
             GLuint texID = Nova::App::g_AppLayer->GetViewportTexture();
 
             if (texID != 0) {

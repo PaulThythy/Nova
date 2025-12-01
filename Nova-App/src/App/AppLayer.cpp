@@ -67,7 +67,29 @@ namespace Nova::App {
         s_DockInitialized = true;
     }
 
-    void AppLayer::OnEvent(Event& e) {}
+    void AppLayer::OnEvent(Event& e) {
+        EventDispatcher dispatcher(e);
+
+        dispatcher.Dispatch<ImGuiPanelResizeEvent>(
+            [this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); }
+        );
+    }
+
+    bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
+        if (e.GetPanelName() != "Viewport")
+            return false;
+
+        float width = e.GetWidth();
+        float height = e.GetHeight();
+
+        if (width <= 0.0f || height <= 0.0f)
+            return false;
+
+        m_PendingViewportSize = { width, height };
+        m_ViewportResizePending = true;
+
+        return false;
+    }
 
     void AppLayer::OnAttach() {
         g_AppLayer = this;
@@ -200,6 +222,25 @@ namespace Nova::App {
     }
 
     void AppLayer::BeginScene() {
+        if (m_ViewportResizePending) {
+            m_ViewportResizePending = false;
+            m_ViewportSize = m_PendingViewportSize;
+
+            InvalidateFramebuffer();
+
+            auto& registry = g_Scene.GetRegistry();
+            using Nova::Core::Scene::ECS::Components::CameraComponent;
+
+            auto camView = registry.view<CameraComponent>();
+            for (auto entity : camView) {
+                auto& camComp = camView.get<CameraComponent>(entity);
+                if (camComp.m_Camera && camComp.m_IsPrimary) {
+                    camComp.m_Camera->m_AspectRatio = m_ViewportSize.x / m_ViewportSize.y;
+                    break;
+                }
+            }
+        }
+
         if (!m_Framebuffer || !m_SceneProgram)
             return;
 
