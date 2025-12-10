@@ -109,14 +109,14 @@ namespace Nova::App {
         registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
 
         auto camera = std::make_shared<Renderer::Camera>(
-            glm::vec3(10.0f, 10.0f, 0.0f),       // lookFrom
-            glm::vec3(0.0f, 0.0f, 0.0f),        // lookAt
-            glm::vec3(0.0f, 1.0f, 0.0f),        // up
-            45.0f,                                    // FOV in degree
-            16.0f / 9.0f,                             // aspect ratio
-            0.1f,                                     // near
-            100.0f,                                   // far
-            true                                      // perspective
+            glm::vec3(5.0f, 5.0f, 10.0f),               // lookFrom
+            glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
+            glm::vec3(0.0f, 1.0f, 0.0f),                // up
+            45.0f,                                      // FOV in degree
+            16.0f / 9.0f,                               // aspect ratio
+            0.1f,                                       // near
+            100.0f,                                     // far
+            true                                        // perspective
         );
 
         entt::entity cameraEntity = g_Scene.CreateEntity("Camera");

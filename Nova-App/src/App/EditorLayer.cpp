@@ -24,7 +24,7 @@ namespace Nova::App {
     }
 
     void EditorLayer::OnAttach() {
-        const float axisLength = 2.0f;
+        const float axisLength = 1.0f;
 
         // X axis : red
         m_XAxis = std::make_unique<Line>(
