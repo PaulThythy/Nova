@@ -102,8 +102,12 @@ namespace Nova::App {
         std::shared_ptr<Renderer::Mesh> cpuCube = Renderer::Mesh::CreateCube();
         std::shared_ptr<Renderer::Mesh> glCube = std::make_shared<Renderer::OpenGL::GL_Mesh>(*cpuCube);
 
+        std::shared_ptr<Renderer::Mesh> cpuSphere = Renderer::Mesh::CreateSphere(1.0f, 3, 6);
+        std::shared_ptr<Renderer::Mesh> glSphere = std::make_shared<Renderer::OpenGL::GL_Mesh>(*cpuSphere);
+
         entt::entity planeEntity = g_Scene.CreateEntity("Plane");
         entt::entity cubeEntity = g_Scene.CreateEntity("Cube");
+        entt::entity sphereEntity = g_Scene.CreateEntity("Sphere");
 
         const glm::vec3 t{ 0.0f,0.0f,0.0f };
         const glm::vec3 r{ 0.0f,0.0f,0.0f };
@@ -119,8 +123,15 @@ namespace Nova::App {
         );
         registry.emplace<Scene::ECS::Components::MeshComponent>(cubeEntity, glCube);
 
+        registry.emplace<Scene::ECS::Components::TransformComponent>(sphereEntity,
+            glm::vec3(2.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
+        );
+        registry.emplace<Scene::ECS::Components::MeshComponent>(sphereEntity, glSphere);
+
         auto camera = std::make_shared<Renderer::Camera>(
-            glm::vec3(5.0f, 5.0f, 10.0f),               // lookFrom
+            glm::vec3(2.5f, 2.5f, 5.0f),               // lookFrom
             glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
             glm::vec3(0.0f, 1.0f, 0.0f),                // up
             45.0f,                                      // FOV in degree
@@ -142,6 +153,7 @@ namespace Nova::App {
 
         glPlane->Upload(*cpuPlane);
         glCube->Upload(*cpuCube);
+        glSphere->Upload(*cpuSphere);
 
         std::string root = NOVA_APP_ROOT_DIR;
         m_SceneProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
@@ -230,7 +242,7 @@ namespace Nova::App {
 
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
+        glFrontFace(GL_CW);
 
         auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
         for (auto entity : viewMeshes) {
