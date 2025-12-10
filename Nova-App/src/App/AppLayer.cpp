@@ -94,19 +94,30 @@ namespace Nova::App {
     void AppLayer::OnAttach() {
         g_AppLayer = this;
 
+        auto& registry = g_Scene.GetRegistry();
+
         std::shared_ptr<Renderer::Mesh> cpuPlane = Renderer::Mesh::CreatePlane();
         std::shared_ptr<Renderer::Mesh> glPlane = std::make_shared<Renderer::OpenGL::GL_Mesh>(*cpuPlane);
 
-        entt::entity planeEntity = g_Scene.CreateEntity("Plane");
+        std::shared_ptr<Renderer::Mesh> cpuCube = Renderer::Mesh::CreateCube();
+        std::shared_ptr<Renderer::Mesh> glCube = std::make_shared<Renderer::OpenGL::GL_Mesh>(*cpuCube);
 
-        auto& registry = g_Scene.GetRegistry();
+        entt::entity planeEntity = g_Scene.CreateEntity("Plane");
+        entt::entity cubeEntity = g_Scene.CreateEntity("Cube");
 
         const glm::vec3 t{ 0.0f,0.0f,0.0f };
         const glm::vec3 r{ 0.0f,0.0f,0.0f };
-        const glm::vec3 s{ 3.0f,3.0f,3.0f };
+        const glm::vec3 s{ 10.0f,10.0f,10.0f };
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity, t, r, s);
         registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
+
+        registry.emplace<Scene::ECS::Components::TransformComponent>(cubeEntity,
+            glm::vec3(0.0f, 0.5f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
+        );
+        registry.emplace<Scene::ECS::Components::MeshComponent>(cubeEntity, glCube);
 
         auto camera = std::make_shared<Renderer::Camera>(
             glm::vec3(5.0f, 5.0f, 10.0f),               // lookFrom
@@ -130,6 +141,7 @@ namespace Nova::App {
         );
 
         glPlane->Upload(*cpuPlane);
+        glCube->Upload(*cpuCube);
 
         std::string root = NOVA_APP_ROOT_DIR;
         m_SceneProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
@@ -277,11 +289,7 @@ namespace Nova::App {
         ImGui::PopStyleVar(3);
 
         ImGuiID dockspace_id = ImGui::GetID("NovaDockspace");
-        ImGui::DockSpace(
-            dockspace_id,
-            ImVec2(0.0f, 0.0f),
-            ImGuiDockNodeFlags_PassthruCentralNode
-        );
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
 
         SetupDockSpace(dockspace_id);
 
