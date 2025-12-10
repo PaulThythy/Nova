@@ -143,7 +143,7 @@ namespace Nova::App {
     }
 
     void AppLayer::OnDetach() {
-        ReleaseFramebuffer();
+        m_FrameBuffer.reset();
 
         if (m_SceneProgram) {
             glDeleteProgram(m_SceneProgram);
@@ -157,69 +157,6 @@ namespace Nova::App {
             g_AppLayer = nullptr;
     }
 
-    void AppLayer::SetViewportSize(float width, float height) {
-        if (width <= 0.0f || height <= 0.0f)
-            return;
-
-        if (m_ViewportSize.x == width && m_ViewportSize.y == height)
-            return;
-
-        m_ViewportSize = { width, height };
-        InvalidateFramebuffer();
-    }
-
-    void AppLayer::InvalidateFramebuffer() {
-        ReleaseFramebuffer();
-
-        if (m_ViewportSize.x <= 0.0f || m_ViewportSize.y <= 0.0f)
-            return;
-
-        glGenFramebuffers(1, &m_Framebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_Framebuffer);
-
-        // Color attachment
-        glGenTextures(1, &m_ColorAttachment);
-        glBindTexture(GL_TEXTURE_2D, m_ColorAttachment);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-            (GLsizei)m_ViewportSize.x, (GLsizei)m_ViewportSize.y,
-            0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D, m_ColorAttachment, 0);
-
-        // Depth-stencil
-        glGenRenderbuffers(1, &m_DepthAttachment);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_DepthAttachment);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-            (GLsizei)m_ViewportSize.x, (GLsizei)m_ViewportSize.y);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-            GL_RENDERBUFFER, m_DepthAttachment);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cerr << "AppLayer: Framebuffer is incomplete!" << std::endl;
-        }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void AppLayer::ReleaseFramebuffer() {
-        if (m_DepthAttachment) {
-            glDeleteRenderbuffers(1, &m_DepthAttachment);
-            m_DepthAttachment = 0;
-        }
-        if (m_ColorAttachment) {
-            glDeleteTextures(1, &m_ColorAttachment);
-            m_ColorAttachment = 0;
-        }
-        if (m_Framebuffer) {
-            glDeleteFramebuffers(1, &m_Framebuffer);
-            m_Framebuffer = 0;
-        }
-    }
-
     void AppLayer::OnUpdate(float dt) {
         (void)dt;
         //later
@@ -230,7 +167,14 @@ namespace Nova::App {
             m_ViewportResizePending = false;
             m_ViewportSize = m_PendingViewportSize;
 
-            InvalidateFramebuffer();
+            if (!m_FrameBuffer) {
+                m_FrameBuffer = std::make_unique<Renderer::OpenGL::GL_FrameBuffer>();
+            }
+
+            m_FrameBuffer->Resize(
+                static_cast<int>(m_ViewportSize.x),
+                static_cast<int>(m_ViewportSize.y)
+            );
 
             auto& registry = g_Scene.GetRegistry();
             using Nova::Core::Scene::ECS::Components::CameraComponent;
@@ -245,13 +189,11 @@ namespace Nova::App {
             }
         }
 
-        if (!m_Framebuffer || !m_SceneProgram)
+        if (!m_FrameBuffer || !m_SceneProgram)
             return;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, m_Framebuffer);
-        glViewport(0, 0,
-            (GLsizei)m_ViewportSize.x,
-            (GLsizei)m_ViewportSize.y);
+        m_FrameBuffer->Bind();
+        glViewport(0, 0, static_cast<GLsizei>(m_ViewportSize.x), static_cast<GLsizei>(m_ViewportSize.y));
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -302,7 +244,10 @@ namespace Nova::App {
     }
 
     void AppLayer::EndScene() {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (m_FrameBuffer)
+            m_FrameBuffer->Unbind();
+        else
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void AppLayer::OnRender() {/*empty*/ }

@@ -18,9 +18,9 @@
 #include "Scene/ECS/Components/TransformComponent.h"
 #include "Scene/ECS/Components/MeshComponent.h"
 
-#include "Renderer/Mesh.h"
 #include "Renderer/OpenGL/GL_Mesh.h"
 #include "Renderer/OpenGL/GL_Shader.h"
+#include "Renderer/OpenGL/GL_FrameBuffer.h"
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -54,7 +54,9 @@ namespace Nova::App {
         void EndScene();
 
         void SetViewportSize(float width, float height);
-        GLuint GetViewportTexture() const { return m_ColorAttachment; }
+        GLuint GetViewportTexture() const { 
+            return m_FrameBuffer ? m_FrameBuffer->GetColorAttachment() : 0;
+        }
 
     private: 
         void SetupDockSpace(ImGuiID dockspace_id);
@@ -65,12 +67,7 @@ namespace Nova::App {
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
         bool      m_ViewportResizePending{ false };
 
-        GLuint    m_Framebuffer{ 0 };
-        GLuint    m_ColorAttachment{ 0 };
-        GLuint    m_DepthAttachment{ 0 };
-
-        void InvalidateFramebuffer();
-        void ReleaseFramebuffer();
+        std::unique_ptr<Nova::Core::Renderer::OpenGL::GL_FrameBuffer> m_FrameBuffer;
         
         bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
     };
