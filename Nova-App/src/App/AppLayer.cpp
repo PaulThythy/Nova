@@ -111,7 +111,7 @@ namespace Nova::App {
 
         const glm::vec3 t{ 0.0f,0.0f,0.0f };
         const glm::vec3 r{ 0.0f,0.0f,0.0f };
-        const glm::vec3 s{ 10.0f,10.0f,10.0f };
+        const glm::vec3 s{ 3.0f,3.0f,3.0f };
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity, t, r, s);
         registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
