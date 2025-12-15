@@ -24,34 +24,7 @@ namespace Nova::App {
     }
 
     void EditorLayer::OnAttach() {
-        const float axisLength = 1.0f;
-
-        // X axis : red
-        m_XAxis = std::make_unique<Line>(
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(axisLength, 0.0f, 0.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f)
-        );
-
-        // Y axis : green
-        m_YAxis = std::make_unique<Line>(
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, axisLength),
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-
-        // Z axis : blue
-        m_ZAxis = std::make_unique<Line>(
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, axisLength, 0.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f)
-        );
-
-        m_Grid = std::make_unique<Grid>(
-            10,
-            1.0f,
-            glm::vec3(0.3f)
-        );
+        m_Grid = std::make_unique<Grid>();
     }
 
     void EditorLayer::OnDetach() {}
@@ -88,20 +61,22 @@ namespace Nova::App {
 
         //model matrix is identity
         if (m_Grid) {
-            m_Grid->m_MVP = viewProj;
+            glm::mat4 invView = glm::inverse(view);
+            glm::vec3 camPos = glm::vec3(invView[3]);
+
+            m_Grid->m_ViewProj = viewProj;
+            m_Grid->m_InvViewProj = glm::inverse(viewProj);
+            m_Grid->m_CameraPos = camPos;
+
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
             m_Grid->draw();
-        }
-        if (m_XAxis) {
-            m_XAxis->m_MVP = viewProj;
-            m_XAxis->draw();
-        }
-        if (m_YAxis) {
-            m_YAxis->m_MVP = viewProj;
-            m_YAxis->draw();
-        }
-        if (m_ZAxis) {
-            m_ZAxis->m_MVP = viewProj;
-            m_ZAxis->draw();
+
+            glDisable(GL_BLEND);
+            glDepthMask(GL_TRUE);
         }
 
         glEnable(GL_DEPTH_TEST);
