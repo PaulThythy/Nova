@@ -244,12 +244,10 @@ namespace Nova::App {
         glFrontFace(GL_CW);
 
         auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
-        for (auto entity : viewMeshes) {
-            auto& transform = viewMeshes.get<TransformComponent>(entity);
-            auto& meshComp = viewMeshes.get<MeshComponent>(entity);
 
+        viewMeshes.each([&](entt::entity entity, TransformComponent& transform, MeshComponent& meshComp) {
             if (!meshComp.m_Mesh)
-                continue;
+                return;
 
             glm::mat4 model = transform.GetTransform();
 
@@ -261,7 +259,7 @@ namespace Nova::App {
             meshComp.m_Mesh->Bind();
             meshComp.m_Mesh->Draw();
             meshComp.m_Mesh->Unbind();
-        }
+        });
 
         glDisable(GL_CULL_FACE);
     }
