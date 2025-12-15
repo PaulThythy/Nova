@@ -53,7 +53,6 @@ namespace Nova::App {
         void RenderScene(const glm::mat4& viewProj);
         void EndScene();
 
-        void SetViewportSize(float width, float height);
         GLuint GetViewportTexture() const { 
             return m_FrameBuffer ? m_FrameBuffer->GetColorAttachment() : 0;
         }

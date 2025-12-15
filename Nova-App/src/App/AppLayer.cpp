@@ -174,8 +174,7 @@ namespace Nova::App {
             m_SceneProgram = 0;
         }
 
-        auto& registry = g_Scene.GetRegistry();
-        registry.clear();
+        g_Scene.Clear();
 
         if (g_AppLayer == this)
             g_AppLayer = nullptr;
