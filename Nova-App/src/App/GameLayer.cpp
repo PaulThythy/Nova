@@ -25,14 +25,22 @@ namespace Nova::App {
         if (e.GetKeyCode() == SDLK_SPACE) {
             Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EditorLayer>(this);
             std::cout << "GameLayer: Transition to EditorLayer requested." << std::endl;
+
+            Nova::App::g_AppLayer->SetSceneState(Nova::App::AppLayer::SceneState::Edit);
             return true;
         }
         return false;
     }
 
-    void GameLayer::OnAttach() {}
+    void GameLayer::OnAttach() {
+        if (Nova::App::g_AppLayer)
+            Nova::App::g_AppLayer->RegisterGameLayer(this);
+    }
 
-    void GameLayer::OnDetach() {}
+    void GameLayer::OnDetach() {
+        if (Nova::App::g_AppLayer)
+            Nova::App::g_AppLayer->RegisterGameLayer(nullptr);
+    }
 
     void GameLayer::OnUpdate(float dt) {
         (void)dt;

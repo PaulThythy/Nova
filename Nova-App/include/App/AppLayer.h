@@ -31,11 +31,15 @@
 #include "UI/Panels/InspectorPanel.h"
 #include "UI/Panels/AssetBrowserPanel.h"
 #include "UI/Panels/MainMenuBar.h"
+#include "UI/Panels/ScenePanel.h"
 
 using namespace Nova::Core::Events;
 using namespace Nova::Core;
 
 namespace Nova::App {
+
+    class EditorLayer;
+    class GameLayer;
 
     class AppLayer : public Layer {
     public:
@@ -57,7 +61,21 @@ namespace Nova::App {
             return m_FrameBuffer ? m_FrameBuffer->GetColorAttachment() : 0;
         }
 
+        enum class SceneState {
+            Edit = 0, Play = 1
+        };
+        SceneState GetSceneState() const { return m_SceneState; }
+        void SetSceneState(SceneState state) { m_SceneState = state; }
+
+        void RequestPlay();
+        void RequestStop();
+
+        void RegisterEditorLayer(EditorLayer* layer) { m_EditorLayer = layer; }
+        void RegisterGameLayer(GameLayer* layer) { m_GameLayer = layer; }
+
     private: 
+        SceneState  m_SceneState{ SceneState::Edit };
+
         void SetupDockSpace(ImGuiID dockspace_id);
 
         GLuint m_SceneProgram{ 0 };
@@ -69,6 +87,9 @@ namespace Nova::App {
         std::unique_ptr<Nova::Core::Renderer::OpenGL::GL_FrameBuffer> m_FrameBuffer;
         
         bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
+
+        EditorLayer* m_EditorLayer{ nullptr };
+        GameLayer* m_GameLayer{ nullptr };
     };
 
     extern Scene::Scene g_Scene;

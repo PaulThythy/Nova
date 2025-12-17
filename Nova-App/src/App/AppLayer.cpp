@@ -9,11 +9,14 @@
 
 #include <iostream>
 
+#include "App/GameLayer.h"
+#include "App/EditorLayer.h"
+
 namespace Nova::App {
 
     using namespace Nova::Core;
 
-    Nova::Core::Scene::Scene g_Scene;
+    Nova::Core::Scene::Scene g_Scene("Scene_test");
     AppLayer* g_AppLayer = nullptr;
 
     AppLayer::~AppLayer() = default;
@@ -28,23 +31,23 @@ namespace Nova::App {
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
         ImGuiID dock_down = 0;
-        ImGuiID dock_main = 0;
+        ImGuiID dock_center = 0;
         ImGui::DockBuilderSplitNode(
             dockspace_id,
             ImGuiDir_Down,
             0.19f,
             &dock_down,
-            &dock_main
+            &dock_center
         );
 
         ImGuiID dock_right = 0;
-        ImGuiID dock_center = 0;
+        ImGuiID dock_left = 0;
         ImGui::DockBuilderSplitNode(
-            dock_main,
+            dock_center,
             ImGuiDir_Right,
-            0.25f,
+            0.27f,
             &dock_right,
-            &dock_center
+            &dock_left
         );
 
         ImGuiID dock_right_top = 0;
@@ -52,18 +55,18 @@ namespace Nova::App {
         ImGui::DockBuilderSplitNode(
             dock_right,
             ImGuiDir_Up,
-            0.5f,
+            0.50f,
             &dock_right_top,
             &dock_right_bottom
         );
 
+        // Dock windows
+        ImGui::DockBuilderDockWindow(g_Scene.GetName().c_str(), dock_left);
         ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
         ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
-        ImGui::DockBuilderDockWindow("Viewport", dock_center);
         ImGui::DockBuilderDockWindow("Asset Browser", dock_down);
 
         ImGui::DockBuilderFinish(dockspace_id);
-
         s_DockInitialized = true;
     }
 
@@ -73,6 +76,38 @@ namespace Nova::App {
         dispatcher.Dispatch<ImGuiPanelResizeEvent>(
             [this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); }
         );
+    }
+
+    void AppLayer::RequestPlay() {
+        if (m_SceneState == SceneState::Play)
+            return;
+
+        if (!m_EditorLayer) {
+            std::cerr << "[AppLayer] Cannot Play: EditorLayer not registered.\n";
+            return;
+        }
+
+        // Replace the current EditorLayer with GameLayer (keep AppLayer alive for UI).
+        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<GameLayer>(m_EditorLayer);
+        std::cout << "AppLayer: Transition to GameLayer requested.\n";
+
+        SetSceneState(SceneState::Play);
+    }
+
+    void AppLayer::RequestStop() {
+        if (m_SceneState == SceneState::Edit)
+            return;
+
+        if (!m_GameLayer) {
+            std::cerr << "[AppLayer] Cannot Stop: GameLayer not registered.\n";
+            return;
+        }
+
+        // Replace the current GameLayer with EditorLayer (keep AppLayer alive for UI).
+        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EditorLayer>(m_GameLayer);
+        std::cout << "AppLayer: Transition to EditorLayer requested.\n";
+
+        SetSceneState(SceneState::Edit);
     }
 
     bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
@@ -328,11 +363,11 @@ namespace Nova::App {
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
 
         SetupDockSpace(dockspace_id);
-
         ImGui::End();
 
+        // Docked windows
+        UI::Panels::ScenePanel::Render(g_Scene.GetName());
         UI::Panels::HierarchyPanel::Render();
-        UI::Panels::ViewportPanel::Render();
         UI::Panels::InspectorPanel::Render();
         UI::Panels::AssetBrowserPanel::Render();
     }
