@@ -219,8 +219,8 @@ namespace Nova::App {
 
         std::string root = NOVA_APP_ROOT_DIR;
         m_SceneProgram = Nova::Core::Renderer::OpenGL::LoadRenderShader(
-            root + "/shaders/OpenGL/scene/scene.vert",
-            root + "/shaders/OpenGL/scene/scene.frag"
+            root + "/assets/shaders/OpenGL/scene/scene.vert",
+            root + "/assets/shaders/OpenGL/scene/scene.frag"
         );
 
         if (!m_SceneProgram) {
