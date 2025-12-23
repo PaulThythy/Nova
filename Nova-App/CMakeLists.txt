@@ -20,3 +20,12 @@ set_target_properties(Nova-App PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE
 target_compile_definitions(Nova-App PRIVATE
     NOVA_APP_ROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"
 )
+
+target_compile_definitions(Nova-App
+    PRIVATE
+        NOVA_APP_ROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"
+        $<$<CONFIG:Debug>:NOVA_DEBUG>
+        $<$<CONFIG:Release>:NOVA_RELEASE>
+        $<$<CONFIG:RelWithDebInfo>:NOVA_RELWITHDEBINFO>
+        $<$<CONFIG:MinSizeRel>:NOVA_MINSIZEREL>
+)
