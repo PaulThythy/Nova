@@ -27,7 +27,6 @@
 #include "Events/ApplicationEvents.h"
 
 #include "UI/Panels/HierarchyPanel.h"
-#include "UI/Panels/ViewportPanel.h"
 #include "UI/Panels/InspectorPanel.h"
 #include "UI/Panels/AssetBrowserPanel.h"
 #include "UI/Panels/MainMenuBar.h"
