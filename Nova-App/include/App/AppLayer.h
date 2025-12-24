@@ -18,9 +18,9 @@
 #include "Scene/ECS/Components/TransformComponent.h"
 #include "Scene/ECS/Components/MeshComponent.h"
 
-#include "Renderer/OpenGL/GL_Mesh.h"
-#include "Renderer/OpenGL/GL_Shader.h"
-#include "Renderer/OpenGL/GL_FrameBuffer.h"
+#include "Renderer/Backends/OpenGL/GL_Mesh.h"
+#include "Renderer/Backends/OpenGL/GL_Shader.h"
+#include "Renderer/Backends/OpenGL/GL_FrameBuffer.h"
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -84,7 +84,7 @@ namespace Nova::App {
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
         bool      m_ViewportResizePending{ false };
 
-        std::unique_ptr<Nova::Core::Renderer::OpenGL::GL_FrameBuffer> m_FrameBuffer;
+        std::unique_ptr<Nova::Core::Renderer::Backends::OpenGL::GL_FrameBuffer> m_FrameBuffer;
         
         bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
 

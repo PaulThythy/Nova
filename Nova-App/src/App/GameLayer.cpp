@@ -50,7 +50,7 @@ namespace Nova::App {
     void GameLayer::OnRender() {
         auto& registry = Nova::App::g_Scene.GetRegistry();
 
-        Nova::Core::Renderer::Camera* cameraPtr = nullptr;
+        Nova::Core::Renderer::Graphics::Camera* cameraPtr = nullptr;
         auto camView = registry.view<CameraComponent>();
         for (auto entity : camView) {
             auto& camComp = camView.get<CameraComponent>(entity);
