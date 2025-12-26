@@ -248,19 +248,23 @@ namespace Nova::App {
     }
 
     void AppLayer::BeginScene() {
+        // Handle viewport resizing
         if (m_ViewportResizePending) {
             m_ViewportResizePending = false;
             m_ViewportSize = m_PendingViewportSize;
-
+            
+            // Recreate framebuffer if it doesn't exist
             if (!m_FrameBuffer) {
                 m_FrameBuffer = std::make_unique<Renderer::Backends::OpenGL::GL_FrameBuffer>();
             }
-
+            
+            // Resize framebuffer
             m_FrameBuffer->Resize(
                 static_cast<int>(m_ViewportSize.x),
                 static_cast<int>(m_ViewportSize.y)
             );
-
+            
+            // Update aspect ratio of primary camera
             auto& registry = g_Scene.GetRegistry();
             using Nova::Core::Scene::ECS::Components::CameraComponent;
 
@@ -277,7 +281,9 @@ namespace Nova::App {
         if (!m_FrameBuffer || !m_SceneProgram)
             return;
 
+        // Render to framebuffer
         m_FrameBuffer->Bind();
+        //TODO remove all gl functions from AppLayer
         glViewport(0, 0, static_cast<GLsizei>(m_ViewportSize.x), static_cast<GLsizei>(m_ViewportSize.y));
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
@@ -285,6 +291,7 @@ namespace Nova::App {
     }
 
     void AppLayer::RenderScene(const glm::mat4& viewProj) {
+        // Render all meshes in the scene
         auto& registry = g_Scene.GetRegistry();
 
         using Nova::Core::Scene::ECS::Components::CameraComponent;
@@ -327,10 +334,16 @@ namespace Nova::App {
     }
 
     void AppLayer::EndScene() {
-        if (m_FrameBuffer)
+        // Unbind framebuffer
+        // if we don't do this verification, the first message is "No framebuffer to unbind", and program crashes
+        if (m_FrameBuffer) {
+            //std::cout << "Unbinding framebuffer if it exists" << std::endl;
             m_FrameBuffer->Unbind();
-        else
+        }
+        else {
+            //std::cout << "No framebuffer to unbind" << std::endl;
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
     }
 
     void AppLayer::OnRender() {/*empty*/ }
