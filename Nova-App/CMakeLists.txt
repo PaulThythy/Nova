@@ -12,7 +12,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES} ${HEADERS})
 
 target_link_libraries(Nova-App Nova-Core)
 
-target_include_directories(Nova-App PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(Nova-App PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Set working directory for VS debugging
 set_target_properties(Nova-App PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/Nova-App")
