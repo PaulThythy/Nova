@@ -1,6 +1,8 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
+#include "Core/GraphicsAPI.h"
 
+#include "App/VkLayer.h"
 #include "App/AppLayer.h"
 #include "App/EditorLayer.h"
 
@@ -16,11 +18,13 @@ int main() {
     windowDesc.m_Height = 900;
     windowDesc.m_Resizable = true;
     windowDesc.m_VSync = true;
+    windowDesc.m_GraphicsAPI = GraphicsAPI::OpenGL;
 
     NV_LOG_INFO("Creating Nova Application");
     Nova::Core::Application windowedApp(windowDesc);
+    //windowedApp.GetLayerStack().PushLayer<Nova::App::VkLayer>();
     windowedApp.GetLayerStack().PushOverlay<Nova::App::AppLayer>();
-    windowedApp.GetLayerStack().PushLayer<Nova::App::EditorLayer>();
+    windowedApp.GetLayerStack().PushOverlay<Nova::App::EditorLayer>();
     windowedApp.Run();
     NV_LOG_INFO("Deleting Nova Application");
 }
