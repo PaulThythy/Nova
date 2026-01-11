@@ -129,6 +129,10 @@ namespace Nova::App {
     void AppLayer::OnAttach() {
         g_AppLayer = this;
 
+        Nova::Core::GraphicsAPI graphicsAPI = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+
+        Nova::Core::Application::Get().GetImGuiLayer().SetImGuiBackend(graphicsAPI);
+
         auto& registry = g_Scene.GetRegistry();
 
         std::shared_ptr<Renderer::Graphics::Mesh> cpuPlane = Renderer::Graphics::Mesh::CreatePlane();
