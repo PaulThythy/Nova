@@ -4,9 +4,16 @@ namespace Nova::App {
 
 	VkLayer::~VkLayer() = default;
 
-	void VkLayer::OnAttach() {}
+	void VkLayer::OnAttach() {
+		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(GraphicsAPI::Vulkan);
+	}
 
-	void VkLayer::OnDetach() {}
+	void VkLayer::OnDetach() {
+		if (m_Renderer) {
+			m_Renderer->Destroy();
+			m_Renderer.reset();
+		}
+	}
 	
 	void VkLayer::OnUpdate(float dt) {}
 	

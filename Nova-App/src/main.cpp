@@ -17,7 +17,7 @@ int main() {
     windowDesc.m_Height = 900;
     windowDesc.m_Resizable = true;
     windowDesc.m_VSync = true;
-    windowDesc.m_GraphicsAPI = GraphicsAPI::OpenGL;
+    windowDesc.m_GraphicsAPI = GraphicsAPI::Vulkan;
 
     NV_LOG_INFO("Creating Nova Application");
     Nova::Core::Application windowedApp(windowDesc);

@@ -7,6 +7,9 @@
 
 #include "Core/Application.h"
 #include "Core/Layer.h"
+#include "Core/Log.h"
+
+#include "Renderer/RHI/RHI_Renderer.h"
 
 using namespace Nova::Core;
 using namespace Nova::Core::Events;
@@ -24,6 +27,9 @@ namespace Nova::App {
 		void OnRender() override;
 		void OnImGuiRender() override;
 		void OnEvent(Event& e) override;
+
+	private:
+		std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
 	};
 
 } // namespace Nova::App
