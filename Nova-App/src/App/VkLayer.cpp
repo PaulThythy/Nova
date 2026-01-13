@@ -17,7 +17,15 @@ namespace Nova::App {
 	
 	void VkLayer::OnUpdate(float dt) {}
 	
-	void VkLayer::OnRender() {}
+	void VkLayer::OnRender() {
+		if (!m_Renderer) return;
+
+		m_Renderer->BeginFrame();
+
+		m_Renderer->Render();
+
+		m_Renderer->EndFrame();
+	}
 
 	void VkLayer::OnEvent(Event& e) {}
 
