@@ -16,19 +16,28 @@ namespace Nova::App {
 	}
 	
 	void VkLayer::OnUpdate(float dt) {}
+
+	void VkLayer::OnBegin() {
+		if (!m_Renderer) return;
+		m_Renderer->BeginFrame();
+	}
 	
 	void VkLayer::OnRender() {
 		if (!m_Renderer) return;
-
-		m_Renderer->BeginFrame();
-
 		m_Renderer->Render();
+	}
 
+	void VkLayer::OnEnd() {
+		if (!m_Renderer) return;
 		m_Renderer->EndFrame();
 	}
 
 	void VkLayer::OnEvent(Event& e) {}
 
-	void VkLayer::OnImGuiRender() {}
+	void VkLayer::OnImGuiRender() {
+		bool show_demo_window = true;
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
+	}
 
 } // namespace Nova::App
