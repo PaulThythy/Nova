@@ -32,6 +32,7 @@ namespace Nova::App {
 
 	private:
 		std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
+		float m_DeltaTime = 0.0f;
 	};
 
 } // namespace Nova::App
