@@ -8,6 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
+#include <filesystem>
 
 #include "App/GameLayer.h"
 #include "App/EditorLayer.h"
@@ -221,11 +222,16 @@ namespace Nova::App {
         glSphere2->Upload(*cpuSphere2);
         glSphere3->Upload(*cpuSphere3);
 
-        std::string root = NOVA_APP_ROOT_DIR;
-        m_SceneProgram = Nova::Core::Renderer::Backends::OpenGL::LoadRenderShader(
-            root + "/resources/shaders/OpenGL/scene/scene.vert",
-            root + "/resources/shaders/OpenGL/scene/scene.frag"
-        );
+        std::filesystem::path p = std::filesystem::current_path();
+        std::filesystem::path shaderDir = p / "Nova-App" / "resources" / "editor" / "shaders";
+
+        std::filesystem::path vertShaderDir = shaderDir / "scene" / "scene.vert";
+        std::filesystem::path fragShaderDir = shaderDir / "scene" / "scene.frag";
+
+        std::string vertShaderDirStr = vertShaderDir.string();
+        std::string fragShaderDirStr = fragShaderDir.string();
+
+        m_SceneProgram = Nova::Core::Renderer::Backends::OpenGL::LoadRenderShader(vertShaderDirStr, fragShaderDirStr);
 
         if (!m_SceneProgram) {
             std::cerr << "Failed to load scene shader program\n";
