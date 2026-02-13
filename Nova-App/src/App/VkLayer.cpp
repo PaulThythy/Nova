@@ -5,7 +5,8 @@ namespace Nova::App {
 	VkLayer::~VkLayer() = default;
 
 	void VkLayer::OnAttach() {
-		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(GraphicsAPI::Vulkan);
+		GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(api);
 	}
 
 	void VkLayer::OnDetach() {
