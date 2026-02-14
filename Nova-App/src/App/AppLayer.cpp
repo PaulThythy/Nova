@@ -223,10 +223,10 @@ namespace Nova::App {
         glSphere3->Upload(*cpuSphere3);
 
         std::filesystem::path p = std::filesystem::current_path();
-        std::filesystem::path shaderDir = p / "Nova-App" / "resources" / "editor" / "shaders";
+        std::filesystem::path shaderDir = p / "Nova-App" / "Resources" / "Editor" / "Shaders";
 
-        std::filesystem::path vertShaderDir = shaderDir / "scene" / "scene.vert";
-        std::filesystem::path fragShaderDir = shaderDir / "scene" / "scene.frag";
+        std::filesystem::path vertShaderDir = shaderDir / "Scene" / "scene.vert";
+        std::filesystem::path fragShaderDir = shaderDir / "Scene" / "scene.frag";
 
         std::string vertShaderDirStr = vertShaderDir.string();
         std::string fragShaderDirStr = fragShaderDir.string();
