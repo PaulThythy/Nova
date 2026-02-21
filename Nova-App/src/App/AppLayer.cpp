@@ -4,6 +4,9 @@
 #include "Scene/ECS/Components/MeshComponent.h"
 #include "Scene/ECS/Components/CameraComponent.h"
 
+#include "Asset/AssetManager.h"
+#include "Asset/Assets/MeshAsset.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -136,20 +139,21 @@ namespace Nova::App {
 
         auto& registry = g_Scene.GetRegistry();
 
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuPlane = Renderer::Graphics::Mesh::CreatePlane();
-        std::shared_ptr<Renderer::Graphics::Mesh> glPlane = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuPlane);
+        using Nova::Core::Asset::AssetManager;
+        using Nova::Core::Asset::Assets::MeshAsset;
+        using Nova::Core::Asset::Assets::MeshAssetDesc;
 
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuCube = Renderer::Graphics::Mesh::CreateCube();
-        std::shared_ptr<Renderer::Graphics::Mesh> glCube = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuCube);
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetShared();
 
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere1 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere1 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere1);
+        MeshAssetDesc cubeDesc{};
+        cubeDesc.m_HalfExtent = 0.5f;
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", cubeDesc).GetShared();
 
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere2 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere2 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere2);
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetShared();
 
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere3 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere3 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere3);
+        if (planeAsset) planeAsset->Load();
+        if (cubeAsset) cubeAsset->Load();
+        if (sphereAsset) sphereAsset->Load();
 
         entt::entity planeEntity = g_Scene.CreateEntity("Plane");
         entt::entity cubeEntity = g_Scene.CreateEntity("Cube");
@@ -165,35 +169,35 @@ namespace Nova::App {
         const glm::vec3 s{ 3.0f,3.0f,3.0f };
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity, t, r, s);
-        registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
+        registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, planeAsset);
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(cubeEntity,
             glm::vec3(0.0f, 0.5f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f)
         );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(cubeEntity, glCube);
+        registry.emplace<Scene::ECS::Components::MeshComponent>(cubeEntity, cubeAsset);
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(sphere1Entity,
             glm::vec3(2.0f, 1.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f)
         );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere1Entity, glSphere1);
+        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere1Entity, sphereAsset);
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(sphere2Entity,
             glm::vec3(3.0f, 0.7f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.7f, 0.7f, 0.7f)
         );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere2Entity, glSphere2);
+        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere2Entity, sphereAsset);
 
         registry.emplace<Scene::ECS::Components::TransformComponent>(sphere3Entity,
             glm::vec3(3.0f, 0.5f, 0.5f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.5f, 0.5f, 0.5f)
         );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere3Entity, glSphere3);
+        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere3Entity, sphereAsset);
 
         auto camera = std::make_shared<Renderer::Graphics::Camera>(
             glm::vec3(2.5f, 2.5f, 5.0f),               // lookFrom
@@ -215,12 +219,6 @@ namespace Nova::App {
             camera,
             true // isPrimary
         );
-
-        glPlane->Upload(*cpuPlane);
-        glCube->Upload(*cpuCube);
-        glSphere1->Upload(*cpuSphere1);
-        glSphere2->Upload(*cpuSphere2);
-        glSphere3->Upload(*cpuSphere3);
 
         std::filesystem::path p = std::filesystem::current_path();
         std::filesystem::path shaderDir = p / "Nova-App" / "Resources" / "Editor" / "Shaders";
@@ -325,7 +323,11 @@ namespace Nova::App {
         auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
 
         viewMeshes.each([&](entt::entity entity, TransformComponent& transform, MeshComponent& meshComp) {
-            if (!meshComp.m_Mesh)
+            if (!meshComp.m_MeshAsset)
+                return;
+
+            auto renderMesh = meshComp.m_MeshAsset->GetGPUMesh();
+            if (!renderMesh)
                 return;
 
             glm::mat4 model = transform.GetTransform();
@@ -335,9 +337,9 @@ namespace Nova::App {
                 glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
             }
 
-            meshComp.m_Mesh->Bind();
-            meshComp.m_Mesh->Draw();
-            meshComp.m_Mesh->Unbind();
+            renderMesh->Bind();
+            renderMesh->Draw();
+            renderMesh->Unbind();
         });
 
         glDisable(GL_CULL_FACE);

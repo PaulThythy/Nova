@@ -18,7 +18,6 @@
 #include "Scene/ECS/Components/TransformComponent.h"
 #include "Scene/ECS/Components/MeshComponent.h"
 
-#include "Renderer/Backends/OpenGL/GL_Mesh.h"
 #include "Renderer/Backends/OpenGL/GL_Shaders.h"
 #include "Renderer/Backends/OpenGL/GL_FrameBuffer.h"
 
