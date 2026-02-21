@@ -143,13 +143,13 @@ namespace Nova::App {
         using Nova::Core::Asset::Assets::MeshAsset;
         using Nova::Core::Asset::Assets::MeshAssetDesc;
 
-        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetShared();
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetAssetRef();
 
         MeshAssetDesc cubeDesc{};
         cubeDesc.m_HalfExtent = 0.5f;
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", cubeDesc).GetShared();
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", cubeDesc).GetAssetRef();
 
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetShared();
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetAssetRef();
 
         if (planeAsset) planeAsset->Load();
         if (cubeAsset) cubeAsset->Load();
