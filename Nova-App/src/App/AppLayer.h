@@ -47,7 +47,9 @@ namespace Nova::App {
         void OnAttach() override;
         void OnDetach() override;
         void OnUpdate(float dt) override;
-        void OnRender() override;
+        void OnBegin() override {};
+        void OnRender() override {};
+        void OnEnd() override {};
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
 

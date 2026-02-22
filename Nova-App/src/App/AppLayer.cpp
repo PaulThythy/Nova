@@ -358,8 +358,6 @@ namespace Nova::App {
         }
     }
 
-    void AppLayer::OnRender() {/*empty*/ }
-
     void AppLayer::OnImGuiRender() {
         UI::Panels::MainMenuBar::Render();
 
