@@ -250,11 +250,6 @@ namespace Nova::App {
             g_AppLayer = nullptr;
     }
 
-    void AppLayer::OnUpdate(float dt) {
-        (void)dt;
-        //later
-    }
-
     void AppLayer::BeginScene() {
         // Handle viewport resizing
         if (m_ViewportResizePending) {
