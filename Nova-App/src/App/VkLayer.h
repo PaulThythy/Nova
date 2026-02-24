@@ -11,6 +11,7 @@
 
 #include "Scene/ECS/Components/CameraComponent.h"
 #include "Scene/ECS/Components/TransformComponent.h"
+#include "Scene/ECS/Components/MeshComponent.h"
 
 #include "Asset/AssetManager.h"
 #include "Asset/Asset.h"
@@ -73,8 +74,8 @@ namespace Nova::App {
 			float m_Yaw = 0.0f;
 			float m_Pitch = 0.0f;
 
-			float m_RotateSensitivity = 0.25f;
-			float m_ZoomSensitivity = 0.5f;
+			float m_RotateSensitivity = 0.025f;
+			float m_ZoomSensitivity = 0.1f;
 
 			bool m_IsRotating = false;
 			bool m_HasLastMousePos = false;

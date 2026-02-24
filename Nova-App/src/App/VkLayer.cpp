@@ -10,7 +10,7 @@ namespace Nova::App {
 
 		// camera setup
 		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
-            glm::vec3(2.5f, 2.5f, 5.0f),               // lookFrom
+            glm::vec3(5.0f, 5.0f, 5.0f),               // lookFrom
             glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
             glm::vec3(0.0f, 1.0f, 0.0f),                // up
             45.0f,                                      // FOV in degree
@@ -36,6 +36,9 @@ namespace Nova::App {
             true // isPrimary
         );
 
+		UpdateCameraAspectFromWindow();
+    	UpdateCameraFromOrbit();
+
 		// load asset
 		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
 		cubeAsset->Load();
@@ -46,6 +49,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f)
         );
+		registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
 	}
 
 	void VkLayer::OnDetach() {
@@ -65,8 +69,71 @@ namespace Nova::App {
 	}
 	
 	void VkLayer::OnRender() {
-		if (!m_Renderer) return;
-		m_Renderer->Render();
+		if (!m_Renderer || !m_Camera) return;
+
+		auto& registry = m_Scene.GetRegistry();
+
+		// View
+		const glm::mat4 view = glm::lookAt(
+			m_Camera->m_LookFrom,
+			m_Camera->m_LookAt,
+			m_Camera->m_Up
+		);
+
+		// Projection
+		glm::mat4 proj{1.0f};
+		if (m_Camera->m_IsPerspective) {
+			// IMPORTANT: essaie d'unifier ta convention (ZO vs NO) entre GL/VK.
+			// Si tu utilises glClipControl(..., GL_ZERO_TO_ONE), une projection ZO est idéale.
+			proj = glm::perspective(
+				glm::radians(m_Camera->m_FOV),
+				m_Camera->m_AspectRatio,
+				m_Camera->m_NearPlane,
+				m_Camera->m_FarPlane
+			);
+		} else {
+			// à adapter selon ta Camera (ortho)
+			proj = glm::mat4(1.0f);
+		}
+
+		// Parcours ECS : tous les objets rendables
+		auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
+		for (auto entity : viewMeshes) {
+			auto& tc = viewMeshes.get<TransformComponent>(entity);
+			auto& mc = viewMeshes.get<MeshComponent>(entity);
+
+			if (!mc.m_MeshAsset || !mc.m_MeshAsset->IsLoaded())
+				continue;
+
+			auto gpuMesh = mc.m_MeshAsset->GetGPUMesh();
+			if (!gpuMesh)
+				continue;
+
+			const bool hasIndices = !gpuMesh->GetIndices().empty();
+
+			if (hasIndices) {
+				Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+				cmd.m_Mesh = gpuMesh;
+				cmd.m_Model = tc.GetTransform();
+				cmd.m_View = view;
+				cmd.m_Proj = proj;
+				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+				cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+				cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
+
+				m_Renderer->DrawIndexed(cmd);
+			} else {
+				Nova::Core::Renderer::RHI::RHI_DrawCommand cmd{};
+				cmd.m_Mesh = gpuMesh;
+				cmd.m_Model = tc.GetTransform();
+				cmd.m_View = view;
+				cmd.m_Proj = proj;
+				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+				cmd.m_VertexCount = static_cast<uint32_t>(gpuMesh->GetVertices().size());
+
+				m_Renderer->Draw(cmd);
+			}
+		}
 	}
 
 	void VkLayer::OnEnd() {
@@ -113,11 +180,14 @@ namespace Nova::App {
 	}
 
 	bool VkLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
-		// Adapte le nom du bouton à ton enum
-		// Exemple: if (e.GetMouseButton() == MouseButton::Right)
+		// Si ImGui utilise la souris (drag d'une fenêtre, slider, etc.), on ignore pour la caméra
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return false;
+		}
+
 		if (e.GetMouseButton() == 1 /* Right placeholder */) {
 			m_Orbit.m_IsRotating = true;
-			m_Orbit.m_HasLastMousePos = false; // reset pour éviter un gros delta au premier move
+			m_Orbit.m_HasLastMousePos = false;
 			return true;
 		}
 		return false;
@@ -132,10 +202,15 @@ namespace Nova::App {
 	}
 
 	bool VkLayer::OnMouseMoved(MouseMovedEvent& e) {
-		// Si ImGui capture la souris, ignore l'orbite (recommandé)
-		// if (ImGui::GetIO().WantCaptureMouse) return false;
-
 		const glm::vec2 mousePos{ e.GetX(), e.GetY() };
+
+		// Si ImGui capture la souris, on n'applique pas d'orbite
+		if (ImGui::GetIO().WantCaptureMouse) {
+			// On garde la dernière position à jour pour éviter un "saut" quand on revient dans la vue
+			m_Orbit.m_LastMousePos = mousePos;
+			m_Orbit.m_HasLastMousePos = true;
+			return false;
+		}
 
 		if (!m_Orbit.m_IsRotating) {
 			m_Orbit.m_LastMousePos = mousePos;
@@ -152,7 +227,6 @@ namespace Nova::App {
 		const glm::vec2 delta = mousePos - m_Orbit.m_LastMousePos;
 		m_Orbit.m_LastMousePos = mousePos;
 
-		// RMB drag: yaw/pitch
 		m_Orbit.m_Yaw   -= delta.x * m_Orbit.m_RotateSensitivity;
 		m_Orbit.m_Pitch -= delta.y * m_Orbit.m_RotateSensitivity;
 
@@ -161,7 +235,10 @@ namespace Nova::App {
 	}
 
 	bool VkLayer::OnMouseScrolled(MouseScrolledEvent& e) {
-		// Optionnel mais très utile : zoom orbit
+		if (ImGui::GetIO().WantCaptureMouse) {
+			return false;
+		}
+
 		const float scrollY = e.GetYOffset();
 		m_Orbit.m_Distance -= scrollY * m_Orbit.m_ZoomSensitivity;
 		UpdateCameraFromOrbit();
@@ -177,7 +254,7 @@ namespace Nova::App {
 
 	void VkLayer::OnImGuiRender() {
 		// Performance stats panel
-		ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 		if (ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_None)) {
 			float frameTimeMs = m_DeltaTime * 1000.0f;
