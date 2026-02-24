@@ -1,8 +1,8 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
 
-#include "App/AppLayer.h"
-#include "App/EditorLayer.h"
+//#include "App/AppLayer.h"
+//#include "App/EditorLayer.h"
 #include "App/VkLayer.h"
 
 #include "Core/Log.h"
