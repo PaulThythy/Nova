@@ -109,30 +109,16 @@ namespace Nova::App {
 			if (!gpuMesh)
 				continue;
 
-			const bool hasIndices = !gpuMesh->GetIndices().empty();
+			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+			cmd.m_Mesh = gpuMesh;
+			cmd.m_Model = tc.GetTransform();
+			cmd.m_View = view;
+			cmd.m_Proj = proj;
+			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
 
-			if (hasIndices) {
-				Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-				cmd.m_Mesh = gpuMesh;
-				cmd.m_Model = tc.GetTransform();
-				cmd.m_View = view;
-				cmd.m_Proj = proj;
-				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-				cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-				cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
-
-				m_Renderer->DrawIndexed(cmd);
-			} else {
-				Nova::Core::Renderer::RHI::RHI_DrawCommand cmd{};
-				cmd.m_Mesh = gpuMesh;
-				cmd.m_Model = tc.GetTransform();
-				cmd.m_View = view;
-				cmd.m_Proj = proj;
-				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-				cmd.m_VertexCount = static_cast<uint32_t>(gpuMesh->GetVertices().size());
-
-				m_Renderer->Draw(cmd);
-			}
+			m_Renderer->DrawIndexed(cmd);
 		}
 	}
 
