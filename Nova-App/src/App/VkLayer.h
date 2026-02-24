@@ -75,7 +75,7 @@ namespace Nova::App {
 			float m_Pitch = 0.0f;
 
 			float m_RotateSensitivity = 0.025f;
-			float m_ZoomSensitivity = 0.1f;
+			float m_ZoomSensitivity = 0.5f;
 
 			bool m_IsRotating = false;
 			bool m_HasLastMousePos = false;

@@ -40,7 +40,7 @@ namespace Nova::App {
     	UpdateCameraFromOrbit();
 
 		// load asset
-		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
+		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetAssetRef();
 		cubeAsset->Load();
 		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
 
@@ -228,7 +228,7 @@ namespace Nova::App {
 		m_Orbit.m_LastMousePos = mousePos;
 
 		m_Orbit.m_Yaw   -= delta.x * m_Orbit.m_RotateSensitivity;
-		m_Orbit.m_Pitch -= delta.y * m_Orbit.m_RotateSensitivity;
+		m_Orbit.m_Pitch += delta.y * m_Orbit.m_RotateSensitivity;
 
 		UpdateCameraFromOrbit();
 		return true;
