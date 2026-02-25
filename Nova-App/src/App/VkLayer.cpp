@@ -40,7 +40,7 @@ namespace Nova::App {
     	UpdateCameraFromOrbit();
 
 		// load asset
-		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetAssetRef();
+		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
 		cubeAsset->Load();
 		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
 
