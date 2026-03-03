@@ -259,6 +259,37 @@ namespace Nova::App {
 		}
 		ImGui::End();
 
+		// Viewport panel for rendering output (OpenGL or Vulkan).
+		// OpenGL: the renderer outputs to an offscreen framebuffer, exposed as an ImGui texture.
+		// Vulkan: for now, the scene is rendered directly into the swapchain, so no texture yet.
+		/*ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		if (ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			const ImVec2 avail = ImGui::GetContentRegionAvail();
+			if (avail.x > 0.0f && avail.y > 0.0f && m_Camera) {
+				const glm::vec2 newSize{ avail.x, avail.y };
+				if (newSize != m_ViewportSize) {
+					m_ViewportSize = newSize;
+
+					m_Camera->m_AspectRatio = newSize.x / newSize.y;
+
+					if (m_Renderer) {
+						m_Renderer->Resize(static_cast<int>(newSize.x), static_cast<int>(newSize.y));
+					}
+				}
+		
+				if (m_Renderer) {
+					if (void* textureId = m_Renderer->GetViewportTextureID()) {
+						// OpenGL: display the FBO texture in the panel
+						ImGui::Image(textureId, avail, ImVec2(0, 1), ImVec2(1, 0));
+					}
+					// Vulkan: textureId == nullptr for now, the panel remains empty
+					// but continues to control the camera aspect ratio.
+				}
+			}
+		}
+		ImGui::End();
+		ImGui::PopStyleVar();*/
+
 		// Demo window for reference
 		bool show_demo_window = true;
 		if (show_demo_window)

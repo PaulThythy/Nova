@@ -63,6 +63,9 @@ namespace Nova::App {
 		std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
 		float m_DeltaTime = 0.0f;
 
+		// Cached size of the ImGui viewport panel. Used to keep camera aspect ratio in sync.
+		glm::vec2 m_ViewportSize{0.0f, 0.0f};
+
 		Nova::Core::Scene::Scene m_Scene{"Scene_test"};
 
 		std::shared_ptr<Camera> m_Camera;
