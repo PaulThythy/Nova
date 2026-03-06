@@ -65,6 +65,8 @@ namespace Nova::App {
 
 		// Cached size of the ImGui viewport panel. Used to keep camera aspect ratio in sync.
 		glm::vec2 m_ViewportSize{0.0f, 0.0f};
+		glm::ivec2 m_PendingViewportSize{0, 0};
+		bool m_ViewportResizePending{false};
 
 		Nova::Core::Scene::Scene m_Scene{"Scene_test"};
 

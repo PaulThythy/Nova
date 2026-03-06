@@ -65,6 +65,14 @@ namespace Nova::App {
 
 	void VkLayer::OnBegin() {
 		if (!m_Renderer) return;
+
+		if (m_ViewportResizePending) {
+			m_ViewportResizePending = false;
+			if (m_PendingViewportSize.x > 0 && m_PendingViewportSize.y > 0) {
+				m_Renderer->Resize(m_PendingViewportSize.x, m_PendingViewportSize.y);
+			}
+		}
+
 		m_Renderer->BeginFrame();
 	}
 	
@@ -271,10 +279,11 @@ namespace Nova::App {
 					m_ViewportSize = newSize;
 
 					m_Camera->m_AspectRatio = newSize.x / newSize.y;
-
-					if (m_Renderer) {
-						m_Renderer->Resize(static_cast<int>(newSize.x), static_cast<int>(newSize.y));
-					}
+					m_PendingViewportSize = {
+						std::max(1, static_cast<int>(newSize.x)),
+						std::max(1, static_cast<int>(newSize.y))
+					};
+					m_ViewportResizePending = true;
 				}
 		
 				if (m_Renderer) {
