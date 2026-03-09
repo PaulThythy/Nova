@@ -128,6 +128,9 @@ namespace Nova::App {
 
 			m_Renderer->DrawIndexed(cmd);
 		}
+
+		// Vulkan: end viewport pass, transition to shader read, begin swapchain pass for ImGui
+		m_Renderer->PrepareForImGui();
 	}
 
 	void VkLayer::OnEnd() {
@@ -268,9 +271,8 @@ namespace Nova::App {
 		ImGui::End();
 
 		// Viewport panel for rendering output (OpenGL or Vulkan).
-		// OpenGL: the renderer outputs to an offscreen framebuffer, exposed as an ImGui texture.
-		// Vulkan: for now, the scene is rendered directly into the swapchain, so no texture yet.
-		/*ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		// OpenGL: FBO color texture. Vulkan: offscreen viewport image via VkDescriptorSet.
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
 			const ImVec2 avail = ImGui::GetContentRegionAvail();
 			if (avail.x > 0.0f && avail.y > 0.0f && m_Camera) {
@@ -297,7 +299,7 @@ namespace Nova::App {
 			}
 		}
 		ImGui::End();
-		ImGui::PopStyleVar();*/
+		ImGui::PopStyleVar();
 
 		// Demo window for reference
 		bool show_demo_window = true;
