@@ -135,8 +135,6 @@ namespace Nova::App {
 			m_Renderer->DrawIndexed(cmd);
 		}
 
-		// Vulkan: end viewport pass, transition to shader read, begin swapchain pass for ImGui
-		m_Renderer->PrepareForImGui();
 	}
 
 	void VkLayer::OnEnd() {
