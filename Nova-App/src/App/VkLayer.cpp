@@ -108,6 +108,8 @@ namespace Nova::App {
 			proj = glm::mat4(1.0f);
 		}
 
+		m_Renderer->BeginScene(view, proj);
+
 		// Parcours ECS : tous les objets rendables
 		auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
 		for (auto entity : viewMeshes) {
@@ -123,13 +125,11 @@ namespace Nova::App {
 
 			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
 			cmd.m_Mesh = gpuMesh;
-			cmd.m_Model = tc.GetTransform();
-			cmd.m_View = view;
-			cmd.m_Proj = proj;
 			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
 			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
 			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
 
+			m_Renderer->SetModelMatrix(tc.GetTransform());
 			m_Renderer->GetShader()->SetParameter("u_Color", m_ObjectColor);
 
 			m_Renderer->DrawIndexed(cmd);
