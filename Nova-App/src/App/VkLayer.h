@@ -72,6 +72,8 @@ namespace Nova::App {
 
 		std::shared_ptr<Camera> m_Camera;
 
+		glm::vec3 m_ObjectColor{1.0f, 0.0f, 0.0f};
+
 		struct OrbitState {
 			glm::vec3 m_Target{0.0f, 0.0f, 0.0f};
 			float m_Distance = 5.0f;

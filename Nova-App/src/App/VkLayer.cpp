@@ -1,5 +1,9 @@
 #include "App/VkLayer.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 namespace Nova::App {
 
 	VkLayer::~VkLayer() = default;
@@ -125,6 +129,8 @@ namespace Nova::App {
 			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
 			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
 			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
+
+			m_Renderer->GetShader()->SetParameter("u_Color", m_ObjectColor);
 
 			m_Renderer->DrawIndexed(cmd);
 		}
@@ -267,6 +273,10 @@ namespace Nova::App {
 			ImGui::Text("Distance: %.2f", m_Orbit.m_Distance);
 			ImGui::Text("Camera Pos: (%.2f, %.2f, %.2f)",
 				m_Camera->m_LookFrom.x, m_Camera->m_LookFrom.y, m_Camera->m_LookFrom.z);
+			
+			ImGui::Separator();
+			ImGui::Text("Object Color");
+			ImGui::ColorEdit3("Color", glm::value_ptr(m_ObjectColor));
 		}
 		ImGui::End();
 
