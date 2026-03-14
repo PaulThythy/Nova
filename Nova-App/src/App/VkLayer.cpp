@@ -57,10 +57,9 @@ namespace Nova::App {
 	}
 
 	void VkLayer::OnDetach() {
-		if (m_Renderer) {
-			m_Renderer->Destroy();
-			m_Renderer.reset();
-		}
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		m_Renderer->Destroy();
+		m_Renderer.reset();
 	}
 	
 	void VkLayer::OnUpdate(float dt) {
@@ -68,7 +67,7 @@ namespace Nova::App {
 	}
 
 	void VkLayer::OnBegin() {
-		if (!m_Renderer) return;
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 
 		if (m_ViewportResizePending) {
 			m_ViewportResizePending = false;
@@ -81,7 +80,8 @@ namespace Nova::App {
 	}
 	
 	void VkLayer::OnRender() {
-		if (!m_Renderer || !m_Camera) return;
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
 		auto& registry = m_Scene.GetRegistry();
 
@@ -138,7 +138,7 @@ namespace Nova::App {
 	}
 
 	void VkLayer::OnEnd() {
-		if (!m_Renderer) return;
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		m_Renderer->EndFrame();
 	}
 
