@@ -257,7 +257,7 @@ namespace Nova::App {
 		// Performance stats panel
 		ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-		if (ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_None)) {
+		if (ImGui::Begin("Statistics", nullptr, ImGuiWindowFlags_None)) {
 			float frameTimeMs = m_DeltaTime * 1000.0f;
 			float fps = m_DeltaTime > 0.0f ? 1.0f / m_DeltaTime : 0.0f;
 			
