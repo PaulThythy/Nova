@@ -19,8 +19,11 @@
 
 #include "Renderer/Graphics/Camera.h"
 #include "Renderer/RHI/RHI_Renderer.h"
+#include "Renderer/RHI/RHI_ShaderUniforms.h"
 
 #include "Scene/Scene.h"
+
+#include <vector>
 
 using namespace Nova::Core;
 using namespace Nova::Core::Events;
@@ -50,6 +53,8 @@ namespace Nova::App {
 	
 	private:
 		// ---- Orbit camera helpers ----
+		void CreateInstancedCubeScene();
+		void UpdateCubeInstances();
 		void UpdateCameraFromOrbit();
 		void UpdateCameraAspectFromWindow();
 
@@ -71,15 +76,28 @@ namespace Nova::App {
 		Nova::Core::Scene::Scene m_Scene{"Scene_test"};
 
 		std::shared_ptr<Camera> m_Camera;
+		std::shared_ptr<MeshAsset> m_CubeMeshAsset;
 
-		glm::vec3 m_ObjectColor{1.0f, 0.0f, 0.0f};
+		struct AnimatedCube {
+			glm::vec3 m_Position{0.0f};
+			glm::vec3 m_RotationAxis{0.0f, 1.0f, 0.0f};
+			glm::vec4 m_Color{1.0f};
+			float m_RotationSpeed{0.0f};
+			float m_RotationAngle{0.0f};
+			float m_Scale{1.0f};
+		};
+
+		std::vector<AnimatedCube> m_Cubes;
+		std::vector<Nova::Core::Renderer::RHI::SSBO_InstanceData> m_InstanceData;
+		float m_ElapsedTime{0.0f};
+		uint32_t m_FrameIndex{0};
 
 		struct OrbitState {
 			glm::vec3 m_Target{0.0f, 0.0f, 0.0f};
-			float m_Distance = 5.0f;
+			float m_Distance = 18.0f;
 
-			float m_Yaw = 0.0f;
-			float m_Pitch = 0.0f;
+			float m_Yaw = glm::radians(35.0f);
+			float m_Pitch = glm::radians(25.0f);
 
 			float m_RotateSensitivity = 0.025f;
 			float m_ZoomSensitivity = 0.5f;

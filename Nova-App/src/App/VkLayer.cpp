@@ -4,7 +4,19 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <algorithm>
+#include <random>
+
 namespace Nova::App {
+
+	namespace {
+		constexpr size_t kCubeInstanceCount = 250;
+		constexpr float kSceneRadius = 14.0f;
+		constexpr float kSceneHeight = 4.0f;
+		constexpr float kCenterExclusionRadius = 1.5f;
+		constexpr float kAxisLength = 1.0f;
+		constexpr float kAxisThickness = 0.05f;
+	}
 
 	VkLayer::~VkLayer() = default;
 
@@ -43,17 +55,8 @@ namespace Nova::App {
 		UpdateCameraAspectFromWindow();
     	UpdateCameraFromOrbit();
 
-		// load asset
-		auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
-		cubeAsset->Load();
-		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
-
-		registry.emplace<TransformComponent>(cubeEntity,
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
-		registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
+		CreateInstancedCubeScene();
+		UpdateCameraFromOrbit();
 	}
 
 	void VkLayer::OnDetach() {
@@ -64,6 +67,13 @@ namespace Nova::App {
 	
 	void VkLayer::OnUpdate(float dt) {
 		m_DeltaTime = dt;
+		m_ElapsedTime += dt;
+
+		for (auto& cube : m_Cubes) {
+			cube.m_RotationAngle += cube.m_RotationSpeed * dt;
+		}
+
+		UpdateCubeInstances();
 	}
 
 	void VkLayer::OnBegin() {
@@ -110,6 +120,39 @@ namespace Nova::App {
 
 		m_Renderer->BeginScene(view, proj);
 
+		if (auto* shader = m_Renderer->GetShader()) {
+			shader->SetParameter("iTime", m_ElapsedTime);
+			shader->SetParameter("iTimeDelta", m_DeltaTime);
+			shader->SetParameter("iFrameRate", m_DeltaTime > 0.0f ? 1.0f / m_DeltaTime : 0.0f);
+			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
+			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
+		}
+
+		if (m_CubeMeshAsset && m_CubeMeshAsset->IsLoaded() && !m_InstanceData.empty()) {
+			auto gpuMesh = m_CubeMeshAsset->GetGPUMesh();
+			if (gpuMesh) {
+				Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+				cmd.m_Mesh = gpuMesh;
+				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+				cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+				cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
+				cmd.m_InstanceCount = static_cast<uint32_t>(m_InstanceData.size());
+
+				if (auto* shader = m_Renderer->GetShader()) {
+					shader->SetParameter("u_UseInstancing", 1);
+					shader->SetInstanceData(m_InstanceData);
+					shader->SetParameter("u_Color", glm::vec4(1.0f));
+				}
+
+				m_Renderer->SetModelMatrix(glm::mat4(1.0f));
+				m_Renderer->DrawIndexed(cmd);
+
+				if (auto* shader = m_Renderer->GetShader()) {
+					shader->SetParameter("u_UseInstancing", 0);
+				}
+			}
+		}
+
 		// Parcours ECS : tous les objets rendables
 		auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
 		for (auto entity : viewMeshes) {
@@ -130,11 +173,111 @@ namespace Nova::App {
 			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
 
 			m_Renderer->SetModelMatrix(tc.GetTransform());
-			m_Renderer->GetShader()->SetParameter("u_Color", m_ObjectColor);
+			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
+			m_Renderer->GetShader()->SetParameter("u_Color", glm::vec4(1.0f));
 
 			m_Renderer->DrawIndexed(cmd);
 		}
 
+	}
+
+	void VkLayer::CreateInstancedCubeScene() {
+		m_CubeMeshAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
+		NV_ASSERT_MSG(m_CubeMeshAsset, "Failed to acquire the cube mesh asset.");
+		if (!m_CubeMeshAsset) {
+			return;
+		}
+
+		m_CubeMeshAsset->Load();
+
+		m_Cubes.clear();
+		m_Cubes.reserve(kCubeInstanceCount);
+		m_InstanceData.reserve(kCubeInstanceCount);
+
+		std::mt19937 rng(1337u);
+		std::uniform_real_distribution<float> positionDist(-kSceneRadius, kSceneRadius);
+		std::uniform_real_distribution<float> heightDist(-kSceneHeight, kSceneHeight);
+		std::uniform_real_distribution<float> axisDist(-1.0f, 1.0f);
+		std::uniform_real_distribution<float> speedDist(0.15f, 0.45f);
+		std::uniform_real_distribution<float> scaleDist(0.45f, 1.35f);
+		std::uniform_real_distribution<float> colorDist(0.2f, 1.0f);
+
+		for (size_t i = 0; i < kCubeInstanceCount; ++i) {
+			AnimatedCube cube{};
+			do {
+				cube.m_Position = {
+					positionDist(rng),
+					heightDist(rng),
+					positionDist(rng)
+				};
+			} while (glm::length(cube.m_Position) < kCenterExclusionRadius);
+
+			glm::vec3 axis{
+				axisDist(rng),
+				axisDist(rng),
+				axisDist(rng)
+			};
+			if (glm::length(axis) < 0.001f) {
+				axis = glm::vec3(0.0f, 1.0f, 0.0f);
+			}
+
+			cube.m_RotationAxis = glm::normalize(axis);
+			cube.m_RotationSpeed = speedDist(rng);
+			cube.m_RotationAngle = glm::radians(positionDist(rng) * 10.0f);
+			cube.m_Scale = scaleDist(rng);
+			cube.m_Color = glm::vec4(
+				colorDist(rng),
+				colorDist(rng),
+				colorDist(rng),
+				1.0f
+			);
+			m_Cubes.push_back(cube);
+		}
+
+		m_Orbit.m_Target = glm::vec3(0.0f);
+		UpdateCubeInstances();
+	}
+
+	void VkLayer::UpdateCubeInstances() {
+		m_InstanceData.clear();
+		m_InstanceData.reserve(m_Cubes.size() + 3);
+
+		for (const auto& cube : m_Cubes) {
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), cube.m_Position);
+			model = glm::rotate(model, cube.m_RotationAngle, cube.m_RotationAxis);
+			model = glm::scale(model, glm::vec3(cube.m_Scale));
+
+			RHI::SSBO_InstanceData instance{};
+			instance.model = model;
+			instance.color = cube.m_Color;
+			m_InstanceData.push_back(instance);
+		}
+
+		m_Orbit.m_Target = glm::vec3(0.0f);
+
+		const auto appendAxisMarker = [this](const glm::vec3& translation, const glm::vec3& scale, const glm::vec4& color) {
+			RHI::SSBO_InstanceData instance{};
+			instance.model = glm::translate(glm::mat4(1.0f), translation)
+				* glm::scale(glm::mat4(1.0f), scale);
+			instance.color = color;
+			m_InstanceData.push_back(instance);
+		};
+
+		appendAxisMarker(
+			glm::vec3(kAxisLength * 0.5f, 0.0f, 0.0f),
+			glm::vec3(kAxisLength, kAxisThickness, kAxisThickness),
+			glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)
+		);
+		appendAxisMarker(
+			glm::vec3(0.0f, kAxisLength * 0.5f, 0.0f),
+			glm::vec3(kAxisThickness, kAxisLength, kAxisThickness),
+			glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)
+		);
+		appendAxisMarker(
+			glm::vec3(0.0f, 0.0f, kAxisLength * 0.5f),
+			glm::vec3(kAxisThickness, kAxisThickness, kAxisLength),
+			glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)
+		);
 	}
 
 	void VkLayer::OnEnd() {
@@ -273,8 +416,9 @@ namespace Nova::App {
 				m_Camera->m_LookFrom.x, m_Camera->m_LookFrom.y, m_Camera->m_LookFrom.z);
 			
 			ImGui::Separator();
-			ImGui::Text("Object Color");
-			ImGui::ColorEdit3("Color", glm::value_ptr(m_ObjectColor));
+			ImGui::Text("Instancing");
+			ImGui::Text("Cubes: %zu", m_Cubes.size());
+			ImGui::Text("Orbit Target: (0.00, 0.00, 0.00)");
 		}
 		ImGui::End();
 
