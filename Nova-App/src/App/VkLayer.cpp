@@ -133,7 +133,7 @@ namespace Nova::App {
 			}
 		}
 
-		// Parcours ECS : tous les objets rendables
+		// ECS traversal: draw all entities that have a transform and a mesh.
 		auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
 		for (auto entity : viewMeshes) {
 			auto& tc = viewMeshes.get<TransformComponent>(entity);
@@ -275,14 +275,14 @@ namespace Nova::App {
 	}
 
 	void VkLayer::UpdateCameraFromOrbit() {
-		// Clamp pitch pour éviter les singularités (gimbal-ish / flip)
+		// Clamp pitch to avoid gimbal singularities (flip at ±90°).
 		const float maxPitch = glm::radians(89.0f);
 		m_Orbit.m_Pitch = std::clamp(m_Orbit.m_Pitch, -maxPitch, maxPitch);
 		m_Orbit.m_Distance = std::max(0.2f, m_Orbit.m_Distance);
 
 		const float cp = std::cos(m_Orbit.m_Pitch);
 
-		// yaw=0 => caméra sur +Z
+		// yaw=0 places the camera on the +Z axis.
 		glm::vec3 offset;
 		offset.x = m_Orbit.m_Distance * cp * std::sin(m_Orbit.m_Yaw);
 		offset.y = m_Orbit.m_Distance * std::sin(m_Orbit.m_Pitch);
@@ -304,7 +304,7 @@ namespace Nova::App {
 	}
 
 	bool VkLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
-		// Si ImGui utilise la souris (drag d'une fenêtre, slider, etc.), on ignore pour la caméra
+		// If ImGui is consuming mouse input (window drag, slider, etc.), ignore it for the camera.
 		if (ImGui::GetIO().WantCaptureMouse) {
 			return false;
 		}
@@ -328,9 +328,9 @@ namespace Nova::App {
 	bool VkLayer::OnMouseMoved(MouseMovedEvent& e) {
 		const glm::vec2 mousePos{ e.GetX(), e.GetY() };
 
-		// Si ImGui capture la souris, on n'applique pas d'orbite
+		// If ImGui has captured the mouse, skip orbit input.
 		if (ImGui::GetIO().WantCaptureMouse) {
-			// On garde la dernière position à jour pour éviter un "saut" quand on revient dans la vue
+			// Keep the last position up-to-date to avoid a position jump when the cursor re-enters the viewport.
 			m_Orbit.m_LastMousePos = mousePos;
 			m_Orbit.m_HasLastMousePos = true;
 			return false;
@@ -422,8 +422,8 @@ namespace Nova::App {
 		
 				if (m_Renderer) {
 					if (void* textureId = m_Renderer->GetViewportTextureID()) {
-						// OpenGL FBOs ont Y=0 en bas → flip V nécessaire.
-						// Vulkan/Metal/DX ont Y=0 en haut → pas de flip.
+						// OpenGL FBOs have Y=0 at the bottom, so a V-flip is required.
+						// Vulkan/Metal/DX have Y=0 at the top: no flip needed.
 						const GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
 						const bool needsVFlip = (api == GraphicsAPI::OpenGL);
 						const ImVec2 uv0 = needsVFlip ? ImVec2(0, 1) : ImVec2(0, 0);
