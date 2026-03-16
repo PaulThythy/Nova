@@ -95,28 +95,8 @@ namespace Nova::App {
 
 		auto& registry = m_Scene.GetRegistry();
 
-		// View
-		const glm::mat4 view = glm::lookAt(
-			m_Camera->m_LookFrom,
-			m_Camera->m_LookAt,
-			m_Camera->m_Up
-		);
-
-		// Projection
-		glm::mat4 proj{1.0f};
-		if (m_Camera->m_IsPerspective) {
-			// IMPORTANT: essaie d'unifier ta convention (ZO vs NO) entre GL/VK.
-			// Si tu utilises glClipControl(..., GL_ZERO_TO_ONE), une projection ZO est idéale.
-			proj = glm::perspective(
-				glm::radians(m_Camera->m_FOV),
-				m_Camera->m_AspectRatio,
-				m_Camera->m_NearPlane,
-				m_Camera->m_FarPlane
-			);
-		} else {
-			// à adapter selon ta Camera (ortho)
-			proj = glm::mat4(1.0f);
-		}
+		const glm::mat4 view = m_Camera->GetViewMatrix();
+		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
 
 		m_Renderer->BeginScene(view, proj);
 
@@ -442,11 +422,14 @@ namespace Nova::App {
 		
 				if (m_Renderer) {
 					if (void* textureId = m_Renderer->GetViewportTextureID()) {
-						// OpenGL: display the FBO texture in the panel
-						ImGui::Image(textureId, avail, ImVec2(0, 1), ImVec2(1, 0));
+						// OpenGL FBOs ont Y=0 en bas → flip V nécessaire.
+						// Vulkan/Metal/DX ont Y=0 en haut → pas de flip.
+						const GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+						const bool needsVFlip = (api == GraphicsAPI::OpenGL);
+						const ImVec2 uv0 = needsVFlip ? ImVec2(0, 1) : ImVec2(0, 0);
+						const ImVec2 uv1 = needsVFlip ? ImVec2(1, 0) : ImVec2(1, 1);
+						ImGui::Image(textureId, avail, uv0, uv1);
 					}
-					// Vulkan: textureId == nullptr for now, the panel remains empty
-					// but continues to control the camera aspect ratio.
 				}
 			}
 		}
