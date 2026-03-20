@@ -9,14 +9,12 @@
 
 namespace Nova::App {
 
-	namespace {
-		constexpr size_t kCubeInstanceCount = 250;
-		constexpr float kSceneRadius = 14.0f;
-		constexpr float kSceneHeight = 4.0f;
-		constexpr float kCenterExclusionRadius = 1.5f;
-		constexpr float kAxisLength = 1.0f;
-		constexpr float kAxisThickness = 0.05f;
-	}
+	constexpr size_t kCubeInstanceCount = 250;
+	constexpr float kSceneRadius = 14.0f;
+	constexpr float kSceneHeight = 4.0f;
+	constexpr float kCenterExclusionRadius = 1.5f;
+	constexpr float kAxisLength = 1.0f;
+	constexpr float kAxisThickness = 0.05f;
 
 	VkLayer::~VkLayer() = default;
 
