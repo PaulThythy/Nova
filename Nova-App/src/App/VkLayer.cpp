@@ -225,7 +225,7 @@ namespace Nova::App {
 			model = glm::rotate(model, cube.m_RotationAngle, cube.m_RotationAxis);
 			model = glm::scale(model, glm::vec3(cube.m_Scale));
 
-			RHI::SSBO_InstanceData instance{};
+			RHI::Instance instance{};
 			instance.model = model;
 			instance.color = cube.m_Color;
 			m_InstanceData.push_back(instance);
@@ -234,7 +234,7 @@ namespace Nova::App {
 		m_Orbit.m_Target = glm::vec3(0.0f);
 
 		const auto appendAxisMarker = [this](const glm::vec3& translation, const glm::vec3& scale, const glm::vec4& color) {
-			RHI::SSBO_InstanceData instance{};
+			RHI::Instance instance{};
 			instance.model = glm::translate(glm::mat4(1.0f), translation)
 				* glm::scale(glm::mat4(1.0f), scale);
 			instance.color = color;

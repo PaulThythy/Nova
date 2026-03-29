@@ -88,7 +88,7 @@ namespace Nova::App {
 		};
 
 		std::vector<AnimatedCube> m_Cubes;
-		std::vector<Nova::Core::Renderer::RHI::SSBO_InstanceData> m_InstanceData;
+		std::vector<Nova::Core::Renderer::RHI::Instance> m_InstanceData;
 		float m_ElapsedTime{0.0f};
 		uint32_t m_FrameIndex{0};
 
