@@ -3,7 +3,6 @@
 
 #include "App/AppLayer.h"
 //#include "App/EditorLayer.h"
-#include "App/VkLayer.h"
 
 #include "Core/Log.h"
 
@@ -23,7 +22,6 @@ int main() {
     Nova::Core::Application windowedApp(windowDesc);
     windowedApp.GetLayerStack().PushOverlay<Nova::App::AppLayer>();
     //windowedApp.GetLayerStack().PushLayer<Nova::App::EditorLayer>();
-    //windowedApp.GetLayerStack().PushLayer<Nova::App::VkLayer>();
     windowedApp.Run();
     NV_LOG_INFO("Deleting Nova Application");
 }

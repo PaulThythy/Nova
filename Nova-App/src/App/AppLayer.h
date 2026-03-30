@@ -21,6 +21,7 @@
 #include "Scene/Scene.h"
 #include "Scene/ECS/Components/TransformComponent.h"
 #include "Scene/ECS/Components/MeshComponent.h"
+#include "Scene/ECS/Components/MeshRendererComponent.h"
 #include "Scene/ECS/Components/CameraComponent.h"
 
 #include "Renderer/RHI/RHI_Renderer.h"
