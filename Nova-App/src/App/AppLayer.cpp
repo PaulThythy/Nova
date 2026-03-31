@@ -1,22 +1,14 @@
 #include "App/AppLayer.h"
 
-#include "Scene/ECS/Components/TransformComponent.h"
-#include "Scene/ECS/Components/MeshComponent.h"
-#include "Scene/ECS/Components/CameraComponent.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <iostream>
+#include <filesystem>
+#include <algorithm>
 
 #include "App/GameLayer.h"
 #include "App/EditorLayer.h"
 
 namespace Nova::App {
 
-    using namespace Nova::Core;
-
-    Nova::Core::Scene::Scene g_Scene("Scene_test");
     AppLayer* g_AppLayer = nullptr;
 
     AppLayer::~AppLayer() = default;
@@ -32,36 +24,18 @@ namespace Nova::App {
 
         ImGuiID dock_down = 0;
         ImGuiID dock_center = 0;
-        ImGui::DockBuilderSplitNode(
-            dockspace_id,
-            ImGuiDir_Down,
-            0.19f,
-            &dock_down,
-            &dock_center
-        );
+        ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.19f, &dock_down, &dock_center);
 
         ImGuiID dock_right = 0;
         ImGuiID dock_left = 0;
-        ImGui::DockBuilderSplitNode(
-            dock_center,
-            ImGuiDir_Right,
-            0.27f,
-            &dock_right,
-            &dock_left
-        );
+        ImGui::DockBuilderSplitNode(dock_center, ImGuiDir_Right, 0.27f, &dock_right, &dock_left);
 
         ImGuiID dock_right_top = 0;
         ImGuiID dock_right_bottom = 0;
-        ImGui::DockBuilderSplitNode(
-            dock_right,
-            ImGuiDir_Up,
-            0.50f,
-            &dock_right_top,
-            &dock_right_bottom
-        );
+        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up, 0.50f, &dock_right_top, &dock_right_bottom);
 
         // Dock windows
-        ImGui::DockBuilderDockWindow(g_Scene.GetName().c_str(), dock_left);
+        ImGui::DockBuilderDockWindow(m_Scene.GetName().c_str(), dock_left);
         ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
         ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
         ImGui::DockBuilderDockWindow("Asset Browser", dock_down);
@@ -72,10 +46,12 @@ namespace Nova::App {
 
     void AppLayer::OnEvent(Event& e) {
         EventDispatcher dispatcher(e);
-
-        dispatcher.Dispatch<ImGuiPanelResizeEvent>(
-            [this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); }
-        );
+        dispatcher.Dispatch<MouseButtonPressedEvent>([this](MouseButtonPressedEvent& ev) { return OnMouseButtonPressed(ev); });
+		dispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& ev) { return OnMouseButtonReleased(ev); });
+		dispatcher.Dispatch<MouseMovedEvent>([this](MouseMovedEvent& ev) { return OnMouseMoved(ev); });
+		dispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent& ev) { return OnMouseScrolled(ev); });
+		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) { return OnWindowResized(ev); });
+		dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); });
     }
 
     void AppLayer::RequestPlay() {
@@ -110,92 +86,15 @@ namespace Nova::App {
         SetSceneState(SceneState::Edit);
     }
 
-    bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
-        if (e.GetPanelName() != "Viewport")
-            return false;
-
-        float width = e.GetWidth();
-        float height = e.GetHeight();
-
-        if (width <= 0.0f || height <= 0.0f)
-            return false;
-
-        m_PendingViewportSize = { width, height };
-        m_ViewportResizePending = true;
-
-        return false;
-    }
-
     void AppLayer::OnAttach() {
         g_AppLayer = this;
 
-        Nova::Core::GraphicsAPI graphicsAPI = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+        GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(api);
 
-        Nova::Core::Application::Get().GetImGuiLayer().SetImGuiBackend(graphicsAPI);
-
-        auto& registry = g_Scene.GetRegistry();
-
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuPlane = Renderer::Graphics::Mesh::CreatePlane();
-        std::shared_ptr<Renderer::Graphics::Mesh> glPlane = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuPlane);
-
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuCube = Renderer::Graphics::Mesh::CreateCube();
-        std::shared_ptr<Renderer::Graphics::Mesh> glCube = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuCube);
-
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere1 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere1 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere1);
-
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere2 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere2 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere2);
-
-        std::shared_ptr<Renderer::Graphics::Mesh> cpuSphere3 = Renderer::Graphics::Mesh::CreateSphere();
-        std::shared_ptr<Renderer::Graphics::Mesh> glSphere3 = std::make_shared<Renderer::Backends::OpenGL::GL_Mesh>(*cpuSphere3);
-
-        entt::entity planeEntity = g_Scene.CreateEntity("Plane");
-        entt::entity cubeEntity = g_Scene.CreateEntity("Cube");
-        entt::entity sphere1Entity = g_Scene.CreateEntity("Sphere1");
-        entt::entity sphere2Entity = g_Scene.CreateEntity("Sphere2");
-        entt::entity sphere3Entity = g_Scene.CreateEntity("Sphere3");
-
-        g_Scene.ParentEntity(sphere2Entity, sphere1Entity);
-        g_Scene.ParentEntity(sphere3Entity, sphere1Entity);
-
-        const glm::vec3 t{ 0.0f,0.0f,0.0f };
-        const glm::vec3 r{ 0.0f,0.0f,0.0f };
-        const glm::vec3 s{ 3.0f,3.0f,3.0f };
-
-        registry.emplace<Scene::ECS::Components::TransformComponent>(planeEntity, t, r, s);
-        registry.emplace<Scene::ECS::Components::MeshComponent>(planeEntity, glPlane);
-
-        registry.emplace<Scene::ECS::Components::TransformComponent>(cubeEntity,
-            glm::vec3(0.0f, 0.5f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(cubeEntity, glCube);
-
-        registry.emplace<Scene::ECS::Components::TransformComponent>(sphere1Entity,
-            glm::vec3(2.0f, 1.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere1Entity, glSphere1);
-
-        registry.emplace<Scene::ECS::Components::TransformComponent>(sphere2Entity,
-            glm::vec3(3.0f, 0.7f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.7f, 0.7f, 0.7f)
-        );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere2Entity, glSphere2);
-
-        registry.emplace<Scene::ECS::Components::TransformComponent>(sphere3Entity,
-            glm::vec3(3.0f, 0.5f, 0.5f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.5f, 0.5f, 0.5f)
-        );
-        registry.emplace<Scene::ECS::Components::MeshComponent>(sphere3Entity, glSphere3);
-
-        auto camera = std::make_shared<Renderer::Graphics::Camera>(
-            glm::vec3(2.5f, 2.5f, 5.0f),               // lookFrom
+        // camera setup
+		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
+            glm::vec3(5.0f, 5.0f, 5.0f),               // lookFrom
             glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
             glm::vec3(0.0f, 1.0f, 0.0f),                // up
             45.0f,                                      // FOV in degree
@@ -204,153 +103,144 @@ namespace Nova::App {
             100.0f,                                     // far
             true                                        // perspective
         );
+		m_Camera->m_IsPerspective = true;
+		m_Camera->m_FOV = 45.0f;
+		m_Camera->m_NearPlane = 0.1f;
+		m_Camera->m_FarPlane = 100.0f;
+		m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
 
-        entt::entity cameraEntity = g_Scene.CreateEntity("Camera");
+        entt::entity cameraEntity = m_Scene.CreateEntity("Camera");
 
-        g_Scene.SetMainCamera(cameraEntity);
+        m_Scene.SetMainCamera(cameraEntity);
 
-        registry.emplace<Scene::ECS::Components::CameraComponent>(
+		auto& registry = m_Scene.GetRegistry();
+        registry.emplace<CameraComponent>(
             cameraEntity,
-            camera,
+            m_Camera,
             true // isPrimary
         );
 
-        glPlane->Upload(*cpuPlane);
-        glCube->Upload(*cpuCube);
-        glSphere1->Upload(*cpuSphere1);
-        glSphere2->Upload(*cpuSphere2);
-        glSphere3->Upload(*cpuSphere3);
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
+		cubeAsset->Load();
+		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
 
-        std::string root = NOVA_APP_ROOT_DIR;
-        m_SceneProgram = Nova::Core::Renderer::Backends::OpenGL::LoadRenderShader(
-            root + "/resources/shaders/OpenGL/scene/scene.vert",
-            root + "/resources/shaders/OpenGL/scene/scene.frag"
+		registry.emplace<TransformComponent>(cubeEntity,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
         );
+		{
+			Nova::Core::Renderer::Graphics::Material mat{};
+			mat.m_BaseColorFactor = glm::vec4(1.0f);
+			mat.m_MetallicFactor = 0.0f;
+			mat.m_RoughnessFactor = 0.85f;
+			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+		}
 
-        if (!m_SceneProgram) {
-            std::cerr << "Failed to load scene shader program\n";
-        }
+		UpdateCameraAspectFromWindow();
+    	UpdateCameraFromOrbit();
     }
 
     void AppLayer::OnDetach() {
-        m_FrameBuffer.reset();
+        NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		m_Renderer->Destroy();
+		m_Renderer.reset();
 
-        if (m_SceneProgram) {
-            glDeleteProgram(m_SceneProgram);
-            m_SceneProgram = 0;
-        }
-
-        g_Scene.Clear();
+        m_Scene.Clear();
 
         if (g_AppLayer == this)
             g_AppLayer = nullptr;
     }
 
     void AppLayer::OnUpdate(float dt) {
-        (void)dt;
-        //later
+        m_DeltaTime = dt;
+        m_ElapsedTime += dt;
     }
+	
+	void AppLayer::OnBegin() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		BeginRenderScene();
+	}
 
-    void AppLayer::BeginScene() {
-        // Handle viewport resizing
-        if (m_ViewportResizePending) {
-            m_ViewportResizePending = false;
-            m_ViewportSize = m_PendingViewportSize;
-            
-            // Recreate framebuffer if it doesn't exist
-            if (!m_FrameBuffer) {
-                m_FrameBuffer = std::make_unique<Renderer::Backends::OpenGL::GL_FrameBuffer>();
-            }
-            
-            // Resize framebuffer
-            m_FrameBuffer->Resize(
-                static_cast<int>(m_ViewportSize.x),
-                static_cast<int>(m_ViewportSize.y)
-            );
-            
-            // Update aspect ratio of primary camera
-            auto& registry = g_Scene.GetRegistry();
-            using Nova::Core::Scene::ECS::Components::CameraComponent;
+	void AppLayer::OnRender() {}
 
-            auto camView = registry.view<CameraComponent>();
-            for (auto entity : camView) {
-                auto& camComp = camView.get<CameraComponent>(entity);
-                if (camComp.m_Camera && camComp.m_IsPrimary) {
-                    camComp.m_Camera->m_AspectRatio = m_ViewportSize.x / m_ViewportSize.y;
-                    break;
-                }
-            }
-        }
+	void AppLayer::OnEnd() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		EndRenderScene();
+	}
 
-        if (!m_FrameBuffer || !m_SceneProgram)
-            return;
+	void AppLayer::BeginRenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
-        // Render to framebuffer
-        m_FrameBuffer->Bind();
-        //TODO remove all gl functions from AppLayer
-        glViewport(0, 0, static_cast<GLsizei>(m_ViewportSize.x), static_cast<GLsizei>(m_ViewportSize.y));
-        glEnable(GL_DEPTH_TEST);
-        glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
+		if (m_ViewportResizePending) {
+			m_ViewportResizePending = false;
+			if (m_PendingViewportSize.x > 0 && m_PendingViewportSize.y > 0) {
+				m_Renderer->Resize(m_PendingViewportSize.x, m_PendingViewportSize.y);
+			}
+		}
 
-    void AppLayer::RenderScene(const glm::mat4& viewProj) {
-        // Render all meshes in the scene
-        auto& registry = g_Scene.GetRegistry();
+		m_Renderer->BeginFrame();
 
-        using Nova::Core::Scene::ECS::Components::CameraComponent;
-        using Nova::Core::Scene::ECS::Components::TransformComponent;
-        using Nova::Core::Scene::ECS::Components::MeshComponent;
+		const glm::mat4 view = m_Camera->GetViewMatrix();
+		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
 
-        if (!m_SceneProgram)
-            return;
+		m_Renderer->BeginScene(view, proj);
 
-        glUseProgram(m_SceneProgram);
+		if (auto* shader = m_Renderer->GetShader()) {
+			shader->SetParameter("iTime", m_ElapsedTime);
+			shader->SetParameter("iTimeDelta", m_DeltaTime);
+			shader->SetParameter("iFrameRate", m_DeltaTime > 0.0f ? 1.0f / m_DeltaTime : 0.0f);
+			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
+			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
+		}
+	}
 
-        GLint locVP = glGetUniformLocation(m_SceneProgram, "u_ViewProjection");
-        if (locVP != -1) {
-            glUniformMatrix4fv(locVP, 1, GL_FALSE, glm::value_ptr(viewProj));
-        }
+	void AppLayer::RenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glFrontFace(GL_CW);
+		auto& registry = m_Scene.GetRegistry();
 
-        auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
+		// ECS traversal: draw all entities that have a transform and a mesh renderer.
+		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
+		for (auto entity : viewMeshes) {
+			auto& tc = viewMeshes.get<TransformComponent>(entity);
+			auto& mrc = viewMeshes.get<MeshRendererComponent>(entity);
 
-        viewMeshes.each([&](entt::entity entity, TransformComponent& transform, MeshComponent& meshComp) {
-            if (!meshComp.m_Mesh)
-                return;
+			if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
+				continue;
 
-            glm::mat4 model = transform.GetTransform();
+			auto gpuMesh = mrc.m_MeshAsset->GetGPUMesh();
+			if (!gpuMesh)
+				continue;
 
-            GLint locModel = glGetUniformLocation(m_SceneProgram, "u_Model");
-            if (locModel != -1) {
-                glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(model));
-            }
+			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+			cmd.m_Mesh = gpuMesh;
+			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
 
-            meshComp.m_Mesh->Bind();
-            meshComp.m_Mesh->Draw();
-            meshComp.m_Mesh->Unbind();
-        });
+			m_Renderer->SetModelMatrix(tc.GetTransform());
+			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
+			m_Renderer->GetShader()->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
 
-        glDisable(GL_CULL_FACE);
-    }
+			// Material (PBR factors)
+			const auto rhiMat = mrc.m_Material.ToRhi();
+			m_Renderer->GetShader()->SetParameter("u_BaseColorFactor", rhiMat.baseColorFactor);
+			m_Renderer->GetShader()->SetParameter("u_MetallicFactor", rhiMat.metallicFactor);
+			m_Renderer->GetShader()->SetParameter("u_RoughnessFactor", rhiMat.roughnessFactor);
+			m_Renderer->GetShader()->SetParameter("u_EmissiveFactor", glm::vec3(rhiMat.emissiveFactor));
+			m_Renderer->GetShader()->SetParameter("u_EmissiveStrength", rhiMat.emissiveStrength);
 
-    void AppLayer::EndScene() {
-        // Unbind framebuffer
-        // if we don't do this verification, the first message is "No framebuffer to unbind", and program crashes
-        if (m_FrameBuffer) {
-            //std::cout << "Unbinding framebuffer if it exists" << std::endl;
-            m_FrameBuffer->Unbind();
-        }
-        else {
-            //std::cout << "No framebuffer to unbind" << std::endl;
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
-    }
+			m_Renderer->DrawIndexed(cmd);
+		}
+	}
 
-    void AppLayer::OnRender() {/*empty*/ }
+	void AppLayer::EndRenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		m_Renderer->EndFrame();
+	}
 
     void AppLayer::OnImGuiRender() {
         UI::Panels::MainMenuBar::Render();
@@ -383,10 +273,119 @@ namespace Nova::App {
         ImGui::End();
 
         // Docked windows
-        UI::Panels::ScenePanel::Render(g_Scene.GetName());
+        UI::Panels::ScenePanel::Render(m_Scene.GetName());
         UI::Panels::HierarchyPanel::Render();
         UI::Panels::InspectorPanel::Render();
         UI::Panels::AssetBrowserPanel::Render();
     }
+
+    bool AppLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
+		// Only start orbit rotation when the mouse is inside the rendered viewport.
+		if (!m_ViewportHovered)
+			return false;
+
+		if (e.GetMouseButton() == 1) {
+			m_Orbit.m_IsRotating = true;
+			m_Orbit.m_HasLastMousePos = false;
+			return true;
+		}
+		return false;
+	}
+
+	bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
+		// Always stop rotation, even if the mouse left the viewport while dragging.
+		if (e.GetMouseButton() == 1) {
+			m_Orbit.m_IsRotating = false;
+			return true;
+		}
+		return false;
+	}
+
+	bool AppLayer::OnMouseMoved(MouseMovedEvent& e) {
+		const glm::vec2 mousePos{ e.GetX(), e.GetY() };
+
+		if (!m_Orbit.m_IsRotating) {
+			// Track position continuously so there is no jump when rotation starts.
+			m_Orbit.m_LastMousePos = mousePos;
+			m_Orbit.m_HasLastMousePos = true;
+			return false;
+		}
+
+		// While rotating, continue even if the mouse left the viewport (standard editor behaviour).
+		if (!m_Orbit.m_HasLastMousePos) {
+			m_Orbit.m_LastMousePos = mousePos;
+			m_Orbit.m_HasLastMousePos = true;
+			return true;
+		}
+
+		const glm::vec2 delta = mousePos - m_Orbit.m_LastMousePos;
+		m_Orbit.m_LastMousePos = mousePos;
+
+		m_Orbit.m_Yaw   -= delta.x * m_Orbit.m_RotateSensitivity;
+		m_Orbit.m_Pitch += delta.y * m_Orbit.m_RotateSensitivity;
+
+		UpdateCameraFromOrbit();
+		return true;
+	}
+
+	bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
+		// Only zoom when the mouse is inside the rendered viewport.
+		if (!m_ViewportHovered)
+			return false;
+
+		m_Orbit.m_Distance -= e.GetYOffset() * m_Orbit.m_ZoomSensitivity;
+		UpdateCameraFromOrbit();
+		return true;
+	}
+
+	bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
+		if (e.GetWidth() <= 0 || e.GetHeight() <= 0) return false;
+		m_Camera->m_AspectRatio = static_cast<float>(e.GetWidth()) / static_cast<float>(e.GetHeight());
+		return false;
+	}
+
+    bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
+		const float w = e.GetWidth();
+		const float h = e.GetHeight();
+		if (w <= 0.0f || h <= 0.0f) return false;
+
+		m_ViewportSize = { w, h };
+
+		if (m_Camera)
+			m_Camera->m_AspectRatio = w / h;
+
+		m_PendingViewportSize   = { w, h };
+		m_ViewportResizePending = true;
+		return false;
+	}
+
+    void AppLayer::UpdateCameraFromOrbit() {
+		// Clamp pitch to avoid gimbal singularities (flip at ±90°).
+		const float maxPitch = glm::radians(89.0f);
+		m_Orbit.m_Pitch = std::clamp(m_Orbit.m_Pitch, -maxPitch, maxPitch);
+		m_Orbit.m_Distance = std::max(0.2f, m_Orbit.m_Distance);
+
+		const float cp = std::cos(m_Orbit.m_Pitch);
+
+		// yaw=0 places the camera on the +Z axis.
+		glm::vec3 offset;
+		offset.x = m_Orbit.m_Distance * cp * std::sin(m_Orbit.m_Yaw);
+		offset.y = m_Orbit.m_Distance * std::sin(m_Orbit.m_Pitch);
+		offset.z = m_Orbit.m_Distance * cp * std::cos(m_Orbit.m_Yaw);
+
+		m_Camera->m_LookAt = m_Orbit.m_Target;
+		m_Camera->m_LookFrom = m_Orbit.m_Target + offset;
+		m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
+	}
+
+	void AppLayer::UpdateCameraAspectFromWindow() {
+		SDL_Window* window = Nova::Core::Application::Get().GetWindow().GetSDLWindow();
+		int w = 0, h = 0;
+		SDL_GetWindowSizeInPixels(window, &w, &h);
+
+		if (w > 0 && h > 0) {
+			m_Camera->m_AspectRatio = static_cast<float>(w) / static_cast<float>(h);
+		}
+	}
 
 } // namespace Nova::App

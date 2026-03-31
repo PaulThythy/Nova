@@ -1,106 +1,93 @@
 #include "App/EditorLayer.h"
+
 #include "App/AppLayer.h"
-#include "App/GameLayer.h"
+#include "Core/Assert.h"
+#include "Core/Log.h"
+#include "Core/Application.h"
 
-#include "Scene/ECS/Components/CameraComponent.h"
+#include "Renderer/RHI/RHI_ShaderCompiler.h"
 
-#include "imgui.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <filesystem>
 
 namespace Nova::App {
 
-    using Nova::Core::Scene::ECS::Components::CameraComponent;
-    using Nova::Core::Scene::ECS::Components::TransformComponent;
-    using Nova::Core::Scene::ECS::Components::MeshComponent;
+    void EditorLayer::CompileGridShaders() {
+        namespace fs = std::filesystem;
+        using namespace Nova::Core::Renderer::RHI;
 
-    EditorLayer::~EditorLayer() = default;
+        fs::path cwd            = fs::current_path();
+        fs::path editorShaders  = cwd / "Nova-App" / "Resources" / "Editor" / "Shaders";
+        fs::path engineShaders  = cwd / "Nova-Core" / "Resources" / "Engine" / "Shaders";
 
-    void EditorLayer::OnEvent(Event& e) {
-        EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<KeyReleasedEvent>(
-            [this](KeyReleasedEvent& ev) { return OnKeyReleased(ev); });
+        RHI_ShaderCompileOptions options;
+        options.m_IncludeDirs.push_back(engineShaders);
+
+        RHI_ShaderDesc vertDesc;
+        vertDesc.m_FilePath = editorShaders / "Grid.vert.slang";
+        vertDesc.m_Stage    = RHI_ShaderStage::Vertex;
+
+        RHI_ShaderDesc fragDesc;
+        fragDesc.m_FilePath = editorShaders / "Grid.frag.slang";
+        fragDesc.m_Stage    = RHI_ShaderStage::Fragment;
+
+        RHI_ShaderCompilationOutput vertOut, fragOut;
+
+        if (!CompileShader(vertDesc, options, vertOut)) {
+            NV_LOG_ERROR(("Grid vertex shader compile failed:\n" + vertOut.m_Log).c_str());
+            return;
+        }
+        if (!CompileShader(fragDesc, options, fragOut)) {
+            NV_LOG_ERROR(("Grid fragment shader compile failed:\n" + fragOut.m_Log).c_str());
+            return;
+        }
+
+        auto* renderer = g_AppLayer ? g_AppLayer->GetRenderer() : nullptr;
+        if (!renderer) {
+            NV_LOG_ERROR("EditorLayer: renderer not available for grid shader creation");
+            return;
+        }
+
+        m_GridShader = renderer->CreateFullscreenShader(vertOut.m_Spirv, fragOut.m_Spirv);
+        if (m_GridShader)
+            NV_LOG_INFO("Editor grid shader ready.");
+        else
+            NV_LOG_ERROR("Editor grid shader creation failed.");
     }
 
     void EditorLayer::OnAttach() {
-        if (Nova::App::g_AppLayer)
-            Nova::App::g_AppLayer->RegisterEditorLayer(this);
+        if (g_AppLayer)
+            g_AppLayer->RegisterEditorLayer(this);
 
-        m_Grid = std::make_unique<Grid>();
+        CompileGridShaders();
     }
 
     void EditorLayer::OnDetach() {
-        if (Nova::App::g_AppLayer)
-            Nova::App::g_AppLayer->RegisterEditorLayer(nullptr);
+        if (m_GridShader && g_AppLayer && g_AppLayer->GetRenderer()) {
+            g_AppLayer->GetRenderer()->DestroyFullscreenShader(m_GridShader);
+            m_GridShader = nullptr;
+        }
+
+        if (g_AppLayer)
+            g_AppLayer->RegisterEditorLayer(nullptr);
     }
 
-    void EditorLayer::OnUpdate(float dt) {
-        (void)dt;
-        //later
-    }
+    void EditorLayer::OnUpdate(float) {}
+
+    void EditorLayer::OnBegin() {}
 
     void EditorLayer::OnRender() {
-        auto& registry = Nova::App::g_Scene.GetRegistry();
+        if (!g_AppLayer) return;
 
-        Nova::Core::Renderer::Graphics::Camera* cameraPtr = nullptr;
-        auto camView = registry.view<CameraComponent>();
-        for (auto entity : camView) {
-            auto& camComp = camView.get<CameraComponent>(entity);
-            if (camComp.m_Camera && camComp.m_IsPrimary) {
-                cameraPtr = camComp.m_Camera.get();
-                break;
-            }
-        }
+        if (m_GridShader && g_AppLayer->GetRenderer())
+            g_AppLayer->GetRenderer()->DrawFullscreen(m_GridShader);
 
-        if (!cameraPtr)
-            return;
-
-        glm::mat4 view = cameraPtr->GetViewMatrix();
-        glm::mat4 projection = cameraPtr->GetProjectionMatrix();
-        glm::mat4 viewProj = projection * view;
-
-        Nova::App::g_AppLayer->BeginScene();
-        Nova::App::g_AppLayer->RenderScene(viewProj);
-
-        glDisable(GL_DEPTH_TEST);
-
-        //model matrix is identity
-        if (m_Grid) {
-            glm::mat4 invView = glm::inverse(view);
-            glm::vec3 camPos = glm::vec3(invView[3]);
-
-            m_Grid->m_ViewProj = viewProj;
-            m_Grid->m_InvViewProj = glm::inverse(viewProj);
-            m_Grid->m_CameraPos = camPos;
-
-            glEnable(GL_DEPTH_TEST);
-            glDepthMask(GL_FALSE);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            m_Grid->draw();
-
-            glDisable(GL_BLEND);
-            glDepthMask(GL_TRUE);
-        }
-
-        glEnable(GL_DEPTH_TEST);
-
-        Nova::App::g_AppLayer->EndScene();
+        g_AppLayer->RenderScene();
     }
+
+    void EditorLayer::OnEnd() {}
 
     void EditorLayer::OnImGuiRender() {}
 
-    bool EditorLayer::OnKeyReleased(KeyReleasedEvent& e) {
-        if (e.GetKeyCode() == SDLK_SPACE) {
-            Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<GameLayer>(this);
-            std::cout << "EditorLayer: Transition to GameLayer requested." << std::endl;
-
-            Nova::App::g_AppLayer->SetSceneState(Nova::App::AppLayer::SceneState::Play);
-            return true;
-        }
-        return false;
-    }
+    void EditorLayer::OnEvent(Nova::Core::Events::Event&) {}
 
 } // namespace Nova::App

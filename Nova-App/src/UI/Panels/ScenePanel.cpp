@@ -1,4 +1,4 @@
-﻿#include "UI/Panels/ScenePanel.h"
+#include "UI/Panels/ScenePanel.h"
 
 #include "imgui.h"
 #include "App/AppLayer.h"
@@ -50,9 +50,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
     static void DrawViewportSettingsBar() {
         const float barH = 32.0f;
 
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_NoScrollbar |
-            ImGuiWindowFlags_NoScrollWithMouse;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
         ImGui::BeginChild("##ViewportSettingsBar", ImVec2(0.0f, barH), true, flags);
 
@@ -72,9 +70,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
     }
 
     void Render(const std::string& sceneName) {
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_NoScrollbar |
-            ImGuiWindowFlags_NoScrollWithMouse;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
         ImGui::Begin(sceneName.c_str(), nullptr, flags);
 
@@ -86,8 +82,11 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         // 3) Viewport (framebuffer)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::BeginChild("##Viewport", ImVec2(0.0f, 0.0f), true,
-            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::BeginChild("##Viewport", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+        // Expose hover state to AppLayer so orbit-camera input is restricted to this area.
+        if (Nova::App::g_AppLayer)
+            Nova::App::g_AppLayer->SetViewportHovered(ImGui::IsWindowHovered());
 
         ImVec2 size = ImGui::GetContentRegionAvail();
 
@@ -103,19 +102,19 @@ namespace Nova::App::UI::Panels::ScenePanel {
             Nova::Core::Application::Get().OnEvent(e);
         }
 
-        if (Nova::App::g_AppLayer) {
-            GLuint texID = Nova::App::g_AppLayer->GetViewportTexture();
-            if (texID != 0) {
-                ImGui::Image(
-                    (ImTextureID)(uintptr_t)texID,
-                    size,
-                    ImVec2(0.0f, 1.0f),
-                    ImVec2(1.0f, 0.0f)
-                );
+        if (Nova::App::g_AppLayer->GetRenderer()) {
+            if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetViewportTextureID()) {
+                // OpenGL FBOs have Y=0 at the bottom, so a V-flip is required.
+                // Vulkan/Metal/DX have Y=0 at the top: no flip needed.
+                const GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+                const bool needsVFlip = (api == GraphicsAPI::OpenGL);
+                const ImVec2 uv0 = needsVFlip ? ImVec2(0, 1) : ImVec2(0, 0);
+                const ImVec2 uv1 = needsVFlip ? ImVec2(1, 0) : ImVec2(1, 1);
+                ImGui::Image(textureId, size, uv0, uv1);
             }
-            else {
-                ImGui::TextUnformatted("Framebuffer not ready.");
-            }
+        }
+        else {
+            ImGui::TextUnformatted("Framebuffer not ready.");
         }
 
         ImGui::EndChild();
@@ -124,4 +123,4 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::End();
     }
 
-} // namespace
+} // namespace Nova::App::UI::Panels::ScenePanel

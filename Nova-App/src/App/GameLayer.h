@@ -1,38 +1,26 @@
 #ifndef GAMELAYER_H
 #define GAMELAYER_H
 
-#include <iostream>
-#include <glad/gl.h>
-
-#include "Events/Event.h"
-#include "Events/InputEvents.h"
-
 #include "Core/Layer.h"
-#include "Core/Application.h"
-
-#include "Scene/ECS/Components/CameraComponent.h"
-#include "Scene/ECS/Components/TransformComponent.h"
-#include "Scene/ECS/Components/MeshComponent.h"
-
-using namespace Nova::Core::Events;
-using namespace Nova::Core;
+#include "Events/Event.h"
 
 namespace Nova::App {
 
-    class GameLayer : public Layer {
+    class AppLayer;
+
+    class GameLayer : public Nova::Core::Layer {
     public:
         explicit GameLayer(): Layer("GameLayer") {}
-        ~GameLayer() override;
+        ~GameLayer() override = default;
 
         void OnAttach() override;
         void OnDetach() override;
         void OnUpdate(float dt) override;
+        void OnBegin() override;
         void OnRender() override;
+        void OnEnd() override;
         void OnImGuiRender() override;
-        void OnEvent(Event& e) override;
-
-    private:
-        bool OnKeyReleased(KeyReleasedEvent& e);
+        void OnEvent(Nova::Core::Events::Event& e) override;
     };
 
 } // namespace Nova::App

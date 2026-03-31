@@ -39,3 +39,5 @@ imgui.ini
 .codegpt
 
 docs
+/.cursor/
+/build-shared/
