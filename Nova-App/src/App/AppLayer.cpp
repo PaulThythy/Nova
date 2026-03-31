@@ -2,9 +2,10 @@
 
 #include <iostream>
 #include <filesystem>
+#include <algorithm>
 
-//#include "App/GameLayer.h"
-//#include "App/EditorLayer.h"
+#include "App/GameLayer.h"
+#include "App/EditorLayer.h"
 
 namespace Nova::App {
 
@@ -53,7 +54,7 @@ namespace Nova::App {
 		dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); });
     }
 
-    /*void AppLayer::RequestPlay() {
+    void AppLayer::RequestPlay() {
         if (m_SceneState == SceneState::Play)
             return;
 
@@ -83,7 +84,7 @@ namespace Nova::App {
         std::cout << "AppLayer: Transition to EditorLayer requested.\n";
 
         SetSceneState(SceneState::Edit);
-    }*/
+    }
 
     void AppLayer::OnAttach() {
         g_AppLayer = this;
@@ -155,9 +156,22 @@ namespace Nova::App {
         m_DeltaTime = dt;
         m_ElapsedTime += dt;
     }
-
-    void AppLayer::OnBegin() {
+	
+	void AppLayer::OnBegin() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		BeginRenderScene();
+	}
+
+	void AppLayer::OnRender() {}
+
+	void AppLayer::OnEnd() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		EndRenderScene();
+	}
+
+	void AppLayer::BeginRenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
 		if (m_ViewportResizePending) {
 			m_ViewportResizePending = false;
@@ -167,13 +181,6 @@ namespace Nova::App {
 		}
 
 		m_Renderer->BeginFrame();
-	}
-	
-	void AppLayer::OnRender() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-
-		auto& registry = m_Scene.GetRegistry();
 
 		const glm::mat4 view = m_Camera->GetViewMatrix();
 		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
@@ -187,6 +194,13 @@ namespace Nova::App {
 			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
 			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
 		}
+	}
+
+	void AppLayer::RenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+
+		auto& registry = m_Scene.GetRegistry();
 
 		// ECS traversal: draw all entities that have a transform and a mesh renderer.
 		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
@@ -221,10 +235,9 @@ namespace Nova::App {
 
 			m_Renderer->DrawIndexed(cmd);
 		}
-
 	}
 
-    void AppLayer::OnEnd() {
+	void AppLayer::EndRenderScene() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		m_Renderer->EndFrame();
 	}
