@@ -23,7 +23,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 6.0f));
 
         // Left side: Play/Stop
-        /*if (!playing) {
+        if (!playing) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.70f, 0.20f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.80f, 0.25f, 1.0f));
             if (ImGui::Button("->")) {
@@ -40,7 +40,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
                     Nova::App::g_AppLayer->RequestStop();
             }
             ImGui::PopStyleColor(2);
-        }*/
+        }
 
         ImGui::PopStyleVar();
 

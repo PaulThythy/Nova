@@ -2,9 +2,10 @@
 
 #include <iostream>
 #include <filesystem>
+#include <algorithm>
 
-//#include "App/GameLayer.h"
-//#include "App/EditorLayer.h"
+#include "App/GameLayer.h"
+#include "App/EditorLayer.h"
 
 namespace Nova::App {
 
@@ -53,7 +54,7 @@ namespace Nova::App {
 		dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); });
     }
 
-    /*void AppLayer::RequestPlay() {
+    void AppLayer::RequestPlay() {
         if (m_SceneState == SceneState::Play)
             return;
 
@@ -83,7 +84,7 @@ namespace Nova::App {
         std::cout << "AppLayer: Transition to EditorLayer requested.\n";
 
         SetSceneState(SceneState::Edit);
-    }*/
+    }
 
     void AppLayer::OnAttach() {
         g_AppLayer = this;
@@ -128,7 +129,13 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f)
         );
-		registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
+		{
+			Nova::Core::Renderer::Graphics::Material mat{};
+			mat.m_BaseColorFactor = glm::vec4(1.0f);
+			mat.m_MetallicFactor = 0.0f;
+			mat.m_RoughnessFactor = 0.85f;
+			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+		}
 
 		UpdateCameraAspectFromWindow();
     	UpdateCameraFromOrbit();
@@ -149,9 +156,22 @@ namespace Nova::App {
         m_DeltaTime = dt;
         m_ElapsedTime += dt;
     }
-
-    void AppLayer::OnBegin() {
+	
+	void AppLayer::OnBegin() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		BeginRenderScene();
+	}
+
+	void AppLayer::OnRender() {}
+
+	void AppLayer::OnEnd() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		EndRenderScene();
+	}
+
+	void AppLayer::BeginRenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
 		if (m_ViewportResizePending) {
 			m_ViewportResizePending = false;
@@ -161,13 +181,6 @@ namespace Nova::App {
 		}
 
 		m_Renderer->BeginFrame();
-	}
-	
-	void AppLayer::OnRender() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-
-		auto& registry = m_Scene.GetRegistry();
 
 		const glm::mat4 view = m_Camera->GetViewMatrix();
 		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
@@ -181,17 +194,24 @@ namespace Nova::App {
 			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
 			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
 		}
+	}
 
-		// ECS traversal: draw all entities that have a transform and a mesh.
-		auto viewMeshes = registry.view<TransformComponent, MeshComponent>();
+	void AppLayer::RenderScene() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+
+		auto& registry = m_Scene.GetRegistry();
+
+		// ECS traversal: draw all entities that have a transform and a mesh renderer.
+		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
 		for (auto entity : viewMeshes) {
 			auto& tc = viewMeshes.get<TransformComponent>(entity);
-			auto& mc = viewMeshes.get<MeshComponent>(entity);
+			auto& mrc = viewMeshes.get<MeshRendererComponent>(entity);
 
-			if (!mc.m_MeshAsset || !mc.m_MeshAsset->IsLoaded())
+			if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
 				continue;
 
-			auto gpuMesh = mc.m_MeshAsset->GetGPUMesh();
+			auto gpuMesh = mrc.m_MeshAsset->GetGPUMesh();
 			if (!gpuMesh)
 				continue;
 
@@ -203,14 +223,21 @@ namespace Nova::App {
 
 			m_Renderer->SetModelMatrix(tc.GetTransform());
 			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
-			m_Renderer->GetShader()->SetParameter("u_Color", glm::vec4(1.0f));
+			m_Renderer->GetShader()->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+
+			// Material (PBR factors)
+			const auto rhiMat = mrc.m_Material.ToRhi();
+			m_Renderer->GetShader()->SetParameter("u_BaseColorFactor", rhiMat.baseColorFactor);
+			m_Renderer->GetShader()->SetParameter("u_MetallicFactor", rhiMat.metallicFactor);
+			m_Renderer->GetShader()->SetParameter("u_RoughnessFactor", rhiMat.roughnessFactor);
+			m_Renderer->GetShader()->SetParameter("u_EmissiveFactor", glm::vec3(rhiMat.emissiveFactor));
+			m_Renderer->GetShader()->SetParameter("u_EmissiveStrength", rhiMat.emissiveStrength);
 
 			m_Renderer->DrawIndexed(cmd);
 		}
-
 	}
 
-    void AppLayer::OnEnd() {
+	void AppLayer::EndRenderScene() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		m_Renderer->EndFrame();
 	}

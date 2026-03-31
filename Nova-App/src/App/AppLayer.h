@@ -21,6 +21,7 @@
 #include "Scene/Scene.h"
 #include "Scene/ECS/Components/TransformComponent.h"
 #include "Scene/ECS/Components/MeshComponent.h"
+#include "Scene/ECS/Components/MeshRendererComponent.h"
 #include "Scene/ECS/Components/CameraComponent.h"
 
 #include "Renderer/RHI/RHI_Renderer.h"
@@ -64,6 +65,11 @@ namespace Nova::App {
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
 
+        // ---- Scene rendering (called by EditorLayer) ----
+        void BeginRenderScene();
+        void RenderScene();
+        void EndRenderScene();
+
         enum class SceneState {
             Edit = 0, Play = 1
         };
@@ -76,11 +82,14 @@ namespace Nova::App {
         void SetViewportHovered(bool hovered) { m_ViewportHovered = hovered; }
         bool IsViewportHovered() const        { return m_ViewportHovered; }
 
-        //void RequestPlay();
-        //void RequestStop();
+        void RequestPlay();
+        void RequestStop();
 
-        //void RegisterEditorLayer(EditorLayer* layer) { m_EditorLayer = layer; }
-        //void RegisterGameLayer(GameLayer* layer) { m_GameLayer = layer; }
+        void RegisterEditorLayer(EditorLayer* layer) { m_EditorLayer = layer; }
+        void RegisterGameLayer(GameLayer* layer) { m_GameLayer = layer; }
+
+        const Nova::Core::Scene::Scene& GetScene() const { return m_Scene; }
+        Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
     
     private:
         // ---- Orbit camera helpers ----
