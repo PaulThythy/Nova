@@ -9,7 +9,7 @@ struct PSOut {
     float  depth : SV_Depth;
 };
 
-static const float GridSize = 0.5;
+static const float GridSize = 1.0;
 static const uint  GridMinorsPerMajor = 4;
 
 float fogFade(float viewDist, float nearDist, float farDist) {
