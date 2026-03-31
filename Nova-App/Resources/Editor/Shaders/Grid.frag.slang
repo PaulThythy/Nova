@@ -9,10 +9,15 @@ struct PSOut {
     float  depth : SV_Depth;
 };
 
-float gridLine(float2 coord, float step) {
-    float2 r = coord / step;
-    float2 g = abs(frac(r - 0.5) - 0.5) / fwidth(r);
-    return 1.0 - min(min(g.x, g.y), 1.0);
+static const float GridSize = 0.5;
+static const uint  GridMinorsPerMajor = 4;
+
+float fogFade(float viewDist, float nearDist, float farDist) {
+    return 1.0 - smoothstep(nearDist, farDist, viewDist);
+}
+
+float fogScaledFade(float viewDist, float nearDist, float farDist, float2 fogScale) {
+    return 1.0 - smoothstep(nearDist * fogScale.x, farDist * fogScale.y, viewDist);
 }
 
 [shader("fragment")]
@@ -40,40 +45,72 @@ PSOut main(PSIn input) {
     float4 clip     = mul(nova.mvp.viewProj, float4(pos, 1.0));
     float  ndcDepth = clip.z / clip.w;
 
-    // Distance fade.
-    float dist = length(pos - nova.globals.u_CameraPos);
-    float fade = 1.0 - clamp(dist / 50.0, 0.0, 1.0);
+    // View-space distance for fog.
+    float3 viewPos  = mul(nova.mvp.view, float4(pos, 1.0)).xyz;
+    float  viewDist = length(viewPos);
 
-    float2 xz = pos.xz;
+    // Fog tuning (world units in view-space).
+    // Major lines persist longer; minor lines fade earlier.
+    float majorFog = fogFade(viewDist, 10.0, 120.0);
+    float minorFog = fogScaledFade(viewDist, 10.0, 120.0, float2(0.5, 0.85));
 
-    // Grid lines.
-    float small = gridLine(xz, 1.0);
-    float major = gridLine(xz, 5.0);
+    // Grid coordinates pinned to world-space.
+    float2 gridCoord = pos.xz / GridSize + 0.5;
 
-    // Axis highlights (X red, Z blue).
-    float axX = 1.0 - smoothstep(0.0, fwidth(xz.y) * 2.0, abs(xz.y));
-    float axZ = 1.0 - smoothstep(0.0, fwidth(xz.x) * 2.0, abs(xz.x));
+    // Closest line index in each axis.
+    int2 lineIndex = (int2)floor(gridCoord);
 
-    float3 col = float3(0.0, 0.0, 0.0);
-    float  a   = 0.0;
+    // Choose width/color/fog per nearest X- and Z-bounded line.
+    float2 lineWidth;
+    float3 lineColor[2];
+    float2 lineFog;
+    for (int i = 0; i < 2; i++) {
+        float width;
+        float3 color;
+        float fog;
 
-    col += float3(0.5, 0.5, 0.5) * (small * 0.35);
-    a    = max(a, small * 0.35);
+        if (lineIndex[i] == 0) {
+            width = 5.0;
+            // Axis colors: X axis = red, Z axis = blue.
+            // `i` indexes the bounded coordinate (0=x, 1=z), so swap for axis identity.
+            color = (i == 0) ? float3(0.2, 0.2, 1.0) : float3(1.0, 0.2, 0.2);
+            fog = majorFog;
+        }
+        else if ((lineIndex[i] % (int)GridMinorsPerMajor) == 0) {
+            width = 3.0;
+            color = float3(0.55, 0.55, 0.55);
+            fog = majorFog;
+        }
+        else {
+            width = 2.0;
+            color = float3(0.25, 0.25, 0.25);
+            fog = minorFog;
+        }
 
-    col = lerp(col, float3(0.7, 0.7, 0.7), major);
-    a   = max(a, major);
+        lineWidth[i] = width;
+        lineColor[i] = color;
+        lineFog[i]   = fog;
+    }
 
-    col = lerp(col, float3(1.0, 0.2, 0.2), axX);   // X axis — red
-    a   = max(a, axX);
+    // Distance from the center of the nearest line, for both axes.
+    float2 lineDist = abs(0.5 - frac(gridCoord)) * 2.0;
+    float2 lineMask = 1.0 - saturate(lineDist / (fwidth(gridCoord) * lineWidth));
 
-    col = lerp(col, float3(0.2, 0.2, 1.0), axZ);   // Z axis — blue
-    a   = max(a, axZ);
+    // Base blend factors.
+    float2 blendFactors = lineMask * lineFog;
 
-    a *= fade;
-    if (a < 0.01) discard;
+    // Prevent gray gridlines from overpowering axes near the origin.
+    for (int i = 0; i < 2; i++)
+        if (lineIndex[1 - i] == 0 && lineIndex[i] != 0)
+            blendFactors[i] *= smoothstep(0.0, 0.5, lineDist[1 - i]);
+
+    float3 finalColor = max(lineColor[0] * blendFactors.x, lineColor[1] * blendFactors.y);
+    float  alpha      = max(blendFactors.x, blendFactors.y);
+
+    if (alpha < 0.01) discard;
 
     PSOut o;
-    o.color = float4(col, a);
+    o.color = float4(finalColor, alpha);
     o.depth = clamp(ndcDepth - 1e-5, 0.0, 1.0);
     return o;
 }
