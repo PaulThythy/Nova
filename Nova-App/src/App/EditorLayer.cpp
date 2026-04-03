@@ -19,24 +19,24 @@ namespace Nova::App {
         fs::path editorShaders  = cwd / "Nova-App" / "Resources" / "Editor" / "Shaders";
         fs::path engineShaders  = cwd / "Nova-Core" / "Resources" / "Engine" / "Shaders";
 
-        RHI_ShaderCompileOptions options;
-        options.m_IncludeDirs.push_back(engineShaders);
+        RHI_ShaderCompileInput vertIn{};
+        vertIn.m_File         = editorShaders / "Grid.vert.slang";
+        vertIn.m_Stage        = RHI_ShaderStage::Vertex;
+        vertIn.m_IncludeDirs.push_back(engineShaders);
 
-        RHI_ShaderDesc vertDesc;
-        vertDesc.m_FilePath = editorShaders / "Grid.vert.slang";
-        vertDesc.m_Stage    = RHI_ShaderStage::Vertex;
+        RHI_ShaderCompileInput fragIn{};
+        fragIn.m_File         = editorShaders / "Grid.frag.slang";
+        fragIn.m_Stage        = RHI_ShaderStage::Fragment;
+        fragIn.m_IncludeDirs.push_back(engineShaders);
 
-        RHI_ShaderDesc fragDesc;
-        fragDesc.m_FilePath = editorShaders / "Grid.frag.slang";
-        fragDesc.m_Stage    = RHI_ShaderStage::Fragment;
+        RHI_ShaderCompileResult vertOut = RHI_ShaderCompiler::Compile(vertIn);
+        RHI_ShaderCompileResult fragOut = RHI_ShaderCompiler::Compile(fragIn);
 
-        RHI_ShaderCompilationOutput vertOut, fragOut;
-
-        if (!CompileShader(vertDesc, options, vertOut)) {
+        if (!vertOut.m_Success) {
             NV_LOG_ERROR(("Grid vertex shader compile failed:\n" + vertOut.m_Log).c_str());
             return;
         }
-        if (!CompileShader(fragDesc, options, fragOut)) {
+        if (!fragOut.m_Success) {
             NV_LOG_ERROR(("Grid fragment shader compile failed:\n" + fragOut.m_Log).c_str());
             return;
         }
