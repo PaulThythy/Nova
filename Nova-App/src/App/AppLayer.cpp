@@ -225,13 +225,16 @@ namespace Nova::App {
 			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
 			m_Renderer->GetShader()->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
 
-			// Material (PBR factors)
+			// Material (PBR factors → layout Material.slang / RHI::Material)
 			const auto rhiMat = mrc.m_Material.ToRhi();
-			m_Renderer->GetShader()->SetParameter("u_BaseColorFactor", rhiMat.baseColorFactor);
-			m_Renderer->GetShader()->SetParameter("u_MetallicFactor", rhiMat.metallicFactor);
-			m_Renderer->GetShader()->SetParameter("u_RoughnessFactor", rhiMat.roughnessFactor);
-			m_Renderer->GetShader()->SetParameter("u_EmissiveFactor", glm::vec3(rhiMat.emissiveFactor));
-			m_Renderer->GetShader()->SetParameter("u_EmissiveStrength", rhiMat.emissiveStrength);
+			m_Renderer->GetShader()->SetParameter("base", rhiMat.base);
+			m_Renderer->GetShader()->SetParameter("baseColor", rhiMat.baseColor);
+			m_Renderer->GetShader()->SetParameter("metalness", rhiMat.metalness);
+			m_Renderer->GetShader()->SetParameter("specularRoughness", rhiMat.specularRoughness);
+			m_Renderer->GetShader()->SetParameter("emissionColor", rhiMat.emissionColor);
+			m_Renderer->GetShader()->SetParameter("emission", rhiMat.emission);
+			m_Renderer->GetShader()->SetParameter("opacity", rhiMat.opacity);
+			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(rhiMat.isOpaque));
 
 			m_Renderer->DrawIndexed(cmd);
 		}
