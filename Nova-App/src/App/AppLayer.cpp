@@ -130,11 +130,24 @@ namespace Nova::App {
             glm::vec3(1.0f, 1.0f, 1.0f)
         );
 		{
-			Nova::Core::Renderer::Graphics::Material mat{};
-			mat.m_BaseColorFactor = glm::vec4(1.0f);
-			mat.m_MetallicFactor = 0.0f;
-			mat.m_RoughnessFactor = 0.85f;
+			Nova::Core::Renderer::RHI::Material mat{};
+			mat.baseColor = glm::vec3(0.0f, 1.0f, 0.0f);
 			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+		}
+
+		auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetAssetRef();
+		planeAsset->Load();
+		entt::entity planeEntity = m_Scene.CreateEntity("Plane");
+
+		registry.emplace<TransformComponent>(planeEntity,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(10.0f, 10.0f, 10.0f)
+        );
+
+		{
+			Nova::Core::Renderer::RHI::Material mat{};
+			registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
 		}
 
 		UpdateCameraAspectFromWindow();
@@ -225,19 +238,47 @@ namespace Nova::App {
 			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
 			m_Renderer->GetShader()->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
 
-			// Material (PBR factors → layout Material.slang / RHI::Material)
-			const auto rhiMat = mrc.m_Material.ToRhi();
-			m_Renderer->GetShader()->SetParameter("base", rhiMat.base);
-			m_Renderer->GetShader()->SetParameter("baseColor", rhiMat.baseColor);
-			m_Renderer->GetShader()->SetParameter("metalness", rhiMat.metalness);
-			m_Renderer->GetShader()->SetParameter("specularRoughness", rhiMat.specularRoughness);
-			m_Renderer->GetShader()->SetParameter("emissionColor", rhiMat.emissionColor);
-			m_Renderer->GetShader()->SetParameter("emission", rhiMat.emission);
-			m_Renderer->GetShader()->SetParameter("opacity", rhiMat.opacity);
-			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(rhiMat.isOpaque));
+			//TODO function to set the material parameters
 
+			m_Renderer->GetShader()->SetParameter("base", mrc.m_Material.base);
+			m_Renderer->GetShader()->SetParameter("baseColor", mrc.m_Material.baseColor);
+			m_Renderer->GetShader()->SetParameter("diffuseRoughness", mrc.m_Material.diffuseRoughness);
+			m_Renderer->GetShader()->SetParameter("metalness", mrc.m_Material.metalness);
+			m_Renderer->GetShader()->SetParameter("metalColor", mrc.m_Material.metalColor);
+			m_Renderer->GetShader()->SetParameter("specular", mrc.m_Material.specular);
+			m_Renderer->GetShader()->SetParameter("specularColor", mrc.m_Material.specularColor);
+			m_Renderer->GetShader()->SetParameter("specularRoughness", mrc.m_Material.specularRoughness);
+			m_Renderer->GetShader()->SetParameter("specularIOR", mrc.m_Material.specularIOR);
+			m_Renderer->GetShader()->SetParameter("specularAnisotropy", mrc.m_Material.specularAnisotropy);
+			m_Renderer->GetShader()->SetParameter("specularRotation", mrc.m_Material.specularRotation);
+			m_Renderer->GetShader()->SetParameter("transmission", mrc.m_Material.transmission);
+			m_Renderer->GetShader()->SetParameter("transmissionColor", mrc.m_Material.transmissionColor);
+			m_Renderer->GetShader()->SetParameter("subsurface", mrc.m_Material.subsurface);
+			m_Renderer->GetShader()->SetParameter("subsurfaceColor", mrc.m_Material.subsurfaceColor);
+			m_Renderer->GetShader()->SetParameter("subsurfaceRadius", mrc.m_Material.subsurfaceRadius);
+			m_Renderer->GetShader()->SetParameter("subsurfaceScale", mrc.m_Material.subsurfaceScale);
+			m_Renderer->GetShader()->SetParameter("subsurfaceAnisotropy", mrc.m_Material.subsurfaceAnisotropy);
+			m_Renderer->GetShader()->SetParameter("sheen", mrc.m_Material.sheen);
+			m_Renderer->GetShader()->SetParameter("sheenColor", mrc.m_Material.sheenColor);
+			m_Renderer->GetShader()->SetParameter("sheenRoughness", mrc.m_Material.sheenRoughness);
+			m_Renderer->GetShader()->SetParameter("coat", mrc.m_Material.coat);
+			m_Renderer->GetShader()->SetParameter("coatColor", mrc.m_Material.coatColor);
+			m_Renderer->GetShader()->SetParameter("coatRoughness", mrc.m_Material.coatRoughness);
+			m_Renderer->GetShader()->SetParameter("coatAnisotropy", mrc.m_Material.coatAnisotropy);
+			m_Renderer->GetShader()->SetParameter("coatRotation", mrc.m_Material.coatRotation);
+			m_Renderer->GetShader()->SetParameter("coatIOR", mrc.m_Material.coatIOR);
+			m_Renderer->GetShader()->SetParameter("coatAffectColor", mrc.m_Material.coatAffectColor);
+			m_Renderer->GetShader()->SetParameter("coatAffectRoughness", mrc.m_Material.coatAffectRoughness);
+			m_Renderer->GetShader()->SetParameter("emission", mrc.m_Material.emission);
+			m_Renderer->GetShader()->SetParameter("emissionColor", mrc.m_Material.emissionColor);
+			m_Renderer->GetShader()->SetParameter("opacity", mrc.m_Material.opacity);
+			m_Renderer->GetShader()->SetParameter("thinWalled", mrc.m_Material.thinWalled);
+			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.isOpaque));
+			
 			m_Renderer->DrawIndexed(cmd);
 		}
+
+		m_Renderer->PrepareForImGui();
 	}
 
 	void AppLayer::EndRenderScene() {
