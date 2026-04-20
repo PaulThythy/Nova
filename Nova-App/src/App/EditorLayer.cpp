@@ -29,25 +29,13 @@ namespace Nova::App {
         fragIn.m_Stage        = RHI_ShaderStage::Fragment;
         fragIn.m_IncludeDirs.push_back(engineShaders);
 
-        RHI_ShaderCompileResult vertOut = RHI_ShaderCompiler::Compile(vertIn);
-        RHI_ShaderCompileResult fragOut = RHI_ShaderCompiler::Compile(fragIn);
-
-        if (!vertOut.m_Success) {
-            NV_LOG_ERROR(("Grid vertex shader compile failed:\n" + vertOut.m_Log).c_str());
-            return;
-        }
-        if (!fragOut.m_Success) {
-            NV_LOG_ERROR(("Grid fragment shader compile failed:\n" + fragOut.m_Log).c_str());
-            return;
-        }
-
         auto* renderer = g_AppLayer ? g_AppLayer->GetRenderer() : nullptr;
         if (!renderer) {
             NV_LOG_ERROR("EditorLayer: renderer not available for grid shader creation");
             return;
         }
 
-        m_GridShader = renderer->CreateFullscreenShader(vertOut.m_Spirv, fragOut.m_Spirv);
+        m_GridShader = renderer->CreateFullscreenShader(vertIn, fragIn);
         if (m_GridShader)
             NV_LOG_INFO("Editor grid shader ready.");
         else
