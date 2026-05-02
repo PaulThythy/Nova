@@ -1,5 +1,5 @@
 #!/bin/bash
 
-cmake -S . -B build -G "Ninja"
-cmake --build build -- -j 6
-./build/Nova-App/Nova-App
+cmake -S . -B Build -G "Ninja"
+cmake --build Build -- -j 6
+./Build/Nova-App/Nova-App
