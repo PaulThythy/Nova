@@ -32,7 +32,6 @@ bin
 .vscode
 .vs
 .idea
-build
 out
 imgui.ini
 
@@ -42,3 +41,4 @@ docs
 /.cursor/
 /build-shared/
 /Cache/
+/Build/
