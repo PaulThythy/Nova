@@ -1,13 +1,14 @@
 #include "NovaUniforms.slang"
 
+// Fullscreen quad: two attributes at binding 0 — locations 0,1 (Slang field order).
 struct VSIn {
-    [[vk::location(0)]] float2 position : POSITION;
-    [[vk::location(1)]] float2 uv : TEXCOORD0;
+    float2 position : POSITION;
+    float2 uv : TEXCOORD0;
 };
 
 struct VSOut {
     float4 sv_position : SV_Position;
-    [[vk::location(0)]] float2 v_UV;
+    float2 v_UV;
 };
 
 [shader("vertex")]

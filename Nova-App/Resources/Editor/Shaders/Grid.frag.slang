@@ -1,7 +1,8 @@
 #include "NovaUniforms.slang"
 
+// Must match Grid.vert.slang VSOut (after SV_Position).
 struct PSIn {
-    [[vk::location(0)]] float2 v_UV;
+    float2 v_UV;
 };
 
 struct PSOut {

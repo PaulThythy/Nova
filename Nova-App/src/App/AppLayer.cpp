@@ -131,7 +131,7 @@ namespace Nova::App {
         );
 		{
 			Nova::Core::Renderer::RHI::Material mat{};
-			mat.baseColor = glm::vec3(0.0f, 1.0f, 0.0f);
+			mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
 			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
 		}
 
@@ -240,40 +240,40 @@ namespace Nova::App {
 
 			//TODO function to set the material parameters
 
-			m_Renderer->GetShader()->SetParameter("base", mrc.m_Material.base);
-			m_Renderer->GetShader()->SetParameter("baseColor", mrc.m_Material.baseColor);
-			m_Renderer->GetShader()->SetParameter("diffuseRoughness", mrc.m_Material.diffuseRoughness);
-			m_Renderer->GetShader()->SetParameter("metalness", mrc.m_Material.metalness);
-			m_Renderer->GetShader()->SetParameter("metalColor", mrc.m_Material.metalColor);
-			m_Renderer->GetShader()->SetParameter("specular", mrc.m_Material.specular);
-			m_Renderer->GetShader()->SetParameter("specularColor", mrc.m_Material.specularColor);
-			m_Renderer->GetShader()->SetParameter("specularRoughness", mrc.m_Material.specularRoughness);
-			m_Renderer->GetShader()->SetParameter("specularIOR", mrc.m_Material.specularIOR);
-			m_Renderer->GetShader()->SetParameter("specularAnisotropy", mrc.m_Material.specularAnisotropy);
-			m_Renderer->GetShader()->SetParameter("specularRotation", mrc.m_Material.specularRotation);
-			m_Renderer->GetShader()->SetParameter("transmission", mrc.m_Material.transmission);
-			m_Renderer->GetShader()->SetParameter("transmissionColor", mrc.m_Material.transmissionColor);
-			m_Renderer->GetShader()->SetParameter("subsurface", mrc.m_Material.subsurface);
-			m_Renderer->GetShader()->SetParameter("subsurfaceColor", mrc.m_Material.subsurfaceColor);
-			m_Renderer->GetShader()->SetParameter("subsurfaceRadius", mrc.m_Material.subsurfaceRadius);
-			m_Renderer->GetShader()->SetParameter("subsurfaceScale", mrc.m_Material.subsurfaceScale);
-			m_Renderer->GetShader()->SetParameter("subsurfaceAnisotropy", mrc.m_Material.subsurfaceAnisotropy);
-			m_Renderer->GetShader()->SetParameter("sheen", mrc.m_Material.sheen);
-			m_Renderer->GetShader()->SetParameter("sheenColor", mrc.m_Material.sheenColor);
-			m_Renderer->GetShader()->SetParameter("sheenRoughness", mrc.m_Material.sheenRoughness);
-			m_Renderer->GetShader()->SetParameter("coat", mrc.m_Material.coat);
-			m_Renderer->GetShader()->SetParameter("coatColor", mrc.m_Material.coatColor);
-			m_Renderer->GetShader()->SetParameter("coatRoughness", mrc.m_Material.coatRoughness);
-			m_Renderer->GetShader()->SetParameter("coatAnisotropy", mrc.m_Material.coatAnisotropy);
-			m_Renderer->GetShader()->SetParameter("coatRotation", mrc.m_Material.coatRotation);
-			m_Renderer->GetShader()->SetParameter("coatIOR", mrc.m_Material.coatIOR);
-			m_Renderer->GetShader()->SetParameter("coatAffectColor", mrc.m_Material.coatAffectColor);
-			m_Renderer->GetShader()->SetParameter("coatAffectRoughness", mrc.m_Material.coatAffectRoughness);
-			m_Renderer->GetShader()->SetParameter("emission", mrc.m_Material.emission);
-			m_Renderer->GetShader()->SetParameter("emissionColor", mrc.m_Material.emissionColor);
-			m_Renderer->GetShader()->SetParameter("opacity", mrc.m_Material.opacity);
-			m_Renderer->GetShader()->SetParameter("thinWalled", mrc.m_Material.thinWalled);
-			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.isOpaque));
+			m_Renderer->GetShader()->SetParameter("base", mrc.m_Material.m_Base);
+			m_Renderer->GetShader()->SetParameter("baseColor", mrc.m_Material.m_BaseColor);
+			m_Renderer->GetShader()->SetParameter("diffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
+			m_Renderer->GetShader()->SetParameter("metalness", mrc.m_Material.m_Metalness);
+			m_Renderer->GetShader()->SetParameter("metalColor", mrc.m_Material.m_MetalColor);
+			m_Renderer->GetShader()->SetParameter("specular", mrc.m_Material.m_Specular);
+			m_Renderer->GetShader()->SetParameter("specularColor", mrc.m_Material.m_SpecularColor);
+			m_Renderer->GetShader()->SetParameter("specularRoughness", mrc.m_Material.m_SpecularRoughness);
+			m_Renderer->GetShader()->SetParameter("specularIOR", mrc.m_Material.m_SpecularIOR);
+			m_Renderer->GetShader()->SetParameter("specularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
+			m_Renderer->GetShader()->SetParameter("specularRotation", mrc.m_Material.m_SpecularRotation);
+			m_Renderer->GetShader()->SetParameter("transmission", mrc.m_Material.m_Transmission);
+			m_Renderer->GetShader()->SetParameter("transmissionColor", mrc.m_Material.m_TransmissionColor);
+			m_Renderer->GetShader()->SetParameter("subsurface", mrc.m_Material.m_Subsurface);
+			m_Renderer->GetShader()->SetParameter("subsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
+			m_Renderer->GetShader()->SetParameter("subsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
+			m_Renderer->GetShader()->SetParameter("subsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
+			m_Renderer->GetShader()->SetParameter("subsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
+			m_Renderer->GetShader()->SetParameter("sheen", mrc.m_Material.m_Sheen);
+			m_Renderer->GetShader()->SetParameter("sheenColor", mrc.m_Material.m_SheenColor);
+			m_Renderer->GetShader()->SetParameter("sheenRoughness", mrc.m_Material.m_SheenRoughness);
+			m_Renderer->GetShader()->SetParameter("coat", mrc.m_Material.m_Coat);
+			m_Renderer->GetShader()->SetParameter("coatColor", mrc.m_Material.m_CoatColor);
+			m_Renderer->GetShader()->SetParameter("coatRoughness", mrc.m_Material.m_CoatRoughness);
+			m_Renderer->GetShader()->SetParameter("coatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
+			m_Renderer->GetShader()->SetParameter("coatRotation", mrc.m_Material.m_CoatRotation);
+			m_Renderer->GetShader()->SetParameter("coatIOR", mrc.m_Material.m_CoatIOR);
+			m_Renderer->GetShader()->SetParameter("coatAffectColor", mrc.m_Material.m_CoatAffectColor);
+			m_Renderer->GetShader()->SetParameter("coatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
+			m_Renderer->GetShader()->SetParameter("emission", mrc.m_Material.m_Emission);
+			m_Renderer->GetShader()->SetParameter("emissionColor", mrc.m_Material.m_EmissionColor);
+			m_Renderer->GetShader()->SetParameter("opacity", mrc.m_Material.m_Opacity);
+			m_Renderer->GetShader()->SetParameter("thinWalled", mrc.m_Material.m_ThinWalled);
+			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
 			
 			m_Renderer->DrawIndexed(cmd);
 		}
