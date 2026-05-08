@@ -104,13 +104,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         if (Nova::App::g_AppLayer->GetRenderer()) {
             if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetViewportTextureID()) {
-                // OpenGL FBOs have Y=0 at the bottom, so a V-flip is required.
-                // Vulkan/Metal/DX have Y=0 at the top: no flip needed.
-                const GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
-                const bool needsVFlip = (api == GraphicsAPI::OpenGL);
-                const ImVec2 uv0 = needsVFlip ? ImVec2(0, 1) : ImVec2(0, 0);
-                const ImVec2 uv1 = needsVFlip ? ImVec2(1, 0) : ImVec2(1, 1);
-                ImGui::Image(textureId, size, uv0, uv1);
+                ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
             }
         }
         else {
