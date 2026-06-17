@@ -55,10 +55,10 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::BeginChild("##ViewportSettingsBar", ImVec2(0.0f, barH), true, flags);
 
         static int s_CameraMode = 0; // 0: Perspective, 1: Orthographic
-        static int s_RenderMode = 0; // 0: Lit, 1: Unlit, 2: Wireframe
+        static int s_RenderMode = 0; // 0: Lit, 1: Unlit, 2: Wireframe, 3: Vertex Color, 4: Normals Debug, 5: Positions Debug
 
         const char* camItems[] = { "Perspective", "Orthographic" };
-        const char* rndItems[] = { "Lit", "Unlit", "Wireframe" };
+        const char* rndItems[] = { "Lit", "Unlit", "Wireframe", "Vertex Color", "Normals Debug", "Positions Debug" };
 
         ImGui::SetNextItemWidth(150.0f);
         ImGui::Combo("##cam", &s_CameraMode, camItems, IM_ARRAYSIZE(camItems));
