@@ -3,7 +3,6 @@
 
 #include "Core/Layer.h"
 #include "Events/Event.h"
-#include "Renderer/RHI/RHI_Shaders.h"
 
 namespace Nova::App {
 
@@ -22,11 +21,6 @@ namespace Nova::App {
         void OnEnd() override;
         void OnImGuiRender() override;
         void OnEvent(Nova::Core::Events::Event& e) override;
-
-    private:
-        void CompileGridShaders();
-
-        Nova::Core::Renderer::RHI::RHI_Shaders* m_GridShader{ nullptr };
     };
 
 } // namespace Nova::App

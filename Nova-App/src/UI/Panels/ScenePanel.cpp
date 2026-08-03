@@ -47,26 +47,39 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::EndChild();
     }
 
-    static void DrawViewportSettingsBar() {
-        const float barH = 32.0f;
+    static void DrawViewportSettingsOverlay() {
+        AppLayer* app = Nova::App::g_AppLayer;
+        if (!app)
+            return;
 
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+        // Overlay controls in the top-left corner of the rendered viewport.
+        ImGui::SetCursorPos(ImVec2(8.0f, 8.0f));
 
-        ImGui::BeginChild("##ViewportSettingsBar", ImVec2(0.0f, barH), true, flags);
+        static const char* kModeNames[] = {
+            "Lit",
+            "Normals",
+            "Positions",
+            "Vertex Color",
+            "Depth",
+        };
 
-        static int s_CameraMode = 0; // 0: Perspective, 1: Orthographic
-        static int s_RenderMode = 0; // 0: Lit, 1: Unlit, 2: Wireframe, 3: Vertex Color, 4: Normals Debug, 5: Positions Debug
-
-        const char* camItems[] = { "Perspective", "Orthographic" };
-        const char* rndItems[] = { "Lit", "Unlit", "Wireframe", "Vertex Color", "Normals Debug", "Positions Debug" };
-
+        int mode = static_cast<int>(app->GetRenderDebugMode());
         ImGui::SetNextItemWidth(150.0f);
-        ImGui::Combo("##cam", &s_CameraMode, camItems, IM_ARRAYSIZE(camItems));
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(130.0f);
-        ImGui::Combo("##rnd", &s_RenderMode, rndItems, IM_ARRAYSIZE(rndItems));
+        if (ImGui::Combo("##RenderMode", &mode, kModeNames, static_cast<int>(RenderDebugMode::Count))) {
+            auto debugMode = static_cast<RenderDebugMode>(mode);
+            app->SetRenderDebugMode(debugMode);
+            if (debugMode == RenderDebugMode::Depth)
+                app->ShowGrid(false);
+        }
 
-        ImGui::EndChild();
+        ImGui::SameLine();
+
+        const bool depthMode = (app->GetRenderDebugMode() == RenderDebugMode::Depth);
+        bool showGrid = app->IsGridVisible();
+        ImGui::BeginDisabled(depthMode);
+        if (ImGui::Checkbox("Show Grid", &showGrid))
+            app->ShowGrid(showGrid);
+        ImGui::EndDisabled();
     }
 
     void Render(const std::string& sceneName) {
@@ -77,10 +90,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         // 1) Toolbar INSIDE the scene panel (requested)
         DrawSceneToolbarBar();
 
-        // 2) Viewport settings bar
-        DrawViewportSettingsBar();
-
-        // 3) Viewport (framebuffer)
+        // 2) Viewport (framebuffer) with settings overlaid on top
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::BeginChild("##Viewport", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -103,13 +113,15 @@ namespace Nova::App::UI::Panels::ScenePanel {
         }
 
         if (Nova::App::g_AppLayer->GetRenderer()) {
-            if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetViewportTextureID()) {
+            if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetTextureImGuiID(Nova::App::g_AppLayer->GetSceneColor())) {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
             }
         }
         else {
             ImGui::TextUnformatted("Framebuffer not ready.");
         }
+
+        DrawViewportSettingsOverlay();
 
         ImGui::EndChild();
         ImGui::PopStyleVar();
