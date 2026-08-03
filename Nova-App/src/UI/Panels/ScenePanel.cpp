@@ -47,18 +47,13 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::EndChild();
     }
 
-    static void DrawViewportSettingsBar() {
-        const float barH = 32.0f;
-
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-
-        ImGui::BeginChild("##ViewportSettingsBar", ImVec2(0.0f, barH), true, flags);
-
+    static void DrawViewportSettingsOverlay() {
         AppLayer* app = Nova::App::g_AppLayer;
-        if (!app) {
-            ImGui::EndChild();
+        if (!app)
             return;
-        }
+
+        // Overlay controls in the top-left corner of the rendered viewport.
+        ImGui::SetCursorPos(ImVec2(8.0f, 8.0f));
 
         static const char* kModeNames[] = {
             "Lit",
@@ -85,8 +80,6 @@ namespace Nova::App::UI::Panels::ScenePanel {
         if (ImGui::Checkbox("Show Grid", &showGrid))
             app->ShowGrid(showGrid);
         ImGui::EndDisabled();
-
-        ImGui::EndChild();
     }
 
     void Render(const std::string& sceneName) {
@@ -97,10 +90,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         // 1) Toolbar INSIDE the scene panel (requested)
         DrawSceneToolbarBar();
 
-        // 2) Viewport settings bar
-        DrawViewportSettingsBar();
-
-        // 3) Viewport (framebuffer)
+        // 2) Viewport (framebuffer) with settings overlaid on top
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::BeginChild("##Viewport", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -130,6 +120,8 @@ namespace Nova::App::UI::Panels::ScenePanel {
         else {
             ImGui::TextUnformatted("Framebuffer not ready.");
         }
+
+        DrawViewportSettingsOverlay();
 
         ImGui::EndChild();
         ImGui::PopStyleVar();
