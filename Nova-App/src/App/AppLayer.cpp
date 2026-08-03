@@ -431,7 +431,6 @@ namespace Nova::App {
 				continue;
 
 			sceneShader->SetParameter("model", tc.GetTransform());
-			sceneShader->SetParameter("u_UseInstancing", 0);
 			sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
 
 			sceneShader->SetParameter("base", mrc.m_Material.m_Base);
