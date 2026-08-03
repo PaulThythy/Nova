@@ -1,5 +1,8 @@
 #include "UI/Panels/ScenePanel.h"
 
+#include <algorithm>
+#include <cstdio>
+
 #include "imgui.h"
 #include "App/AppLayer.h"
 #include "Events/ApplicationEvents.h"
@@ -80,6 +83,25 @@ namespace Nova::App::UI::Panels::ScenePanel {
         if (ImGui::Checkbox("Show Grid", &showGrid))
             app->ShowGrid(showGrid);
         ImGui::EndDisabled();
+
+        // Frame stats in the top-right corner of the viewport.
+        const float dt = app->GetDeltaTime();
+        const float fps = (dt > 0.0f) ? (1.0f / dt) : 0.0f;
+        const float frameMs = dt * 1000.0f;
+
+        char fpsText[32];
+        char msText[32];
+        std::snprintf(fpsText, sizeof(fpsText), "%.1f FPS", fps);
+        std::snprintf(msText, sizeof(msText), "%.2f ms", frameMs);
+
+        const float pad = 8.0f;
+        const float textW = (std::max)(ImGui::CalcTextSize(fpsText).x, ImGui::CalcTextSize(msText).x);
+        const ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
+
+        ImGui::SetCursorPos(ImVec2(contentMax.x - textW - pad, pad));
+        ImGui::TextUnformatted(fpsText);
+        ImGui::SetCursorPosX(contentMax.x - ImGui::CalcTextSize(msText).x - pad);
+        ImGui::TextUnformatted(msText);
     }
 
     void Render(const std::string& sceneName) {

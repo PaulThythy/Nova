@@ -94,6 +94,8 @@ namespace Nova::App {
         void ShowGrid(bool show) { m_ShowGrid = show; }
         bool IsGridVisible() const { return m_ShowGrid; }
 
+        float GetDeltaTime() const { return m_DeltaTime; }
+
         RenderDebugMode GetRenderDebugMode() const { return m_RenderDebugMode; }
         void SetRenderDebugMode(RenderDebugMode mode) { m_RenderDebugMode = mode; }
 
