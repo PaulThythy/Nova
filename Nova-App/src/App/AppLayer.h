@@ -96,6 +96,9 @@ namespace Nova::App {
         void ShowGrid(bool show) { m_ShowGrid = show; }
         bool IsGridVisible() const { return m_ShowGrid; }
 
+        RenderDebugMode GetRenderDebugMode() const { return m_RenderDebugMode; }
+        void SetRenderDebugMode(RenderDebugMode mode) { m_RenderDebugMode = mode; }
+
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const { return m_SceneDepth; }
 

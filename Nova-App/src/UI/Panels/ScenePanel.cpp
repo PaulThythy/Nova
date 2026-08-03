@@ -54,17 +54,37 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         ImGui::BeginChild("##ViewportSettingsBar", ImVec2(0.0f, barH), true, flags);
 
-        static int s_CameraMode = 0; // 0: Perspective, 1: Orthographic
-        static int s_RenderMode = 0; // 0: Lit, 1: Unlit, 2: Wireframe, 3: Vertex Color, 4: Normals Debug, 5: Positions Debug
+        AppLayer* app = Nova::App::g_AppLayer;
+        if (!app) {
+            ImGui::EndChild();
+            return;
+        }
 
-        const char* camItems[] = { "Perspective", "Orthographic" };
-        const char* rndItems[] = { "Lit", "Unlit", "Wireframe", "Vertex Color", "Normals Debug", "Positions Debug" };
+        static const char* kModeNames[] = {
+            "Lit",
+            "Normals",
+            "Positions",
+            "Vertex Color",
+            "Depth",
+        };
 
+        int mode = static_cast<int>(app->GetRenderDebugMode());
         ImGui::SetNextItemWidth(150.0f);
-        ImGui::Combo("##cam", &s_CameraMode, camItems, IM_ARRAYSIZE(camItems));
+        if (ImGui::Combo("##RenderMode", &mode, kModeNames, static_cast<int>(RenderDebugMode::Count))) {
+            auto debugMode = static_cast<RenderDebugMode>(mode);
+            app->SetRenderDebugMode(debugMode);
+            if (debugMode == RenderDebugMode::Depth)
+                app->ShowGrid(false);
+        }
+
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(130.0f);
-        ImGui::Combo("##rnd", &s_RenderMode, rndItems, IM_ARRAYSIZE(rndItems));
+
+        const bool depthMode = (app->GetRenderDebugMode() == RenderDebugMode::Depth);
+        bool showGrid = app->IsGridVisible();
+        ImGui::BeginDisabled(depthMode);
+        if (ImGui::Checkbox("Show Grid", &showGrid))
+            app->ShowGrid(showGrid);
+        ImGui::EndDisabled();
 
         ImGui::EndChild();
     }
