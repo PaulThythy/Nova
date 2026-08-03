@@ -356,25 +356,8 @@ namespace Nova::App {
 	void AppLayer::OnBegin() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-		BeginRenderScene();
-	}
-
-	void AppLayer::OnRender() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		m_Renderer->RenderFrame();
-	}
-
-	void AppLayer::OnEnd() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-		EndRenderScene();
-	}
-
-	void AppLayer::BeginRenderScene() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-
-		if (m_ViewportResizePending)
+		
+        if (m_ViewportResizePending)
 			ApplyPendingViewportResize();
 
 		m_Renderer->BeginFrame();
@@ -404,6 +387,18 @@ namespace Nova::App {
 			setGlobals(graph->GetShader(m_VertexColorShader));
 			setGlobals(graph->GetShader(m_DepthShader));
 		}
+	}
+
+	void AppLayer::OnRender() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+		m_Renderer->RenderFrame();
+	}
+
+	void AppLayer::OnEnd() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+		m_Renderer->EndFrame();
 	}
 
 	void AppLayer::RenderScene(Nova::Core::Renderer::RHI::RHI_PassContext& ctx) {
@@ -477,11 +472,6 @@ namespace Nova::App {
 			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
 			ctx.DrawIndexed(cmd);
 		}
-	}
-
-	void AppLayer::EndRenderScene() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		m_Renderer->EndFrame();
 	}
 
     void AppLayer::OnImGuiRender() {
