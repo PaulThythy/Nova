@@ -103,7 +103,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         }
 
         if (Nova::App::g_AppLayer->GetRenderer()) {
-            if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetViewportTextureID()) {
+            if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetTextureImGuiID(Nova::App::g_AppLayer->GetSceneColor())) {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
             }
         }

@@ -6,23 +6,24 @@
 namespace Nova::App {
 
     void GameLayer::OnAttach() {
-        if (g_AppLayer)
+        if (g_AppLayer) {
             g_AppLayer->RegisterGameLayer(this);
+            g_AppLayer->ShowGrid(false);
+        }
     }
 
     void GameLayer::OnDetach() {
-        if (g_AppLayer)
+        if (g_AppLayer) {
             g_AppLayer->RegisterGameLayer(nullptr);
+            g_AppLayer->ShowGrid(true);
+        }
     }
 
     void GameLayer::OnUpdate(float) {}
 
     void GameLayer::OnBegin() {}
 
-    void GameLayer::OnRender() {
-        if (g_AppLayer)
-            g_AppLayer->RenderScene();
-    }
+    void GameLayer::OnRender() {}
 
     void GameLayer::OnEnd() {}
 

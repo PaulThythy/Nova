@@ -90,7 +90,148 @@ namespace Nova::App {
         g_AppLayer = this;
 
         GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
-		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(api);
+
+		Nova::Core::Renderer::RHI::RHI_SwapchainDesc swapDesc{};
+        swapDesc.m_FramesInFlight = 3;
+        swapDesc.m_CreateSurface = true;
+        swapDesc.m_EnableSwapchain = true;
+        swapDesc.m_PreferredPresentMode = Nova::Core::Renderer::RHI::RHI_PresentMode::Default;
+		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(api, swapDesc);
+
+		int initialW = 1280, initialH = 720;
+        Nova::Core::Application::Get().GetWindow().GetWindowSize(initialW, initialH);
+        if (initialW <= 0 || initialH <= 0) {
+            initialW = 1280;
+            initialH = 720;
+        }
+        m_ViewportSize = { static_cast<float>(initialW), static_cast<float>(initialH) };
+
+		namespace RG = Nova::Core::Renderer::RHI;
+        RG::RHI_RenderGraphBuilder fg;
+
+        const uint32_t width = static_cast<uint32_t>(initialW);
+        const uint32_t height = static_cast<uint32_t>(initialH);
+
+        const auto backbuffer = fg.ImportTexture({
+            width,
+            height,
+            RG::RHI_TextureFormat::RGBA8,
+            RG::RHI_TextureUsage::ColorAttachment,
+        }, RG::RHI_ResourceState::Present);
+
+        // Editor viewport renders into offscreen textures sampled by ImGui.
+        RG::RHI_TextureHandle color = fg.CreateTexture({
+            width,
+            height,
+            RG::RHI_TextureFormat::RGBA8,
+            RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled,
+        });
+
+        RG::RHI_TextureHandle depth = fg.CreateTexture({
+            width,
+            height,
+            RG::RHI_TextureFormat::Depth32,
+            RG::RHI_TextureUsage::DepthAttachment | RG::RHI_TextureUsage::Sampled,
+        });
+
+        m_SceneColor = color;
+        m_SceneDepth = depth;
+
+        auto acquireShader = [](const std::filesystem::path& uri) {
+            auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
+            if (!asset || !asset->Compile()) {
+                NV_LOG_WARN(("Failed to compile shader asset: " + uri.generic_string()).c_str());
+            }
+            return asset;
+        };
+
+        auto gridVert = acquireShader("Editor://Shaders/Grid.vert.slang");
+        auto gridFrag = acquireShader("Editor://Shaders/Grid.frag.slang");
+        auto sceneVert = acquireShader("Engine://Shaders/Scene.vert.slang");
+        auto sceneFrag = acquireShader("Engine://Shaders/Scene.frag.slang");
+        auto normalsFrag = acquireShader("Engine://Shaders/NormalsDebug.frag.slang");
+        auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
+        auto vertexColorFrag = acquireShader("Engine://Shaders/VertexColor.frag.slang");
+        auto depthFrag = acquireShader("Engine://Shaders/DepthDebug.frag.slang");
+
+        m_GridShader = fg.RegisterShader({
+            .m_Name = "Grid",
+            .m_Vertex = gridVert,
+            .m_Fragment = gridFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
+            .m_AlphaBlend = true,
+        });
+
+        m_SceneShader = fg.RegisterShader({
+            .m_Name = "Scene",
+            .m_Vertex = sceneVert,
+            .m_Fragment = sceneFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_NormalsShader = fg.RegisterShader({
+            .m_Name = "NormalsDebug",
+            .m_Vertex = sceneVert,
+            .m_Fragment = normalsFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_PositionsShader = fg.RegisterShader({
+            .m_Name = "PositionsDebug",
+            .m_Vertex = sceneVert,
+            .m_Fragment = positionsFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_VertexColorShader = fg.RegisterShader({
+            .m_Name = "VertexColor",
+            .m_Vertex = sceneVert,
+            .m_Fragment = vertexColorFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_DepthShader = fg.RegisterShader({
+            .m_Name = "DepthDebug",
+            .m_Vertex = sceneVert,
+            .m_Fragment = depthFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+
+        fg.AddPass("Grid",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Write(color);
+                if (depth.IsValid())
+                    b.Write(depth);
+            },
+            [this](RG::RHI_PassContext& ctx) {
+                if (!m_ShowGrid)
+                    return;
+                auto* shader = ctx.GetShader(m_GridShader);
+                if (!shader) return;
+                const glm::vec3 resolution(ctx.GetRenderWidth(), ctx.GetRenderHeight(), 1.0f);
+                shader->SetParameter("iResolution", resolution);
+                ctx.DrawFullscreen(m_GridShader);
+            });
+
+        fg.AddPass("Scene",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Read(color);
+                b.Write(color);
+                if (depth.IsValid()) {
+                    b.Read(depth);
+                    b.Write(depth);
+                }
+            },
+            [this](RG::RHI_PassContext& ctx) {
+                RenderScene(ctx);
+            });
+
+        fg.AddPass("UI",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Write(backbuffer);
+                b.PresentOnly();
+            },
+            [](RG::RHI_PassContext& /*ctx*/) {
+                // ImGui draw data is rendered by ImGuiLayer during the present pass.
+            });
+
+        m_Renderer->SetRenderGraph(fg.Build(api));
 
         // camera setup
 		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
@@ -120,6 +261,7 @@ namespace Nova::App {
             true // isPrimary
         );
 
+		// CUBE
         auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
 		cubeAsset->Load();
 		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
@@ -135,6 +277,37 @@ namespace Nova::App {
 			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
 		}
 
+		// TORUS
+        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus").GetAssetRef();
+        torusAsset->Load();
+        entt::entity torusEntity = m_Scene.CreateEntity("Torus");
+        registry.emplace<TransformComponent>(torusEntity,
+            glm::vec3(2.0f, 0.25f, 1.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
+        );
+        {
+            Nova::Core::Renderer::RHI::Material mat{};
+            mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
+            registry.emplace<MeshRendererComponent>(torusEntity, torusAsset, mat);
+        }
+
+        // SPHERE
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetAssetRef();
+        sphereAsset->Load();
+        entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
+        registry.emplace<TransformComponent>(sphereEntity,
+            glm::vec3(0.0f, 0.5f, -1.5f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
+        );
+        {
+            Nova::Core::Renderer::RHI::Material mat{};
+            mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
+            registry.emplace<MeshRendererComponent>(sphereEntity, sphereAsset, mat);
+        }
+
+		// GROUND
 		auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetAssetRef();
 		planeAsset->Load();
 		entt::entity planeEntity = m_Scene.CreateEntity("Plane");
@@ -150,7 +323,6 @@ namespace Nova::App {
 			registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
 		}
 
-		UpdateCameraAspectFromWindow();
     	UpdateCameraFromOrbit();
     }
 
@@ -158,7 +330,6 @@ namespace Nova::App {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		m_Renderer->Destroy();
 		m_Renderer.reset();
-
         m_Scene.Clear();
 
         if (g_AppLayer == this)
@@ -169,16 +340,33 @@ namespace Nova::App {
         m_DeltaTime = dt;
         m_ElapsedTime += dt;
     }
+
+	Nova::Core::Renderer::RHI::RHI_ShaderHandle AppLayer::GetActiveSceneShader() const {
+		switch (m_RenderDebugMode) {
+            case RenderDebugMode::Normals:     return m_NormalsShader;
+            case RenderDebugMode::Positions:   return m_PositionsShader;
+            case RenderDebugMode::VertexColor: return m_VertexColorShader;
+            case RenderDebugMode::Depth:       return m_DepthShader;
+            case RenderDebugMode::Lit:
+            default:
+                return m_SceneShader;
+        }
+	}
 	
 	void AppLayer::OnBegin() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 		BeginRenderScene();
 	}
 
-	void AppLayer::OnRender() {}
+	void AppLayer::OnRender() {
+		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		m_Renderer->RenderFrame();
+	}
 
 	void AppLayer::OnEnd() {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 		EndRenderScene();
 	}
 
@@ -186,36 +374,50 @@ namespace Nova::App {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
-		if (m_ViewportResizePending) {
-			m_ViewportResizePending = false;
-			if (m_PendingViewportSize.x > 0 && m_PendingViewportSize.y > 0) {
-				m_Renderer->Resize(m_PendingViewportSize.x, m_PendingViewportSize.y);
-			}
-		}
+		if (m_ViewportResizePending)
+			ApplyPendingViewportResize();
 
 		m_Renderer->BeginFrame();
-
 		const glm::mat4 view = m_Camera->GetViewMatrix();
 		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
+		const glm::mat4 viewProj = proj * view;
+		const glm::mat4 invViewProj = glm::inverse(viewProj);
 
-		m_Renderer->BeginScene(view, proj);
-
-		if (auto* shader = m_Renderer->GetShader()) {
+		auto setGlobals = [this, view, proj, viewProj, invViewProj](Nova::Core::Renderer::RHI::RHI_Shaders* shader) {
+			if (!shader) return;
 			shader->SetParameter("iTime", m_ElapsedTime);
 			shader->SetParameter("iTimeDelta", m_DeltaTime);
 			shader->SetParameter("iFrameRate", m_DeltaTime > 0.0f ? 1.0f / m_DeltaTime : 0.0f);
 			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
 			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
+			shader->SetParameter("view", view);
+			shader->SetParameter("proj", proj);
+			shader->SetParameter("viewProj", viewProj);
+			shader->SetParameter("invViewProj", invViewProj);
+		};
+
+		if (auto* graph = m_Renderer->GetRenderGraph()) {
+			setGlobals(graph->GetShader(m_GridShader));
+			setGlobals(graph->GetShader(m_SceneShader));
+			setGlobals(graph->GetShader(m_NormalsShader));
+			setGlobals(graph->GetShader(m_PositionsShader));
+			setGlobals(graph->GetShader(m_VertexColorShader));
+			setGlobals(graph->GetShader(m_DepthShader));
 		}
 	}
 
-	void AppLayer::RenderScene() {
+	void AppLayer::RenderScene(Nova::Core::Renderer::RHI::RHI_PassContext& ctx) {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 
-		auto& registry = m_Scene.GetRegistry();
+		const auto shaderHandle = GetActiveSceneShader();
+        auto* sceneShader = ctx.GetShader(shaderHandle);
+        if (!sceneShader) return;
 
-		// ECS traversal: draw all entities that have a transform and a mesh renderer.
+		//const glm::vec3 resolution(ctx.GetRenderWidth(), ctx.GetRenderHeight(), 1.0f);
+        //sceneShader->SetParameter("iResolution", resolution);
+
+		auto& registry = m_Scene.GetRegistry();
 		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
 		for (auto entity : viewMeshes) {
 			auto& tc = viewMeshes.get<TransformComponent>(entity);
@@ -228,57 +430,54 @@ namespace Nova::App {
 			if (!gpuMesh)
 				continue;
 
+			sceneShader->SetParameter("model", tc.GetTransform());
+			sceneShader->SetParameter("u_UseInstancing", 0);
+			sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+
+			sceneShader->SetParameter("base", mrc.m_Material.m_Base);
+			sceneShader->SetParameter("baseColor", mrc.m_Material.m_BaseColor);
+			sceneShader->SetParameter("diffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
+			sceneShader->SetParameter("metalness", mrc.m_Material.m_Metalness);
+			sceneShader->SetParameter("metalColor", mrc.m_Material.m_MetalColor);
+			sceneShader->SetParameter("specular", mrc.m_Material.m_Specular);
+			sceneShader->SetParameter("specularColor", mrc.m_Material.m_SpecularColor);
+			sceneShader->SetParameter("specularRoughness", mrc.m_Material.m_SpecularRoughness);
+			sceneShader->SetParameter("specularIOR", mrc.m_Material.m_SpecularIOR);
+			sceneShader->SetParameter("specularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
+			sceneShader->SetParameter("specularRotation", mrc.m_Material.m_SpecularRotation);
+			sceneShader->SetParameter("transmission", mrc.m_Material.m_Transmission);
+			sceneShader->SetParameter("transmissionColor", mrc.m_Material.m_TransmissionColor);
+			sceneShader->SetParameter("subsurface", mrc.m_Material.m_Subsurface);
+			sceneShader->SetParameter("subsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
+			sceneShader->SetParameter("subsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
+			sceneShader->SetParameter("subsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
+			sceneShader->SetParameter("subsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
+			sceneShader->SetParameter("sheen", mrc.m_Material.m_Sheen);
+			sceneShader->SetParameter("sheenColor", mrc.m_Material.m_SheenColor);
+			sceneShader->SetParameter("sheenRoughness", mrc.m_Material.m_SheenRoughness);
+			sceneShader->SetParameter("coat", mrc.m_Material.m_Coat);
+			sceneShader->SetParameter("coatColor", mrc.m_Material.m_CoatColor);
+			sceneShader->SetParameter("coatRoughness", mrc.m_Material.m_CoatRoughness);
+			sceneShader->SetParameter("coatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
+			sceneShader->SetParameter("coatRotation", mrc.m_Material.m_CoatRotation);
+			sceneShader->SetParameter("coatIOR", mrc.m_Material.m_CoatIOR);
+			sceneShader->SetParameter("coatAffectColor", mrc.m_Material.m_CoatAffectColor);
+			sceneShader->SetParameter("coatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
+			sceneShader->SetParameter("emission", mrc.m_Material.m_Emission);
+			sceneShader->SetParameter("emissionColor", mrc.m_Material.m_EmissionColor);
+			sceneShader->SetParameter("opacity", mrc.m_Material.m_Opacity);
+			sceneShader->SetParameter("thinWalled", mrc.m_Material.m_ThinWalled);
+			sceneShader->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
+
+			ctx.BindShader(shaderHandle);
+
 			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
 			cmd.m_Mesh = gpuMesh;
 			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
 			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
 			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
-
-			m_Renderer->SetModelMatrix(tc.GetTransform());
-			m_Renderer->GetShader()->SetParameter("u_UseInstancing", 0);
-			m_Renderer->GetShader()->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
-
-			//TODO function to set the material parameters
-
-			m_Renderer->GetShader()->SetParameter("base", mrc.m_Material.m_Base);
-			m_Renderer->GetShader()->SetParameter("baseColor", mrc.m_Material.m_BaseColor);
-			m_Renderer->GetShader()->SetParameter("diffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
-			m_Renderer->GetShader()->SetParameter("metalness", mrc.m_Material.m_Metalness);
-			m_Renderer->GetShader()->SetParameter("metalColor", mrc.m_Material.m_MetalColor);
-			m_Renderer->GetShader()->SetParameter("specular", mrc.m_Material.m_Specular);
-			m_Renderer->GetShader()->SetParameter("specularColor", mrc.m_Material.m_SpecularColor);
-			m_Renderer->GetShader()->SetParameter("specularRoughness", mrc.m_Material.m_SpecularRoughness);
-			m_Renderer->GetShader()->SetParameter("specularIOR", mrc.m_Material.m_SpecularIOR);
-			m_Renderer->GetShader()->SetParameter("specularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
-			m_Renderer->GetShader()->SetParameter("specularRotation", mrc.m_Material.m_SpecularRotation);
-			m_Renderer->GetShader()->SetParameter("transmission", mrc.m_Material.m_Transmission);
-			m_Renderer->GetShader()->SetParameter("transmissionColor", mrc.m_Material.m_TransmissionColor);
-			m_Renderer->GetShader()->SetParameter("subsurface", mrc.m_Material.m_Subsurface);
-			m_Renderer->GetShader()->SetParameter("subsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
-			m_Renderer->GetShader()->SetParameter("subsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
-			m_Renderer->GetShader()->SetParameter("subsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
-			m_Renderer->GetShader()->SetParameter("subsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
-			m_Renderer->GetShader()->SetParameter("sheen", mrc.m_Material.m_Sheen);
-			m_Renderer->GetShader()->SetParameter("sheenColor", mrc.m_Material.m_SheenColor);
-			m_Renderer->GetShader()->SetParameter("sheenRoughness", mrc.m_Material.m_SheenRoughness);
-			m_Renderer->GetShader()->SetParameter("coat", mrc.m_Material.m_Coat);
-			m_Renderer->GetShader()->SetParameter("coatColor", mrc.m_Material.m_CoatColor);
-			m_Renderer->GetShader()->SetParameter("coatRoughness", mrc.m_Material.m_CoatRoughness);
-			m_Renderer->GetShader()->SetParameter("coatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
-			m_Renderer->GetShader()->SetParameter("coatRotation", mrc.m_Material.m_CoatRotation);
-			m_Renderer->GetShader()->SetParameter("coatIOR", mrc.m_Material.m_CoatIOR);
-			m_Renderer->GetShader()->SetParameter("coatAffectColor", mrc.m_Material.m_CoatAffectColor);
-			m_Renderer->GetShader()->SetParameter("coatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
-			m_Renderer->GetShader()->SetParameter("emission", mrc.m_Material.m_Emission);
-			m_Renderer->GetShader()->SetParameter("emissionColor", mrc.m_Material.m_EmissionColor);
-			m_Renderer->GetShader()->SetParameter("opacity", mrc.m_Material.m_Opacity);
-			m_Renderer->GetShader()->SetParameter("thinWalled", mrc.m_Material.m_ThinWalled);
-			m_Renderer->GetShader()->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
-			
-			m_Renderer->DrawIndexed(cmd);
+			ctx.DrawIndexed(cmd);
 		}
-
-		m_Renderer->PrepareForImGui();
 	}
 
 	void AppLayer::EndRenderScene() {
@@ -383,23 +582,12 @@ namespace Nova::App {
 	}
 
 	bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
-		if (e.GetWidth() <= 0 || e.GetHeight() <= 0) return false;
-		m_Camera->m_AspectRatio = static_cast<float>(e.GetWidth()) / static_cast<float>(e.GetHeight());
-		return false;
+		RequestViewportResize(static_cast<float>(e.GetWidth()), static_cast<float>(e.GetHeight()));
+        return false;
 	}
 
     bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
-		const float w = e.GetWidth();
-		const float h = e.GetHeight();
-		if (w <= 0.0f || h <= 0.0f) return false;
-
-		m_ViewportSize = { w, h };
-
-		if (m_Camera)
-			m_Camera->m_AspectRatio = w / h;
-
-		m_PendingViewportSize   = { w, h };
-		m_ViewportResizePending = true;
+		RequestViewportResize(e.GetWidth(), e.GetHeight());
 		return false;
 	}
 
@@ -422,14 +610,51 @@ namespace Nova::App {
 		m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
 	}
 
-	void AppLayer::UpdateCameraAspectFromWindow() {
-		SDL_Window* window = Nova::Core::Application::Get().GetWindow().GetSDLWindow();
-		int w = 0, h = 0;
-		SDL_GetWindowSizeInPixels(window, &w, &h);
+	void AppLayer::RequestViewportResize(float width, float height) {
+		if (width <= 0.0f || height <= 0.0f)
+            return;
 
-		if (w > 0 && h > 0) {
-			m_Camera->m_AspectRatio = static_cast<float>(w) / static_cast<float>(h);
-		}
+        const int newW = static_cast<int>(std::lround(width));
+        const int newH = static_cast<int>(std::lround(height));
+        if (newW <= 0 || newH <= 0)
+            return;
+
+        const int pendingW = static_cast<int>(std::lround(m_PendingViewportSize.x));
+        const int pendingH = static_cast<int>(std::lround(m_PendingViewportSize.y));
+        if (newW == pendingW && newH == pendingH && m_ViewportResizePending)
+            return;
+
+        const int currentW = static_cast<int>(std::lround(m_ViewportSize.x));
+        const int currentH = static_cast<int>(std::lround(m_ViewportSize.y));
+        if (newW == currentW && newH == currentH && !m_ViewportResizePending)
+            return;
+
+        m_PendingViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
+        m_ViewportResizePending = true;
 	}
+
+	void AppLayer::ApplyPendingViewportResize() {
+        const int newW = static_cast<int>(std::lround(m_PendingViewportSize.x));
+        const int newH = static_cast<int>(std::lround(m_PendingViewportSize.y));
+        if (newW <= 0 || newH <= 0) {
+            m_ViewportResizePending = false;
+            return;
+        }
+
+        const int oldW = static_cast<int>(std::lround(m_ViewportSize.x));
+        const int oldH = static_cast<int>(std::lround(m_ViewportSize.y));
+        if (newW == oldW && newH == oldH) {
+            m_ViewportResizePending = false;
+            return;
+        }
+
+        m_ViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
+        m_Renderer->Resize(newW, newH);
+
+        if (m_Camera)
+            m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
+
+        m_ViewportResizePending = false;
+    }
 
 } // namespace Nova::App
