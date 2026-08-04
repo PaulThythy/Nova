@@ -421,8 +421,8 @@ namespace Nova::App {
 			if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
 				continue;
 
-			auto gpuMesh = mrc.m_MeshAsset->GetGPUMesh();
-			if (!gpuMesh)
+			auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
+			if (!cpuMesh)
 				continue;
 
 			sceneShader->SetParameter("model", tc.GetTransform());
@@ -466,10 +466,10 @@ namespace Nova::App {
 			ctx.BindShader(shaderHandle);
 
 			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-			cmd.m_Mesh = gpuMesh;
+			cmd.m_Mesh = cpuMesh;
 			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
 			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-			cmd.m_IndexCount = static_cast<uint32_t>(gpuMesh->GetIndices().size());
+			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 			ctx.DrawIndexed(cmd);
 		}
 	}
