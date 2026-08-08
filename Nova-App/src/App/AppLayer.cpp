@@ -233,6 +233,30 @@ namespace Nova::App {
 
         m_Renderer->SetRenderGraph(fg.Build(api));
 
+        // Temporary directional light ConstantBuffer (Scene.frag.slang: ParameterBlock<AppResources> user).
+        // Bound once at pipeline creation (GetShader builds the pipeline lazily), same idea as the
+        // engine writeEngineBuffer path — no per-frame descriptor updates.
+        m_Light.m_Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+        m_Light.m_Intensity = 3.0f;
+        m_Light.m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
+        {
+            Nova::Core::Renderer::RHI::RHI_GpuBufferDesc lightDesc{};
+            lightDesc.m_ElementSize = sizeof(DirectionalLight);
+            lightDesc.m_ElementCount = 1;
+            lightDesc.m_PerFrameInFlight = false;
+            lightDesc.m_DebugName = "user.light";
+            m_LightBuffer = m_Renderer->CreateConstantBuffer(lightDesc);
+        }
+        if (m_LightBuffer.IsValid()) {
+            Nova::Core::Renderer::RHI::UpdateConstantBuffer(*m_Renderer, m_LightBuffer, m_Light);
+            if (auto* graph = m_Renderer->GetRenderGraph()) {
+                if (auto* sceneShader = graph->GetShader(m_SceneShader)) {
+                    sceneShader->Resources().SetBuffer("user.light", m_LightBuffer, *m_Renderer);
+                    sceneShader->CommitResources();
+                }
+            }
+        }
+
         // camera setup
 		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
             glm::vec3(5.0f, 5.0f, 5.0f),               // lookFrom
@@ -328,6 +352,8 @@ namespace Nova::App {
 
     void AppLayer::OnDetach() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+        // Light buffer is owned by the renderer's GPU buffer pool; Destroy() waits idle then frees it.
+        m_LightBuffer = {};
 		m_Renderer->Destroy();
 		m_Renderer.reset();
         m_Scene.Clear();
@@ -408,9 +434,6 @@ namespace Nova::App {
 		const auto shaderHandle = GetActiveSceneShader();
         auto* sceneShader = ctx.GetShader(shaderHandle);
         if (!sceneShader) return;
-
-		//const glm::vec3 resolution(ctx.GetRenderWidth(), ctx.GetRenderHeight(), 1.0f);
-        //sceneShader->SetParameter("iResolution", resolution);
 
 		auto& registry = m_Scene.GetRegistry();
 		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();

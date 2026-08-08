@@ -176,6 +176,17 @@ namespace Nova::App {
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
+
+        // Temporary App ConstantBuffer<DirectionalLight> (mirrors Scene.frag.slang `user.light`).
+        // Layout must match Slang cbuffer packing: float3+float pack into one float4.
+        struct DirectionalLight {
+            alignas(16) glm::vec3 m_Direction{ -1.0f, -1.0f, -1.0f };
+            float                 m_Intensity{ 3.0f };
+            alignas(16) glm::vec3 m_Color{ 1.0f, 1.0f, 1.0f };
+            float                 m_Pad{ 0.0f };
+        };
+        DirectionalLight m_Light{};
+        Nova::Core::Renderer::RHI::RHI_GpuBufferHandle m_LightBuffer{};
     };
 
     extern AppLayer* g_AppLayer;
