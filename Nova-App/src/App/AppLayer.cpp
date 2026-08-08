@@ -199,7 +199,7 @@ namespace Nova::App {
                 if (depth.IsValid())
                     b.Write(depth);
             },
-            [this](RG::RHI_PassContext& ctx) {
+            [this](RG::IPassContext& ctx) {
                 if (!m_ShowGrid)
                     return;
                 auto* shader = ctx.GetShader(m_GridShader);
@@ -218,7 +218,7 @@ namespace Nova::App {
                     b.Write(depth);
                 }
             },
-            [this](RG::RHI_PassContext& ctx) {
+            [this](RG::IPassContext& ctx) {
                 RenderScene(ctx);
             });
 
@@ -227,7 +227,7 @@ namespace Nova::App {
                 b.Write(backbuffer);
                 b.PresentOnly();
             },
-            [](RG::RHI_PassContext& /*ctx*/) {
+            [](RG::IPassContext& /*ctx*/) {
                 // ImGui draw data is rendered by ImGuiLayer during the present pass.
             });
 
@@ -392,7 +392,7 @@ namespace Nova::App {
 		const glm::mat4 viewProj = proj * view;
 		const glm::mat4 invViewProj = glm::inverse(viewProj);
 
-		auto setGlobals = [this, view, proj, viewProj, invViewProj](Nova::Core::Renderer::RHI::RHI_Shaders* shader) {
+		auto setGlobals = [this, view, proj, viewProj, invViewProj](Nova::Core::Renderer::RHI::IShaders* shader) {
 			if (!shader) return;
 			shader->SetParameter("iTime", m_ElapsedTime);
 			shader->SetParameter("iTimeDelta", m_DeltaTime);
@@ -427,7 +427,7 @@ namespace Nova::App {
 		m_Renderer->EndFrame();
 	}
 
-	void AppLayer::RenderScene(Nova::Core::Renderer::RHI::RHI_PassContext& ctx) {
+	void AppLayer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
 		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
 

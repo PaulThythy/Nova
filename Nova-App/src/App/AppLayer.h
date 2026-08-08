@@ -77,7 +77,7 @@ namespace Nova::App {
         void OnEvent(Event& e) override;
 
         // ---- Scene rendering (RenderScene from the RG pass) ----
-        void RenderScene(Nova::Core::Renderer::RHI::RHI_PassContext& ctx);
+        void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
 
         enum class SceneState {
             Edit = 0, Play = 1
