@@ -2,6 +2,7 @@
 #define APPLAYER_H
 
 #include <memory>
+#include <vector>
 #include <entt/entt.hpp>
 #include <SDL3/SDL.h>
 
@@ -24,9 +25,12 @@
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/CameraComponent.h"
+#include "ECS/Components/LightComponent.h"
 
 #include "Renderer/RHI/RHI_Renderer.h"
 #include "Renderer/RHI/RHI_RenderGraph.h"
+#include "Renderer/RHI/RHI_ShaderUniforms.h"
+#include "Renderer/Graphics/Light.h"
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -76,8 +80,10 @@ namespace Nova::App {
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
 
-        // ---- Scene rendering (RenderScene from the RG pass) ----
+        // ---- Scene rendering (from RG passes) ----
         void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void UploadLights();
 
         enum class SceneState {
             Edit = 0, Play = 1
@@ -159,8 +165,10 @@ namespace Nova::App {
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};
+        Nova::Core::Renderer::RHI::RHI_TextureHandle m_ShadowMaps{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_NormalsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
@@ -177,16 +185,8 @@ namespace Nova::App {
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
 
-        // Temporary App ConstantBuffer<DirectionalLight> (mirrors Scene.frag.slang `user.light`).
-        // Layout must match Slang cbuffer packing: float3+float pack into one float4.
-        struct DirectionalLight {
-            alignas(16) glm::vec3 m_Direction{ -1.0f, -1.0f, -1.0f };
-            float                 m_Intensity{ 3.0f };
-            alignas(16) glm::vec3 m_Color{ 1.0f, 1.0f, 1.0f };
-            float                 m_Pad{ 0.0f };
-        };
-        DirectionalLight m_Light{};
-        Nova::Core::Renderer::RHI::RHI_GpuBufferHandle m_LightBuffer{};
+        /** CPU mirror of nova.lights uploaded each frame (shadow casters keep lightViewProj). */
+        std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
     };
 
     extern AppLayer* g_AppLayer;

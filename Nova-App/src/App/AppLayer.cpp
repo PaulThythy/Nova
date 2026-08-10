@@ -134,8 +134,19 @@ namespace Nova::App {
             RG::RHI_TextureUsage::DepthAttachment | RG::RHI_TextureUsage::Sampled,
         });
 
+        RG::RHI_TextureHandle shadowMaps = fg.CreateTexture({
+            Nova::Core::Renderer::RHI::SHADOW_MAP_RESOLUTION,
+            Nova::Core::Renderer::RHI::SHADOW_MAP_RESOLUTION,
+            RG::RHI_TextureFormat::Depth32,
+            RG::RHI_TextureUsage::DepthAttachment | RG::RHI_TextureUsage::Sampled,
+            Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS,
+            /*m_ResizeWithViewport*/ false,
+            /*m_ComparisonSampler*/ true,
+        });
+
         m_SceneColor = color;
         m_SceneDepth = depth;
+        m_ShadowMaps = shadowMaps;
 
         auto acquireShader = [](const std::filesystem::path& uri) {
             auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
@@ -149,6 +160,7 @@ namespace Nova::App {
         auto gridFrag = acquireShader("Editor://Shaders/Grid.frag.slang");
         auto sceneVert = acquireShader("Engine://Shaders/Scene.vert.slang");
         auto sceneFrag = acquireShader("Engine://Shaders/Scene.frag.slang");
+        auto shadowVert = acquireShader("Engine://Shaders/Shadow.vert.slang");
         auto normalsFrag = acquireShader("Engine://Shaders/NormalsDebug.frag.slang");
         auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
         auto vertexColorFrag = acquireShader("Engine://Shaders/VertexColor.frag.slang");
@@ -167,6 +179,19 @@ namespace Nova::App {
             .m_Vertex = sceneVert,
             .m_Fragment = sceneFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_ShadowShader = fg.RegisterShader({
+            .m_Name = "Shadow",
+            .m_Vertex = shadowVert,
+            .m_Fragment = nullptr,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+            .m_AlphaBlend = false,
+            .m_DepthTest = true,
+            .m_DepthWrite = true,
+            .m_DepthOnly = true,
+            .m_CullMode = RG::RHI_CullMode::Front,
+            .m_DepthBiasConstant = 0.5f,
+            .m_DepthBiasSlope = 1.0f,
         });
         m_NormalsShader = fg.RegisterShader({
             .m_Name = "NormalsDebug",
@@ -193,6 +218,14 @@ namespace Nova::App {
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
         });
 
+        fg.AddPass("Shadow",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Write(shadowMaps);
+            },
+            [this](RG::IPassContext& ctx) {
+                RenderShadowPass(ctx);
+            });
+
         fg.AddPass("Grid",
             [&](RG::RHI_PassBuilder& b) {
                 b.Write(color);
@@ -217,6 +250,7 @@ namespace Nova::App {
                     b.Read(depth);
                     b.Write(depth);
                 }
+                b.Read(shadowMaps);
             },
             [this](RG::IPassContext& ctx) {
                 RenderScene(ctx);
@@ -233,29 +267,8 @@ namespace Nova::App {
 
         m_Renderer->SetRenderGraph(fg.Build(api));
 
-        // Temporary directional light ConstantBuffer (Scene.frag.slang: ParameterBlock<AppResources> user).
-        // Bound once at pipeline creation (GetShader builds the pipeline lazily), same idea as the
-        // engine writeEngineBuffer path — no per-frame descriptor updates.
-        m_Light.m_Direction = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-        m_Light.m_Intensity = 3.0f;
-        m_Light.m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
-        {
-            Nova::Core::Renderer::RHI::RHI_GpuBufferDesc lightDesc{};
-            lightDesc.m_ElementSize = sizeof(DirectionalLight);
-            lightDesc.m_ElementCount = 1;
-            lightDesc.m_PerFrameInFlight = false;
-            lightDesc.m_DebugName = "user.light";
-            m_LightBuffer = m_Renderer->CreateConstantBuffer(lightDesc);
-        }
-        if (m_LightBuffer.IsValid()) {
-            Nova::Core::Renderer::RHI::UpdateConstantBuffer(*m_Renderer, m_LightBuffer, m_Light);
-            if (auto* graph = m_Renderer->GetRenderGraph()) {
-                if (auto* sceneShader = graph->GetShader(m_SceneShader)) {
-                    sceneShader->Resources().SetBuffer("user.light", m_LightBuffer, *m_Renderer);
-                    sceneShader->CommitResources();
-                }
-            }
-        }
+        if (auto* graph = m_Renderer->GetRenderGraph())
+            graph->BindEngineShadowMaps(m_ShadowMaps);
 
         // camera setup
 		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
@@ -347,13 +360,53 @@ namespace Nova::App {
 			registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
 		}
 
+        // Directional light (shadow casting)
+        {
+            entt::entity dirLightEntity = m_Scene.CreateEntity("DirectionalLight");
+            registry.emplace<TransformComponent>(dirLightEntity,
+                glm::vec3(0.0f, 8.0f, 0.0f),
+                glm::vec3(glm::radians(-45.0f), glm::radians(45.0f), 0.0f),
+                glm::vec3(1.0f));
+            auto dirLight = std::make_shared<Light>();
+            dirLight->m_Type = LightType::Directional;
+            dirLight->m_Color = glm::vec3(1.0f);
+            dirLight->m_Intensity = 3.0f;
+            dirLight->m_Direction = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
+            dirLight->m_LightShadow = true;
+            dirLight->m_ShadowBiasConstant = 0.5f;
+            dirLight->m_ShadowBiasSlope = 1.0f;
+            dirLight->m_ShadowNormalBias = 0.012f;
+            registry.emplace<LightComponent>(dirLightEntity, dirLight);
+        }
+
+        // Spot light demo (shadow casting)
+        /*{
+            entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
+            registry.emplace<TransformComponent>(spotEntity,
+                glm::vec3(2.0f, 6.0f, 2.0f),
+                glm::vec3(glm::radians(-60.0f), glm::radians(-20.0f), 0.0f),
+                glm::vec3(1.0f));
+            auto spot = std::make_shared<Light>();
+            spot->m_Type = LightType::Spot;
+            spot->m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
+            spot->m_Intensity = 8.0f;
+            spot->m_Direction = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
+            spot->m_Range = 20.0f;
+            spot->m_InnerCone = 15.0f;
+            spot->m_OuterCone = 30.0f;
+            spot->m_LightShadow = true;
+            // Perspective shadows amplify bias into peter panning — keep these lower than dir.
+            spot->m_ShadowBiasConstant = 0.2f;
+            spot->m_ShadowBiasSlope = 0.4f;
+            spot->m_ShadowNormalBias = 0.003f;
+            registry.emplace<LightComponent>(spotEntity, spot);
+        }*/
+
     	UpdateCameraFromOrbit();
     }
 
     void AppLayer::OnDetach() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-        // Light buffer is owned by the renderer's GPU buffer pool; Destroy() waits idle then frees it.
-        m_LightBuffer = {};
 		m_Renderer->Destroy();
 		m_Renderer.reset();
         m_Scene.Clear();
@@ -387,12 +440,15 @@ namespace Nova::App {
 			ApplyPendingViewportResize();
 
 		m_Renderer->BeginFrame();
+        UploadLights();
+
 		const glm::mat4 view = m_Camera->GetViewMatrix();
 		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
 		const glm::mat4 viewProj = proj * view;
 		const glm::mat4 invViewProj = glm::inverse(viewProj);
+        const int lightCount = static_cast<int>(m_GpuLights.size());
 
-		auto setGlobals = [this, view, proj, viewProj, invViewProj](Nova::Core::Renderer::RHI::IShaders* shader) {
+		auto setGlobals = [this, view, proj, viewProj, invViewProj, lightCount](Nova::Core::Renderer::RHI::IShaders* shader) {
 			if (!shader) return;
 			shader->SetParameter("iTime", m_ElapsedTime);
 			shader->SetParameter("iTimeDelta", m_DeltaTime);
@@ -403,11 +459,13 @@ namespace Nova::App {
 			shader->SetParameter("proj", proj);
 			shader->SetParameter("viewProj", viewProj);
 			shader->SetParameter("invViewProj", invViewProj);
+            shader->SetParameter("lightCount", lightCount);
 		};
 
 		if (auto* graph = m_Renderer->GetRenderGraph()) {
 			setGlobals(graph->GetShader(m_GridShader));
 			setGlobals(graph->GetShader(m_SceneShader));
+            setGlobals(graph->GetShader(m_ShadowShader));
 			setGlobals(graph->GetShader(m_NormalsShader));
 			setGlobals(graph->GetShader(m_PositionsShader));
 			setGlobals(graph->GetShader(m_VertexColorShader));
@@ -663,10 +721,136 @@ namespace Nova::App {
         m_ViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
         m_Renderer->Resize(newW, newH);
 
+        if (auto* graph = m_Renderer->GetRenderGraph()) graph->BindEngineShadowMaps(m_ShadowMaps);
+
         if (m_Camera)
             m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
 
         m_ViewportResizePending = false;
+    }
+
+    void AppLayer::UploadLights() {
+        m_GpuLights.clear();
+        auto& registry = m_Scene.GetRegistry();
+        auto view = registry.view<TransformComponent, LightComponent>();
+
+        int nextShadow = 0;
+        for (auto entity : view) {
+            if (m_GpuLights.size() >= Nova::Core::Renderer::RHI::MAX_LIGHTS)
+                break;
+
+            auto& tc = view.get<TransformComponent>(entity);
+            auto& lc = view.get<LightComponent>(entity);
+            if (!lc.m_Light)
+                continue;
+
+            const Light& light = *lc.m_Light;
+            const glm::vec3 position = tc.m_Translation;
+            const glm::vec3 travelDir = glm::length(light.m_Direction) > 1e-6f
+                ? glm::normalize(light.m_Direction)
+                : glm::vec3(0.0f, -1.0f, 0.0f);
+
+            Nova::Core::Renderer::RHI::LightGPU gpu{};
+            gpu.m_Type = static_cast<int>(light.m_Type);
+            gpu.m_Intensity = light.m_Intensity;
+            gpu.m_Color = light.m_Color;
+            gpu.m_Range = light.m_Range;
+            gpu.m_Direction = travelDir;
+            gpu.m_InnerConeCos = light.InnerCos();
+            gpu.m_Position = position;
+            gpu.m_OuterConeCos = light.OuterCos();
+            gpu.m_ShadowBiasConstant = light.m_ShadowBiasConstant;
+            gpu.m_ShadowBiasSlope = light.m_ShadowBiasSlope;
+            gpu.m_ShadowNormalBias = light.m_ShadowNormalBias;
+            gpu.m_CastShadow = 0;
+            gpu.m_ShadowMapIndex = -1;
+
+            const bool canShadow = light.m_LightShadow
+                && (light.m_Type == LightType::Directional || light.m_Type == LightType::Spot)
+                && nextShadow < static_cast<int>(Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS);
+            if (canShadow) {
+                gpu.m_CastShadow = 1;
+                gpu.m_ShadowMapIndex = nextShadow++;
+                gpu.m_LightViewProj = BuildLightViewProj(
+                    light.m_Type, position, travelDir, light.m_Range, light.m_OuterCone,
+                    Nova::Core::Renderer::RHI::SHADOW_DIR_ORTHO_HALF_EXTENT);
+            }
+
+            m_GpuLights.push_back(gpu);
+        }
+
+        auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
+        const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
+        if (!engine || !engine->m_Lights.IsValid())
+            return;
+
+        if (!m_GpuLights.empty()) {
+            m_Renderer->UpdateGpuBuffer(
+                engine->m_Lights,
+                m_GpuLights.data(),
+                sizeof(Nova::Core::Renderer::RHI::LightGPU) * m_GpuLights.size(),
+                0);
+        }
+    }
+
+    void AppLayer::RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+        if (!m_Renderer || !m_ShadowMaps.IsValid())
+            return;
+
+        // Clear every layer so unused maps stay at far depth and the image layout is valid
+        // even when there are zero shadow casters this frame.
+        for (uint32_t layer = 0; layer < Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS; ++layer) {
+            ctx.BeginDepthLayer(m_ShadowMaps, layer, true);
+            ctx.EndDepthLayer();
+        }
+
+        auto* shadowShader = ctx.GetShader(m_ShadowShader);
+        if (!shadowShader)
+            return;
+
+        auto& registry = m_Scene.GetRegistry();
+        auto meshView = registry.view<TransformComponent, MeshRendererComponent>();
+
+        for (const auto& light : m_GpuLights) {
+            if (!light.m_CastShadow || light.m_ShadowMapIndex < 0)
+                continue;
+
+            ctx.BeginDepthLayer(m_ShadowMaps, static_cast<uint32_t>(light.m_ShadowMapIndex), true);
+            // Same idea as Light::ShadowAngleBiasFactor: less raster bias when light is grazing.
+            const float dirLen2 = glm::dot(light.m_Direction, light.m_Direction);
+            const float angleFactor = dirLen2 > 1e-12f
+                ? std::max(std::abs(light.m_Direction.y) / std::sqrt(dirLen2), 0.35f)
+                : 1.0f;
+            // Spot uses perspective — same constant/slope as ortho over-pushes contact shadows.
+            const float typeScale = (light.m_Type == static_cast<int>(LightType::Spot)) ? 0.35f : 1.0f;
+            ctx.SetDepthBias(
+                light.m_ShadowBiasConstant * angleFactor * typeScale,
+                light.m_ShadowBiasSlope * angleFactor * typeScale);
+
+            for (auto entity : meshView) {
+                auto& tc = meshView.get<TransformComponent>(entity);
+                auto& mrc = meshView.get<MeshRendererComponent>(entity);
+                if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
+                    continue;
+                auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
+                if (!cpuMesh)
+                    continue;
+
+                const glm::mat4 model = tc.GetTransform();
+                shadowShader->SetParameter("model", model);
+                shadowShader->SetParameter("viewProj", light.m_LightViewProj);
+                ctx.BindShader(m_ShadowShader);
+
+                Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+                cmd.m_Mesh = cpuMesh;
+                cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+                cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+                cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+                ctx.DrawIndexed(cmd);
+            }
+
+            ctx.EndDepthLayer();
+        }
     }
 
 } // namespace Nova::App
