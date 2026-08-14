@@ -21,6 +21,7 @@
 #include "Asset/Assets/ShaderAsset.h"
 
 #include "Scene/Scene.h"
+#include "Math/AABB.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
@@ -82,6 +83,7 @@ namespace Nova::App {
 
         // ---- Scene rendering (from RG passes) ----
         void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void UploadLights();
 
@@ -99,6 +101,9 @@ namespace Nova::App {
 
         void ShowGrid(bool show) { m_ShowGrid = show; }
         bool IsGridVisible() const { return m_ShowGrid; }
+
+        void ShowAABB(bool show) { m_ShowAABB = show; }
+        bool IsAABBVisible() const { return m_ShowAABB; }
 
         float GetDeltaTime() const { return m_DeltaTime; }
 
@@ -173,9 +178,13 @@ namespace Nova::App {
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_DepthShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_AABBShader{};
 
         RenderDebugMode m_RenderDebugMode = RenderDebugMode::Lit;
         bool m_ShowGrid = true;
+        bool m_ShowAABB = false;
+
+        std::shared_ptr<Nova::Core::Renderer::RHI::RHI_Mesh> m_AABBWireframeMesh;
 
         glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };

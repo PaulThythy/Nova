@@ -77,6 +77,12 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         ImGui::SameLine();
 
+        bool showAABB = app->IsAABBVisible();
+        if (ImGui::Checkbox("Show AABB", &showAABB))
+            app->ShowAABB(showAABB);
+
+        ImGui::SameLine();
+
         const bool depthMode = (app->GetRenderDebugMode() == RenderDebugMode::Depth);
         bool showGrid = app->IsGridVisible();
         ImGui::BeginDisabled(depthMode);

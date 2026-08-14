@@ -217,6 +217,16 @@ namespace Nova::App {
             .m_Fragment = depthFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
         });
+        m_AABBShader = fg.RegisterShader({
+            .m_Name = "AABBDebug",
+            .m_Vertex = sceneVert,
+            .m_Fragment = vertexColorFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+            .m_PrimitiveTopology = RG::RHI_PrimitiveTopology::Lines,
+            .m_DepthTest = false,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::None,
+        });
 
         fg.AddPass("Shadow",
             [&](RG::RHI_PassBuilder& b) {
@@ -254,6 +264,8 @@ namespace Nova::App {
             },
             [this](RG::IPassContext& ctx) {
                 RenderScene(ctx);
+                if (m_ShowAABB)
+                    RenderAABBs(ctx);
             });
 
         fg.AddPass("UI",
@@ -269,6 +281,8 @@ namespace Nova::App {
 
         if (auto* graph = m_Renderer->GetRenderGraph())
             graph->BindEngineShadowMaps(m_ShadowMaps);
+
+        m_AABBWireframeMesh = Nova::Core::Math::CreateUnitAABBWireframeMesh(glm::vec3(0.0f, 1.0f, 0.0f));
 
         // camera setup
 		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
@@ -299,7 +313,7 @@ namespace Nova::App {
         );
 
 		// CUBE
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube").GetAssetRef();
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
 		cubeAsset->Load();
 		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
 
@@ -312,10 +326,11 @@ namespace Nova::App {
 			Nova::Core::Renderer::RHI::Material mat{};
 			mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
 			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+			registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
 		}
 
 		// TORUS
-        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus").GetAssetRef();
+        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         torusAsset->Load();
         entt::entity torusEntity = m_Scene.CreateEntity("Torus");
         registry.emplace<TransformComponent>(torusEntity,
@@ -327,10 +342,11 @@ namespace Nova::App {
             Nova::Core::Renderer::RHI::Material mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
             registry.emplace<MeshRendererComponent>(torusEntity, torusAsset, mat);
+            registry.emplace<MeshComponent>(torusEntity, torusAsset);
         }
 
         // SPHERE
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere").GetAssetRef();
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         sphereAsset->Load();
         entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
         registry.emplace<TransformComponent>(sphereEntity,
@@ -342,10 +358,11 @@ namespace Nova::App {
             Nova::Core::Renderer::RHI::Material mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
             registry.emplace<MeshRendererComponent>(sphereEntity, sphereAsset, mat);
+            registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
         }
 
 		// GROUND
-		auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane").GetAssetRef();
+		auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
 		planeAsset->Load();
 		entt::entity planeEntity = m_Scene.CreateEntity("Plane");
 
@@ -358,6 +375,7 @@ namespace Nova::App {
 		{
 			Nova::Core::Renderer::RHI::Material mat{};
 			registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
+			registry.emplace<MeshComponent>(planeEntity, planeAsset);
 		}
 
         // Directional light (shadow casting)
@@ -470,6 +488,7 @@ namespace Nova::App {
 			setGlobals(graph->GetShader(m_PositionsShader));
 			setGlobals(graph->GetShader(m_VertexColorShader));
 			setGlobals(graph->GetShader(m_DepthShader));
+			setGlobals(graph->GetShader(m_AABBShader));
 		}
 	}
 
@@ -552,6 +571,44 @@ namespace Nova::App {
 			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
 			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 			ctx.DrawIndexed(cmd);
+		}
+	}
+
+	void AppLayer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+		if (!m_AABBWireframeMesh)
+			return;
+
+		auto* aabbShader = ctx.GetShader(m_AABBShader);
+		if (!aabbShader)
+			return;
+
+		auto& registry = m_Scene.GetRegistry();
+		auto view = registry.view<TransformComponent, MeshComponent>();
+
+		for (auto entity : view) {
+			auto& tc = view.get<TransformComponent>(entity);
+			auto& mc = view.get<MeshComponent>(entity);
+
+			if (!mc.m_AABBTree.IsBuilt())
+				continue;
+
+			const glm::mat4 entityTransform = tc.GetTransform();
+			const auto& nodes = mc.m_AABBTree.GetNodes();
+
+			for (const auto& node : nodes) {
+				const glm::mat4 model = entityTransform * Nova::Core::Math::AABBToModelMatrix(node.m_Bounds);
+				aabbShader->SetParameter("model", model);
+				aabbShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+
+				ctx.BindShader(m_AABBShader);
+
+				Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+				cmd.m_Mesh = m_AABBWireframeMesh;
+				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Lines;
+				cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+				cmd.m_IndexCount = static_cast<uint32_t>(m_AABBWireframeMesh->GetIndices().size());
+				ctx.DrawIndexed(cmd);
+			}
 		}
 	}
 
