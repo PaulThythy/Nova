@@ -19,6 +19,7 @@
 #include "Asset/AssetManager.h"
 #include "Asset/Assets/MeshAsset.h"
 #include "Asset/Assets/ShaderAsset.h"
+#include "Asset/Assets/TextureAsset.h"
 
 #include "Scene/Scene.h"
 #include "Math/AABB.h"
@@ -113,6 +114,10 @@ namespace Nova::App {
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const { return m_SceneDepth; }
 
+        /** Editor toolbar icons (ImGui IDs); nullptr if not loaded. */
+        void* GetPlayIconImGuiID() const;
+        void* GetPauseIconImGuiID() const;
+
         void RequestPlay();
         void RequestStop();
 
@@ -196,6 +201,9 @@ namespace Nova::App {
 
         /** CPU mirror of nova.lights uploaded each frame (shadow casters keep lightViewProj). */
         std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
+
+        std::shared_ptr<TextureAsset> m_PlayIcon;
+        std::shared_ptr<TextureAsset> m_PauseIcon;
     };
 
     extern AppLayer* g_AppLayer;

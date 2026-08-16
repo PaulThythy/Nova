@@ -86,6 +86,18 @@ namespace Nova::App {
         SetSceneState(SceneState::Edit);
     }
 
+    void* AppLayer::GetPlayIconImGuiID() const {
+        if (!m_PlayIcon || !m_Renderer)
+            return nullptr;
+        return m_Renderer->GetTextureImGuiID(m_PlayIcon->GetCPUTexture());
+    }
+
+    void* AppLayer::GetPauseIconImGuiID() const {
+        if (!m_PauseIcon || !m_Renderer)
+            return nullptr;
+        return m_Renderer->GetTextureImGuiID(m_PauseIcon->GetCPUTexture());
+    }
+
     void AppLayer::OnAttach() {
         g_AppLayer = this;
 
@@ -282,6 +294,24 @@ namespace Nova::App {
         if (auto* graph = m_Renderer->GetRenderGraph())
             graph->BindEngineShadowMaps(m_ShadowMaps);
 
+        // Editor toolbar icons (PNG via TextureAsset → RHI_Texture → GetOrUploadTexture).
+        {
+            auto acquireTexture = [this](const std::filesystem::path& uri) -> std::shared_ptr<TextureAsset> {
+                auto asset = AssetManager::Get().Acquire<TextureAsset>(uri).GetAssetRef();
+                if (!asset || !asset->Load()) {
+                    NV_LOG_WARN(("Failed to load texture asset: " + uri.generic_string()).c_str());
+                    return nullptr;
+                }
+                if (!m_Renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
+                    NV_LOG_WARN(("Failed to upload texture asset: " + uri.generic_string()).c_str());
+                    return nullptr;
+                }
+                return asset;
+            };
+            m_PlayIcon = acquireTexture("Editor://Icons/play-6-48.png");
+            m_PauseIcon = acquireTexture("Editor://Icons/pause-48.png");
+        }
+
         m_AABBWireframeMesh = Nova::Core::Math::CreateUnitAABBWireframeMesh(glm::vec3(0.0f, 1.0f, 0.0f));
 
         // camera setup
@@ -398,7 +428,7 @@ namespace Nova::App {
         }
 
         // Spot light demo (shadow casting)
-        /*{
+        {
             entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
             registry.emplace<TransformComponent>(spotEntity,
                 glm::vec3(2.0f, 6.0f, 2.0f),
@@ -418,13 +448,15 @@ namespace Nova::App {
             spot->m_ShadowBiasSlope = 0.4f;
             spot->m_ShadowNormalBias = 0.003f;
             registry.emplace<LightComponent>(spotEntity, spot);
-        }*/
+        }
 
     	UpdateCameraFromOrbit();
     }
 
     void AppLayer::OnDetach() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+        m_PlayIcon.reset();
+        m_PauseIcon.reset();
 		m_Renderer->Destroy();
 		m_Renderer.reset();
         m_Scene.Clear();

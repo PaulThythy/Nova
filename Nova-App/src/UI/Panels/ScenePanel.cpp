@@ -23,28 +23,35 @@ namespace Nova::App::UI::Panels::ScenePanel {
         AppLayer* app = Nova::App::g_AppLayer;
         const bool playing = app && (app->GetSceneState() == AppLayer::SceneState::Play);
 
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 6.0f));
+        const ImVec2 iconSize(18.0f, 18.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.10f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 1.0f, 1.0f, 0.20f));
 
         // Left side: Play/Stop
         if (!playing) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.70f, 0.20f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.80f, 0.25f, 1.0f));
-            if (ImGui::Button("->")) {
+            void* playIcon = app ? app->GetPlayIconImGuiID() : nullptr;
+            const bool clicked = playIcon
+                ? ImGui::ImageButton("##Play", playIcon, iconSize)
+                : ImGui::Button("Play");
+            if (clicked) {
                 if (Nova::App::g_AppLayer)
                     Nova::App::g_AppLayer->RequestPlay();
             }
-            ImGui::PopStyleColor(2);
         }
         else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.75f, 0.20f, 0.20f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.85f, 0.25f, 0.25f, 1.0f));
-            if (ImGui::Button("||")) {
+            void* pauseIcon = app ? app->GetPauseIconImGuiID() : nullptr;
+            const bool clicked = pauseIcon
+                ? ImGui::ImageButton("##Pause", pauseIcon, iconSize)
+                : ImGui::Button("Pause");
+            if (clicked) {
                 if (Nova::App::g_AppLayer)
                     Nova::App::g_AppLayer->RequestStop();
             }
-            ImGui::PopStyleColor(2);
         }
 
+        ImGui::PopStyleColor(3);
         ImGui::PopStyleVar();
 
         ImGui::EndChild();
