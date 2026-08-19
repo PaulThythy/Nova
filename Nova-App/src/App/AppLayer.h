@@ -2,6 +2,7 @@
 #define APPLAYER_H
 
 #include <memory>
+#include <vector>
 #include <entt/entt.hpp>
 #include <SDL3/SDL.h>
 
@@ -18,15 +19,20 @@
 #include "Asset/AssetManager.h"
 #include "Asset/Assets/MeshAsset.h"
 #include "Asset/Assets/ShaderAsset.h"
+#include "Asset/Assets/TextureAsset.h"
 
 #include "Scene/Scene.h"
+#include "Math/AABB.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/CameraComponent.h"
+#include "ECS/Components/LightComponent.h"
 
 #include "Renderer/RHI/RHI_Renderer.h"
 #include "Renderer/RHI/RHI_RenderGraph.h"
+#include "Renderer/RHI/RHI_ShaderUniforms.h"
+#include "Math/Light.h"
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -42,7 +48,7 @@ using namespace Nova::Core;
 using namespace Nova::Core::Events;
 using namespace Nova::Core::Scene;
 using namespace Nova::Core::Renderer;
-using namespace Nova::Core::Renderer::Graphics;
+using namespace Nova::Core::Math;
 using namespace Nova::Core::ECS::Components;
 
 using namespace Nova::Core::Asset;
@@ -76,10 +82,11 @@ namespace Nova::App {
         void OnImGuiRender() override;
         void OnEvent(Event& e) override;
 
-        // ---- Scene rendering (Begin/End from AppLayer; RenderScene from the RG pass) ----
-        void BeginRenderScene();
-        void RenderScene(Nova::Core::Renderer::RHI::RHI_PassContext& ctx);
-        void EndRenderScene();
+        // ---- Scene rendering (from RG passes) ----
+        void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void UploadLights();
 
         enum class SceneState {
             Edit = 0, Play = 1
@@ -96,11 +103,20 @@ namespace Nova::App {
         void ShowGrid(bool show) { m_ShowGrid = show; }
         bool IsGridVisible() const { return m_ShowGrid; }
 
+        void ShowAABB(bool show) { m_ShowAABB = show; }
+        bool IsAABBVisible() const { return m_ShowAABB; }
+
+        float GetDeltaTime() const { return m_DeltaTime; }
+
         RenderDebugMode GetRenderDebugMode() const { return m_RenderDebugMode; }
         void SetRenderDebugMode(RenderDebugMode mode) { m_RenderDebugMode = mode; }
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const { return m_SceneDepth; }
+
+        /** Editor toolbar icons (ImGui IDs); nullptr if not loaded. */
+        void* GetPlayIconImGuiID() const;
+        void* GetPauseIconImGuiID() const;
 
         void RequestPlay();
         void RequestStop();
@@ -159,15 +175,21 @@ namespace Nova::App {
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};
+        Nova::Core::Renderer::RHI::RHI_TextureHandle m_ShadowMaps{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_NormalsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_DepthShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_AABBShader{};
 
         RenderDebugMode m_RenderDebugMode = RenderDebugMode::Lit;
         bool m_ShowGrid = true;
+        bool m_ShowAABB = false;
+
+        std::shared_ptr<Nova::Core::Renderer::RHI::RHI_Mesh> m_AABBWireframeMesh;
 
         glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
@@ -176,6 +198,12 @@ namespace Nova::App {
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
+
+        /** CPU mirror of nova.lights uploaded each frame (shadow casters keep lightViewProj). */
+        std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
+
+        std::shared_ptr<TextureAsset> m_PlayIcon;
+        std::shared_ptr<TextureAsset> m_PauseIcon;
     };
 
     extern AppLayer* g_AppLayer;
