@@ -315,7 +315,7 @@ namespace Nova::App {
         m_AABBWireframeMesh = Nova::Core::Math::CreateUnitAABBWireframeMesh(glm::vec3(0.0f, 1.0f, 0.0f));
 
         // camera setup
-		m_Camera = std::make_shared<Renderer::Graphics::Camera>(
+		m_Camera = std::make_shared<Math::Camera>(
             glm::vec3(5.0f, 5.0f, 5.0f),               // lookFrom
             glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
             glm::vec3(0.0f, 1.0f, 0.0f),                // up

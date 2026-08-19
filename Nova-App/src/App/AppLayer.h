@@ -32,7 +32,7 @@
 #include "Renderer/RHI/RHI_Renderer.h"
 #include "Renderer/RHI/RHI_RenderGraph.h"
 #include "Renderer/RHI/RHI_ShaderUniforms.h"
-#include "Renderer/Graphics/Light.h"
+#include "Math/Light.h"
 
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -48,7 +48,7 @@ using namespace Nova::Core;
 using namespace Nova::Core::Events;
 using namespace Nova::Core::Scene;
 using namespace Nova::Core::Renderer;
-using namespace Nova::Core::Renderer::Graphics;
+using namespace Nova::Core::Math;
 using namespace Nova::Core::ECS::Components;
 
 using namespace Nova::Core::Asset;
