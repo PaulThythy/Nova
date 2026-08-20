@@ -202,6 +202,7 @@ namespace Nova::App {
         /** CPU mirror of nova.lights uploaded each frame (shadow casters keep lightViewProj). */
         std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
 
+        // TODO use an handle like shaders ? 
         std::shared_ptr<TextureAsset> m_PlayIcon;
         std::shared_ptr<TextureAsset> m_PauseIcon;
     };
