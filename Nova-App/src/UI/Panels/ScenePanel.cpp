@@ -150,6 +150,20 @@ namespace Nova::App::UI::Panels::ScenePanel {
         if (Nova::App::g_AppLayer->GetRenderer()) {
             if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetTextureImGuiID(Nova::App::g_AppLayer->GetSceneColor())) {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
+
+                // Left-click on the framebuffer image → closest-mesh picking.
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                    const ImVec2 mouse = ImGui::GetMousePos();
+                    const ImVec2 min = ImGui::GetItemRectMin();
+                    const ImVec2 max = ImGui::GetItemRectMax();
+                    const float w = max.x - min.x;
+                    const float h = max.y - min.y;
+                    if (w > 1e-3f && h > 1e-3f) {
+                        const float u = (mouse.x - min.x) / w;
+                        const float v = (mouse.y - min.y) / h;
+                        Nova::App::g_AppLayer->PickAtViewportUV(u, v);
+                    }
+                }
             }
         }
         else {

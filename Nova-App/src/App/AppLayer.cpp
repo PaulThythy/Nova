@@ -694,6 +694,32 @@ namespace Nova::App {
 		return false;
 	}
 
+	void AppLayer::PickAtViewportUV(float u, float v) {
+		if (!m_Camera)
+			return;
+
+		u = std::clamp(u, 0.0f, 1.0f);
+		v = std::clamp(v, 0.0f, 1.0f);
+
+		const Math::Ray ray = Nova::Core::Scene::ScreenPointToRay(*m_Camera, u, v);
+		Nova::Core::Scene::RaycastHit hit{};
+
+		if (Nova::Core::Scene::Raycast(m_Scene, ray, hit)) {
+			m_SelectedEntity = hit.m_Entity;
+
+			std::string name = "unnamed";
+			if (auto* nc = m_Scene.GetRegistry().try_get<NameComponent>(hit.m_Entity))
+				name = nc->m_Name;
+
+			std::cout << "[Pick] Selected \"" << name
+			          << "\" dist=" << hit.m_Distance
+			          << " tri=" << hit.m_TriangleIndex << '\n';
+		} else {
+			m_SelectedEntity = entt::null;
+			std::cout << "[Pick] Nothing hit\n";
+		}
+	}
+
 	bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
 		// Always stop rotation, even if the mouse left the viewport while dragging.
 		if (e.GetMouseButton() == 1) {

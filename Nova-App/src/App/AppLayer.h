@@ -22,12 +22,15 @@
 #include "Asset/Assets/TextureAsset.h"
 
 #include "Scene/Scene.h"
+#include "Scene/SceneQuery.h"
 #include "Math/AABB.h"
+#include "Math/Camera.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/CameraComponent.h"
 #include "ECS/Components/LightComponent.h"
+#include "ECS/Components/NameComponent.h"
 
 #include "Renderer/RHI/RHI_Renderer.h"
 #include "Renderer/RHI/RHI_RenderGraph.h"
@@ -129,6 +132,13 @@ namespace Nova::App {
 
         const Nova::Core::Scene::Scene& GetScene() const { return m_Scene; }
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
+
+        /** Viewport picking: UV in [0,1], (0,0) = top-left of the rendered image. */
+        void PickAtViewportUV(float u, float v);
+
+        entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
+        void SetSelectedEntity(entt::entity entity) { m_SelectedEntity = entity; }
+        void ClearSelection() { m_SelectedEntity = entt::null; }
     
     private:
         // ---- Orbit camera helpers ----
@@ -195,6 +205,8 @@ namespace Nova::App {
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
         bool      m_ViewportResizePending{ false };
         bool      m_ViewportHovered{ false };
+
+        entt::entity m_SelectedEntity{ entt::null };
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
