@@ -177,6 +177,9 @@ namespace Nova::App {
         auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
         auto vertexColorFrag = acquireShader("Engine://Shaders/VertexColor.frag.slang");
         auto depthFrag = acquireShader("Engine://Shaders/DepthDebug.frag.slang");
+        auto selectionOutlineVert = acquireShader("Editor://Shaders/SelectionOutline.vert.slang");
+        auto selectionOutlineFrag = acquireShader("Editor://Shaders/SelectionOutline.frag.slang");
+        auto selectionOutlineOccludedFrag = acquireShader("Editor://Shaders/SelectionOutlineOccluded.frag.slang");
 
         m_GridShader = fg.RegisterShader({
             .m_Name = "Grid",
@@ -239,6 +242,29 @@ namespace Nova::App {
             .m_DepthWrite = false,
             .m_CullMode = RG::RHI_CullMode::None,
         });
+        // Inverted hull: expanded mesh, front-face cull → yellow silhouette around selection.
+        m_SelectionOutlineShader = fg.RegisterShader({
+            .m_Name = "SelectionOutline",
+            .m_Vertex = selectionOutlineVert,
+            .m_Fragment = selectionOutlineFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+            .m_DepthTest = true,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::Front,
+            .m_DepthCompare = RG::RHI_DepthCompare::Less,
+        });
+        // Same hull where depth fails (under the ground plane, behind other meshes).
+        m_SelectionOutlineOccludedShader = fg.RegisterShader({
+            .m_Name = "SelectionOutlineOccluded",
+            .m_Vertex = selectionOutlineVert,
+            .m_Fragment = selectionOutlineOccludedFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+            .m_AlphaBlend = true,
+            .m_DepthTest = true,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::Front,
+            .m_DepthCompare = RG::RHI_DepthCompare::Greater,
+        });
 
         fg.AddPass("Shadow",
             [&](RG::RHI_PassBuilder& b) {
@@ -276,6 +302,7 @@ namespace Nova::App {
             },
             [this](RG::IPassContext& ctx) {
                 RenderScene(ctx);
+                RenderSelectionOutline(ctx);
                 if (m_ShowAABB)
                     RenderAABBs(ctx);
             });
@@ -521,6 +548,8 @@ namespace Nova::App {
 			setGlobals(graph->GetShader(m_VertexColorShader));
 			setGlobals(graph->GetShader(m_DepthShader));
 			setGlobals(graph->GetShader(m_AABBShader));
+			setGlobals(graph->GetShader(m_SelectionOutlineShader));
+			setGlobals(graph->GetShader(m_SelectionOutlineOccludedShader));
 		}
 	}
 
@@ -604,6 +633,95 @@ namespace Nova::App {
 			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 			ctx.DrawIndexed(cmd);
 		}
+	}
+
+	void AppLayer::RenderSelectionOutline(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+		if (m_SelectedEntity == entt::null)
+			return;
+
+		auto& registry = m_Scene.GetRegistry();
+		if (!registry.valid(m_SelectedEntity)) {
+			m_SelectedEntity = entt::null;
+			return;
+		}
+
+		auto* tc = registry.try_get<TransformComponent>(m_SelectedEntity);
+		auto* mrc = registry.try_get<MeshRendererComponent>(m_SelectedEntity);
+		if (!tc || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+			return;
+
+		auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
+		if (!cpuMesh)
+			return;
+
+		const glm::mat4 model = tc->GetTransform();
+
+		Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+		cmd.m_Mesh = cpuMesh;
+		cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+		cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+		cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+
+		// 1) Occluded / under ground — dim yellow (depth Greater).
+		//    Also covers the object itself (hull back-faces are farther than the mesh).
+		if (auto* occluded = ctx.GetShader(m_SelectionOutlineOccludedShader)) {
+			occluded->SetParameter("model", model);
+			ctx.BindShader(m_SelectionOutlineOccludedShader);
+			ctx.DrawIndexed(cmd);
+		}
+
+		// 2) Visible silhouette — full yellow (depth Less).
+		if (auto* outline = ctx.GetShader(m_SelectionOutlineShader)) {
+			outline->SetParameter("model", model);
+			ctx.BindShader(m_SelectionOutlineShader);
+			ctx.DrawIndexed(cmd);
+		}
+
+		// 3) Re-draw the selected mesh lit — the occluded pass tints the whole object
+		//    yellow and washes out lighting; restoring it keeps only the outline ring.
+		const auto sceneShaderHandle = GetActiveSceneShader();
+		auto* sceneShader = ctx.GetShader(sceneShaderHandle);
+		if (!sceneShader)
+			return;
+
+		sceneShader->SetParameter("model", model);
+		sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+		sceneShader->SetParameter("base", mrc->m_Material.m_Base);
+		sceneShader->SetParameter("baseColor", mrc->m_Material.m_BaseColor);
+		sceneShader->SetParameter("diffuseRoughness", mrc->m_Material.m_DiffuseRoughness);
+		sceneShader->SetParameter("metalness", mrc->m_Material.m_Metalness);
+		sceneShader->SetParameter("metalColor", mrc->m_Material.m_MetalColor);
+		sceneShader->SetParameter("specular", mrc->m_Material.m_Specular);
+		sceneShader->SetParameter("specularColor", mrc->m_Material.m_SpecularColor);
+		sceneShader->SetParameter("specularRoughness", mrc->m_Material.m_SpecularRoughness);
+		sceneShader->SetParameter("specularIOR", mrc->m_Material.m_SpecularIOR);
+		sceneShader->SetParameter("specularAnisotropy", mrc->m_Material.m_SpecularAnisotropy);
+		sceneShader->SetParameter("specularRotation", mrc->m_Material.m_SpecularRotation);
+		sceneShader->SetParameter("transmission", mrc->m_Material.m_Transmission);
+		sceneShader->SetParameter("transmissionColor", mrc->m_Material.m_TransmissionColor);
+		sceneShader->SetParameter("subsurface", mrc->m_Material.m_Subsurface);
+		sceneShader->SetParameter("subsurfaceColor", mrc->m_Material.m_SubsurfaceColor);
+		sceneShader->SetParameter("subsurfaceRadius", mrc->m_Material.m_SubsurfaceRadius);
+		sceneShader->SetParameter("subsurfaceScale", mrc->m_Material.m_SubsurfaceScale);
+		sceneShader->SetParameter("subsurfaceAnisotropy", mrc->m_Material.m_SubsurfaceAnisotropy);
+		sceneShader->SetParameter("sheen", mrc->m_Material.m_Sheen);
+		sceneShader->SetParameter("sheenColor", mrc->m_Material.m_SheenColor);
+		sceneShader->SetParameter("sheenRoughness", mrc->m_Material.m_SheenRoughness);
+		sceneShader->SetParameter("coat", mrc->m_Material.m_Coat);
+		sceneShader->SetParameter("coatColor", mrc->m_Material.m_CoatColor);
+		sceneShader->SetParameter("coatRoughness", mrc->m_Material.m_CoatRoughness);
+		sceneShader->SetParameter("coatAnisotropy", mrc->m_Material.m_CoatAnisotropy);
+		sceneShader->SetParameter("coatRotation", mrc->m_Material.m_CoatRotation);
+		sceneShader->SetParameter("coatIOR", mrc->m_Material.m_CoatIOR);
+		sceneShader->SetParameter("coatAffectColor", mrc->m_Material.m_CoatAffectColor);
+		sceneShader->SetParameter("coatAffectRoughness", mrc->m_Material.m_CoatAffectRoughness);
+		sceneShader->SetParameter("emission", mrc->m_Material.m_Emission);
+		sceneShader->SetParameter("emissionColor", mrc->m_Material.m_EmissionColor);
+		sceneShader->SetParameter("opacity", mrc->m_Material.m_Opacity);
+		sceneShader->SetParameter("thinWalled", mrc->m_Material.m_ThinWalled);
+		sceneShader->SetParameter("isOpaque", static_cast<int>(mrc->m_Material.m_IsOpaque));
+		ctx.BindShader(sceneShaderHandle);
+		ctx.DrawIndexed(cmd);
 	}
 
 	void AppLayer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {

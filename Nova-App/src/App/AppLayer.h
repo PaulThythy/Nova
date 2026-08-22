@@ -87,6 +87,7 @@ namespace Nova::App {
 
         // ---- Scene rendering (from RG passes) ----
         void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderSelectionOutline(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void UploadLights();
@@ -194,6 +195,8 @@ namespace Nova::App {
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_DepthShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_AABBShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionOutlineShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionOutlineOccludedShader{};
 
         RenderDebugMode m_RenderDebugMode = RenderDebugMode::Lit;
         bool m_ShowGrid = true;
