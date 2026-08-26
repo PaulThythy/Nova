@@ -152,6 +152,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
 
                 // Left-click on the framebuffer image → closest-mesh picking.
+                // Hold Left Shift to add to the current selection.
                 if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
                     const ImVec2 mouse = ImGui::GetMousePos();
                     const ImVec2 min = ImGui::GetItemRectMin();
@@ -161,7 +162,8 @@ namespace Nova::App::UI::Panels::ScenePanel {
                     if (w > 1e-3f && h > 1e-3f) {
                         const float u = (mouse.x - min.x) / w;
                         const float v = (mouse.y - min.y) / h;
-                        Nova::App::g_AppLayer->PickAtViewportUV(u, v);
+                        const bool addToSelection = ImGui::IsKeyDown(ImGuiKey_LeftShift);
+                        Nova::App::g_AppLayer->PickAtViewportUV(u, v, addToSelection);
                     }
                 }
             }

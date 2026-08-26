@@ -139,21 +139,26 @@ namespace Nova::App {
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
 
         /** Viewport picking: UV in [0,1], (0,0) = top-left of the rendered image. */
-        void PickAtViewportUV(float u, float v);
+        void PickAtViewportUV(float u, float v, bool addToSelection = false);
 
-        entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
-        void SetSelectedEntity(entt::entity entity) { m_SelectedEntity = entity; }
-        void ClearSelection() { m_SelectedEntity = entt::null; }
+        const std::vector<entt::entity>& GetSelectedEntities() const { return m_SelectedEntities; }
+        entt::entity GetSelectedEntity() const {
+            return m_SelectedEntities.empty() ? entt::null : m_SelectedEntities.front();
+        }
+        void SetSelectedEntity(entt::entity entity);
+        void ClearSelection() { m_SelectedEntities.clear(); }
+        bool IsSelected(entt::entity entity) const;
     
     private:
         // ---- Orbit camera helpers ----
 		void UpdateCameraFromOrbit();
 
-        // ---- Mouse event handlers ----
+        // ---- Mouse / key event handlers ----
         bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
 		bool OnMouseButtonReleased(MouseButtonReleasedEvent& e);
 		bool OnMouseMoved(MouseMovedEvent& e);
 		bool OnMouseScrolled(MouseScrolledEvent& e);
+		bool OnKeyPressed(KeyPressedEvent& e);
 		bool OnWindowResized(WindowResizeEvent& e);
 		bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
 
@@ -219,7 +224,7 @@ namespace Nova::App {
         bool      m_ViewportResizePending{ false };
         bool      m_ViewportHovered{ false };
 
-        entt::entity m_SelectedEntity{ entt::null };
+        std::vector<entt::entity> m_SelectedEntities;
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };

@@ -50,6 +50,7 @@ namespace Nova::App {
 		dispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& ev) { return OnMouseButtonReleased(ev); });
 		dispatcher.Dispatch<MouseMovedEvent>([this](MouseMovedEvent& ev) { return OnMouseMoved(ev); });
 		dispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent& ev) { return OnMouseScrolled(ev); });
+		dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) { return OnKeyPressed(ev); });
 		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) { return OnWindowResized(ev); });
 		dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); });
     }
@@ -749,55 +750,58 @@ namespace Nova::App {
 	}
 
 	void AppLayer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		if (m_SelectedEntity == entt::null)
+		if (m_SelectedEntities.empty())
 			return;
 
 		auto& registry = m_Scene.GetRegistry();
-		if (!registry.valid(m_SelectedEntity)) {
-			m_SelectedEntity = entt::null;
-			return;
-		}
 
-		auto* tc = registry.try_get<TransformComponent>(m_SelectedEntity);
-		auto* mrc = registry.try_get<MeshRendererComponent>(m_SelectedEntity);
-		if (!tc || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+		// Drop destroyed entities from the selection list.
+		std::erase_if(m_SelectedEntities, [&](entt::entity entity) {
+			return !registry.valid(entity);
+		});
+		if (m_SelectedEntities.empty())
 			return;
 
-		auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
-		if (!cpuMesh)
-			return;
+		for (entt::entity entity : m_SelectedEntities) {
+			auto* tc = registry.try_get<TransformComponent>(entity);
+			auto* mrc = registry.try_get<MeshRendererComponent>(entity);
+			if (!tc || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+				continue;
 
-		const glm::mat4 model = tc->GetTransform();
+			auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
+			if (!cpuMesh)
+				continue;
 
-		Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-		cmd.m_Mesh = cpuMesh;
-		cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-		cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-		cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+			const glm::mat4 model = tc->GetTransform();
 
-		// Full coverage (R) — depth off so occluded parts still write the mask.
-		if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
-			mask->SetParameter("model", model);
-			ctx.BindShader(m_SelectionMaskShader);
-			ctx.DrawIndexed(cmd);
-		}
+			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+			cmd.m_Mesh = cpuMesh;
+			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
+			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 
-		// Occluded coverage (G) — depth Greater vs scene depth.
-		if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
-			occluded->SetParameter("model", model);
-			ctx.BindShader(m_SelectionMaskOccludedShader);
-			ctx.DrawIndexed(cmd);
+			if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
+				mask->SetParameter("model", model);
+				ctx.BindShader(m_SelectionMaskShader);
+				ctx.DrawIndexed(cmd);
+			}
+
+			if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
+				occluded->SetParameter("model", model);
+				ctx.BindShader(m_SelectionMaskOccludedShader);
+				ctx.DrawIndexed(cmd);
+			}
 		}
 	}
 
 	void AppLayer::RenderSelectionBlur(Nova::Core::Renderer::RHI::IPassContext& ctx, Nova::Core::Renderer::RHI::RHI_ShaderHandle blurShader) {
-		if (m_SelectedEntity == entt::null || !blurShader.IsValid())
+		if (m_SelectedEntities.empty() || !blurShader.IsValid())
 			return;
 		ctx.DrawFullscreen(blurShader);
 	}
 
 	void AppLayer::RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		if (m_SelectedEntity == entt::null || !m_SelectionCompositeShader.IsValid())
+		if (m_SelectedEntities.empty() || !m_SelectionCompositeShader.IsValid())
 			return;
 		ctx.DrawFullscreen(m_SelectionCompositeShader);
 	}
@@ -918,7 +922,7 @@ namespace Nova::App {
 		if (!m_ViewportHovered)
 			return false;
 
-		if (e.GetMouseButton() == 1) {
+		if (e.GetMouseButton() == SDL_BUTTON_RIGHT) {
 			m_Orbit.m_IsRotating = true;
 			m_Orbit.m_HasLastMousePos = false;
 			return true;
@@ -926,7 +930,18 @@ namespace Nova::App {
 		return false;
 	}
 
-	void AppLayer::PickAtViewportUV(float u, float v) {
+	void AppLayer::SetSelectedEntity(entt::entity entity) {
+		m_SelectedEntities.clear();
+		if (entity != entt::null)
+			m_SelectedEntities.push_back(entity);
+	}
+
+	bool AppLayer::IsSelected(entt::entity entity) const {
+		return std::find(m_SelectedEntities.begin(), m_SelectedEntities.end(), entity)
+			!= m_SelectedEntities.end();
+	}
+
+	void AppLayer::PickAtViewportUV(float u, float v, bool addToSelection) {
 		if (!m_Camera)
 			return;
 
@@ -937,25 +952,43 @@ namespace Nova::App {
 		Nova::Core::Scene::RaycastHit hit{};
 
 		if (Nova::Core::Scene::Raycast(m_Scene, ray, hit)) {
-			m_SelectedEntity = hit.m_Entity;
+			if (addToSelection) {
+				if (!IsSelected(hit.m_Entity))
+					m_SelectedEntities.push_back(hit.m_Entity);
+			} else {
+				SetSelectedEntity(hit.m_Entity);
+			}
 
 			std::string name = "unnamed";
 			if (auto* nc = m_Scene.GetRegistry().try_get<NameComponent>(hit.m_Entity))
 				name = nc->m_Name;
 
 			std::cout << "[Pick] Selected \"" << name
-			          << "\" dist=" << hit.m_Distance
+			          << "\" (count=" << m_SelectedEntities.size()
+			          << ") dist=" << hit.m_Distance
 			          << " tri=" << hit.m_TriangleIndex << '\n';
 		} else {
-			m_SelectedEntity = entt::null;
+			if (!addToSelection)
+				ClearSelection();
 			std::cout << "[Pick] Nothing hit\n";
 		}
 	}
 
 	bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
 		// Always stop rotation, even if the mouse left the viewport while dragging.
-		if (e.GetMouseButton() == 1) {
+		if (e.GetMouseButton() == SDL_BUTTON_RIGHT) {
 			m_Orbit.m_IsRotating = false;
+			return true;
+		}
+		return false;
+	}
+
+	bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {
+		if (e.IsRepeat())
+			return false;
+
+		if (e.GetKeyCode() == SDLK_ESCAPE) {
+			ClearSelection();
 			return true;
 		}
 		return false;
