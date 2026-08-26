@@ -87,7 +87,11 @@ namespace Nova::App {
 
         // ---- Scene rendering (from RG passes) ----
         void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
-        void RenderSelectionOutline(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void RenderSelectionBlur(Nova::Core::Renderer::RHI::IPassContext& ctx, Nova::Core::Renderer::RHI::RHI_ShaderHandle blurShader);
+        void RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        /** Bind selection outline RT views into blur/composite descriptors (init + resize only). */
+        void BindSelectionOutlineTextures();
         void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void UploadLights();
@@ -187,6 +191,9 @@ namespace Nova::App {
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_ShadowMaps{};
+        Nova::Core::Renderer::RHI::RHI_TextureHandle m_SelectionMask{};
+        Nova::Core::Renderer::RHI::RHI_TextureHandle m_SelectionBlurTemp{};
+        Nova::Core::Renderer::RHI::RHI_TextureHandle m_SelectionBlurred{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
@@ -195,8 +202,11 @@ namespace Nova::App {
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_DepthShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_AABBShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionOutlineShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionOutlineOccludedShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionMaskShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionMaskOccludedShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionBlurHShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionBlurVShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SelectionCompositeShader{};
 
         RenderDebugMode m_RenderDebugMode = RenderDebugMode::Lit;
         bool m_ShowGrid = true;

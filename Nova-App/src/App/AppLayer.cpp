@@ -156,9 +156,37 @@ namespace Nova::App {
             /*m_ComparisonSampler*/ true,
         });
 
+        const RG::RHI_TextureUsage selectionRtUsage =
+            RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled;
+
+        RG::RHI_TextureHandle selectionMask = fg.CreateTexture({
+            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
+            /*m_Layers*/ 1,
+            /*m_ResizeWithViewport*/ true,
+            /*m_ComparisonSampler*/ false,
+            /*m_RegisterImGui*/ false,
+        });
+        RG::RHI_TextureHandle selectionBlurTemp = fg.CreateTexture({
+            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
+            /*m_Layers*/ 1,
+            /*m_ResizeWithViewport*/ true,
+            /*m_ComparisonSampler*/ false,
+            /*m_RegisterImGui*/ false,
+        });
+        RG::RHI_TextureHandle selectionBlurred = fg.CreateTexture({
+            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
+            /*m_Layers*/ 1,
+            /*m_ResizeWithViewport*/ true,
+            /*m_ComparisonSampler*/ false,
+            /*m_RegisterImGui*/ false,
+        });
+
         m_SceneColor = color;
         m_SceneDepth = depth;
         m_ShadowMaps = shadowMaps;
+        m_SelectionMask = selectionMask;
+        m_SelectionBlurTemp = selectionBlurTemp;
+        m_SelectionBlurred = selectionBlurred;
 
         auto acquireShader = [](const std::filesystem::path& uri) {
             auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
@@ -177,9 +205,13 @@ namespace Nova::App {
         auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
         auto vertexColorFrag = acquireShader("Engine://Shaders/VertexColor.frag.slang");
         auto depthFrag = acquireShader("Engine://Shaders/DepthDebug.frag.slang");
-        auto selectionOutlineVert = acquireShader("Editor://Shaders/SelectionOutline.vert.slang");
-        auto selectionOutlineFrag = acquireShader("Editor://Shaders/SelectionOutline.frag.slang");
-        auto selectionOutlineOccludedFrag = acquireShader("Editor://Shaders/SelectionOutlineOccluded.frag.slang");
+        auto selectionFullscreenVert = acquireShader("Editor://Shaders/SelectionFullscreen.vert.slang");
+        auto selectionMaskVert = acquireShader("Editor://Shaders/SelectionMask.vert.slang");
+        auto selectionMaskFrag = acquireShader("Editor://Shaders/SelectionMask.frag.slang");
+        auto selectionMaskOccludedFrag = acquireShader("Editor://Shaders/SelectionMaskOccluded.frag.slang");
+        auto selectionBlurHFrag = acquireShader("Editor://Shaders/SelectionOutlineBlurH.frag.slang");
+        auto selectionBlurVFrag = acquireShader("Editor://Shaders/SelectionOutlineBlurV.frag.slang");
+        auto selectionCompositeFrag = acquireShader("Editor://Shaders/SelectionOutlineComposite.frag.slang");
 
         m_GridShader = fg.RegisterShader({
             .m_Name = "Grid",
@@ -242,28 +274,54 @@ namespace Nova::App {
             .m_DepthWrite = false,
             .m_CullMode = RG::RHI_CullMode::None,
         });
-        // Inverted hull: expanded mesh, front-face cull → yellow silhouette around selection.
-        m_SelectionOutlineShader = fg.RegisterShader({
-            .m_Name = "SelectionOutline",
-            .m_Vertex = selectionOutlineVert,
-            .m_Fragment = selectionOutlineFrag,
+        // Selection outline: solid mask → separable blur → soft halo composite (+ x-ray).
+        m_SelectionMaskShader = fg.RegisterShader({
+            .m_Name = "SelectionMask",
+            .m_Vertex = selectionMaskVert,
+            .m_Fragment = selectionMaskFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_DepthTest = true,
+            .m_DepthTest = false,
             .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::Front,
-            .m_DepthCompare = RG::RHI_DepthCompare::Less,
+            .m_CullMode = RG::RHI_CullMode::Back,
         });
-        // Same hull where depth fails (under the ground plane, behind other meshes).
-        m_SelectionOutlineOccludedShader = fg.RegisterShader({
-            .m_Name = "SelectionOutlineOccluded",
-            .m_Vertex = selectionOutlineVert,
-            .m_Fragment = selectionOutlineOccludedFrag,
+        m_SelectionMaskOccludedShader = fg.RegisterShader({
+            .m_Name = "SelectionMaskOccluded",
+            .m_Vertex = selectionMaskVert,
+            .m_Fragment = selectionMaskOccludedFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_AlphaBlend = true,
             .m_DepthTest = true,
             .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::Front,
+            .m_CullMode = RG::RHI_CullMode::Back,
             .m_DepthCompare = RG::RHI_DepthCompare::Greater,
+        });
+        m_SelectionBlurHShader = fg.RegisterShader({
+            .m_Name = "SelectionBlurH",
+            .m_Vertex = selectionFullscreenVert,
+            .m_Fragment = selectionBlurHFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
+            .m_DepthTest = false,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::None,
+        });
+        m_SelectionBlurVShader = fg.RegisterShader({
+            .m_Name = "SelectionBlurV",
+            .m_Vertex = selectionFullscreenVert,
+            .m_Fragment = selectionBlurVFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
+            .m_DepthTest = false,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::None,
+        });
+        m_SelectionCompositeShader = fg.RegisterShader({
+            .m_Name = "SelectionComposite",
+            .m_Vertex = selectionFullscreenVert,
+            .m_Fragment = selectionCompositeFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
+            .m_AlphaBlend = true,
+            .m_AdditiveBlend = true,
+            .m_DepthTest = false,
+            .m_DepthWrite = false,
+            .m_CullMode = RG::RHI_CullMode::None,
         });
 
         fg.AddPass("Shadow",
@@ -302,9 +360,62 @@ namespace Nova::App {
             },
             [this](RG::IPassContext& ctx) {
                 RenderScene(ctx);
-                RenderSelectionOutline(ctx);
                 if (m_ShowAABB)
                     RenderAABBs(ctx);
+            });
+
+        // Mask of selected meshes: R = full coverage, G = occluded (depth Greater).
+        fg.AddPass("SelectionMask",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Write(selectionMask);
+                if (depth.IsValid()) {
+                    b.Read(depth);
+                    b.Write(depth);
+                }
+            },
+            [this](RG::IPassContext& ctx) {
+                RenderSelectionMask(ctx);
+            });
+
+        fg.AddPass("SelectionBlurH",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Read(selectionMask);
+                b.Write(selectionBlurTemp);
+                if (depth.IsValid()) {
+                    b.Read(depth);
+                    b.Write(depth);
+                }
+            },
+            [this](RG::IPassContext& ctx) {
+                RenderSelectionBlur(ctx, m_SelectionBlurHShader);
+            });
+
+        fg.AddPass("SelectionBlurV",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Read(selectionBlurTemp);
+                b.Write(selectionBlurred);
+                if (depth.IsValid()) {
+                    b.Read(depth);
+                    b.Write(depth);
+                }
+            },
+            [this](RG::IPassContext& ctx) {
+                RenderSelectionBlur(ctx, m_SelectionBlurVShader);
+            });
+
+        fg.AddPass("SelectionComposite",
+            [&](RG::RHI_PassBuilder& b) {
+                b.Read(selectionMask);
+                b.Read(selectionBlurred);
+                b.Read(color);
+                b.Write(color);
+                if (depth.IsValid()) {
+                    b.Read(depth);
+                    b.Write(depth);
+                }
+            },
+            [this](RG::IPassContext& ctx) {
+                RenderSelectionComposite(ctx);
             });
 
         fg.AddPass("UI",
@@ -318,8 +429,10 @@ namespace Nova::App {
 
         m_Renderer->SetRenderGraph(fg.Build(api));
 
-        if (auto* graph = m_Renderer->GetRenderGraph())
+        if (auto* graph = m_Renderer->GetRenderGraph()) {
             graph->BindEngineShadowMaps(m_ShadowMaps);
+            BindSelectionOutlineTextures();
+        }
 
         // Editor toolbar icons (PNG via TextureAsset → RHI_Texture → GetOrUploadTexture).
         {
@@ -515,7 +628,6 @@ namespace Nova::App {
 		
         if (m_ViewportResizePending)
 			ApplyPendingViewportResize();
-
 		m_Renderer->BeginFrame();
         UploadLights();
 
@@ -548,8 +660,9 @@ namespace Nova::App {
 			setGlobals(graph->GetShader(m_VertexColorShader));
 			setGlobals(graph->GetShader(m_DepthShader));
 			setGlobals(graph->GetShader(m_AABBShader));
-			setGlobals(graph->GetShader(m_SelectionOutlineShader));
-			setGlobals(graph->GetShader(m_SelectionOutlineOccludedShader));
+			setGlobals(graph->GetShader(m_SelectionMaskShader));
+			setGlobals(graph->GetShader(m_SelectionMaskOccludedShader));
+			// Blur / composite have no nova ParameterBlock — do not push engine globals.
 		}
 	}
 
@@ -635,7 +748,7 @@ namespace Nova::App {
 		}
 	}
 
-	void AppLayer::RenderSelectionOutline(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+	void AppLayer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
 		if (m_SelectedEntity == entt::null)
 			return;
 
@@ -662,66 +775,67 @@ namespace Nova::App {
 		cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
 		cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 
-		// 1) Occluded / under ground — dim yellow (depth Greater).
-		//    Also covers the object itself (hull back-faces are farther than the mesh).
-		if (auto* occluded = ctx.GetShader(m_SelectionOutlineOccludedShader)) {
+		// Full coverage (R) — depth off so occluded parts still write the mask.
+		if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
+			mask->SetParameter("model", model);
+			ctx.BindShader(m_SelectionMaskShader);
+			ctx.DrawIndexed(cmd);
+		}
+
+		// Occluded coverage (G) — depth Greater vs scene depth.
+		if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
 			occluded->SetParameter("model", model);
-			ctx.BindShader(m_SelectionOutlineOccludedShader);
+			ctx.BindShader(m_SelectionMaskOccludedShader);
 			ctx.DrawIndexed(cmd);
 		}
+	}
 
-		// 2) Visible silhouette — full yellow (depth Less).
-		if (auto* outline = ctx.GetShader(m_SelectionOutlineShader)) {
-			outline->SetParameter("model", model);
-			ctx.BindShader(m_SelectionOutlineShader);
-			ctx.DrawIndexed(cmd);
-		}
+	void AppLayer::RenderSelectionBlur(Nova::Core::Renderer::RHI::IPassContext& ctx, Nova::Core::Renderer::RHI::RHI_ShaderHandle blurShader) {
+		if (m_SelectedEntity == entt::null || !blurShader.IsValid())
+			return;
+		ctx.DrawFullscreen(blurShader);
+	}
 
-		// 3) Re-draw the selected mesh lit — the occluded pass tints the whole object
-		//    yellow and washes out lighting; restoring it keeps only the outline ring.
-		const auto sceneShaderHandle = GetActiveSceneShader();
-		auto* sceneShader = ctx.GetShader(sceneShaderHandle);
-		if (!sceneShader)
+	void AppLayer::RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+		if (m_SelectedEntity == entt::null || !m_SelectionCompositeShader.IsValid())
+			return;
+		ctx.DrawFullscreen(m_SelectionCompositeShader);
+	}
+
+	void AppLayer::BindSelectionOutlineTextures() {
+		auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
+		if (!graph)
 			return;
 
-		sceneShader->SetParameter("model", model);
-		sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
-		sceneShader->SetParameter("base", mrc->m_Material.m_Base);
-		sceneShader->SetParameter("baseColor", mrc->m_Material.m_BaseColor);
-		sceneShader->SetParameter("diffuseRoughness", mrc->m_Material.m_DiffuseRoughness);
-		sceneShader->SetParameter("metalness", mrc->m_Material.m_Metalness);
-		sceneShader->SetParameter("metalColor", mrc->m_Material.m_MetalColor);
-		sceneShader->SetParameter("specular", mrc->m_Material.m_Specular);
-		sceneShader->SetParameter("specularColor", mrc->m_Material.m_SpecularColor);
-		sceneShader->SetParameter("specularRoughness", mrc->m_Material.m_SpecularRoughness);
-		sceneShader->SetParameter("specularIOR", mrc->m_Material.m_SpecularIOR);
-		sceneShader->SetParameter("specularAnisotropy", mrc->m_Material.m_SpecularAnisotropy);
-		sceneShader->SetParameter("specularRotation", mrc->m_Material.m_SpecularRotation);
-		sceneShader->SetParameter("transmission", mrc->m_Material.m_Transmission);
-		sceneShader->SetParameter("transmissionColor", mrc->m_Material.m_TransmissionColor);
-		sceneShader->SetParameter("subsurface", mrc->m_Material.m_Subsurface);
-		sceneShader->SetParameter("subsurfaceColor", mrc->m_Material.m_SubsurfaceColor);
-		sceneShader->SetParameter("subsurfaceRadius", mrc->m_Material.m_SubsurfaceRadius);
-		sceneShader->SetParameter("subsurfaceScale", mrc->m_Material.m_SubsurfaceScale);
-		sceneShader->SetParameter("subsurfaceAnisotropy", mrc->m_Material.m_SubsurfaceAnisotropy);
-		sceneShader->SetParameter("sheen", mrc->m_Material.m_Sheen);
-		sceneShader->SetParameter("sheenColor", mrc->m_Material.m_SheenColor);
-		sceneShader->SetParameter("sheenRoughness", mrc->m_Material.m_SheenRoughness);
-		sceneShader->SetParameter("coat", mrc->m_Material.m_Coat);
-		sceneShader->SetParameter("coatColor", mrc->m_Material.m_CoatColor);
-		sceneShader->SetParameter("coatRoughness", mrc->m_Material.m_CoatRoughness);
-		sceneShader->SetParameter("coatAnisotropy", mrc->m_Material.m_CoatAnisotropy);
-		sceneShader->SetParameter("coatRotation", mrc->m_Material.m_CoatRotation);
-		sceneShader->SetParameter("coatIOR", mrc->m_Material.m_CoatIOR);
-		sceneShader->SetParameter("coatAffectColor", mrc->m_Material.m_CoatAffectColor);
-		sceneShader->SetParameter("coatAffectRoughness", mrc->m_Material.m_CoatAffectRoughness);
-		sceneShader->SetParameter("emission", mrc->m_Material.m_Emission);
-		sceneShader->SetParameter("emissionColor", mrc->m_Material.m_EmissionColor);
-		sceneShader->SetParameter("opacity", mrc->m_Material.m_Opacity);
-		sceneShader->SetParameter("thinWalled", mrc->m_Material.m_ThinWalled);
-		sceneShader->SetParameter("isOpaque", static_cast<int>(mrc->m_Material.m_IsOpaque));
-		ctx.BindShader(sceneShaderHandle);
-		ctx.DrawIndexed(cmd);
+		auto bindOutlineTexture = [&](
+			Nova::Core::Renderer::RHI::RHI_ShaderHandle shaderHandle,
+			const char* textureName,
+			const char* samplerName,
+			Nova::Core::Renderer::RHI::RHI_TextureHandle textureHandle)
+		{
+			auto* shader = graph->GetShader(shaderHandle);
+			if (!shader)
+				return;
+			uint64_t imageView = 0;
+			uint64_t sampler = 0;
+			if (!graph->GetSampledTextureNativeHandles(textureHandle, imageView, sampler))
+				return;
+			shader->BindSampledTexture(textureName, samplerName, imageView, sampler);
+		};
+
+		// Views are stable until viewport resize / shader reload.
+		bindOutlineTexture(
+			m_SelectionBlurHShader, "outline.source", "outline.sourceSampler", m_SelectionMask);
+		bindOutlineTexture(
+			m_SelectionBlurVShader, "outline.source", "outline.sourceSampler", m_SelectionBlurTemp);
+		bindOutlineTexture(
+			m_SelectionCompositeShader,
+			"outline.selectionMask", "outline.selectionMaskSampler",
+			m_SelectionMask);
+		bindOutlineTexture(
+			m_SelectionCompositeShader,
+			"outline.selectionBlurred", "outline.selectionBlurredSampler",
+			m_SelectionBlurred);
 	}
 
 	void AppLayer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
@@ -954,7 +1068,10 @@ namespace Nova::App {
         m_ViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
         m_Renderer->Resize(newW, newH);
 
-        if (auto* graph = m_Renderer->GetRenderGraph()) graph->BindEngineShadowMaps(m_ShadowMaps);
+        if (auto* graph = m_Renderer->GetRenderGraph()) {
+            graph->BindEngineShadowMaps(m_ShadowMaps);
+            BindSelectionOutlineTextures();
+        }
 
         if (m_Camera)
             m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
