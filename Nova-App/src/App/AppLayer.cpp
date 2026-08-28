@@ -1,13 +1,41 @@
 #include "App/AppLayer.h"
 
-#include <iostream>
+#include <cmath>
 #include <filesystem>
-#include <algorithm>
+#include <iostream>
 
-#include "App/GameLayer.h"
+#include <SDL3/SDL.h>
+#include "imgui_internal.h"
+
 #include "App/EditorLayer.h"
+#include "App/GameLayer.h"
+
+#include "Asset/AssetManager.h"
+#include "Asset/Assets/MeshAsset.h"
+#include "Asset/Assets/TextureAsset.h"
+#include "Core/Application.h"
+#include "Core/Assert.h"
+#include "Core/Log.h"
+#include "ECS/Components/CameraComponent.h"
+#include "ECS/Components/LightComponent.h"
+#include "ECS/Components/MeshComponent.h"
+#include "ECS/Components/MeshRendererComponent.h"
+#include "ECS/Components/TransformComponent.h"
+#include "Math/Light.h"
+
+#include "UI/Panels/AssetBrowserPanel.h"
+#include "UI/Panels/HierarchyPanel.h"
+#include "UI/Panels/InspectorPanel.h"
+#include "UI/Panels/MainMenuBar.h"
+#include "UI/Panels/ScenePanel.h"
 
 namespace Nova::App {
+
+    using namespace Nova::Core::Asset;
+    using namespace Nova::Core::Asset::Assets;
+    using namespace Nova::Core::ECS::Components;
+    using namespace Nova::Core::Events;
+    using namespace Nova::Core::Math;
 
     AppLayer* g_AppLayer = nullptr;
 
@@ -34,7 +62,6 @@ namespace Nova::App {
         ImGuiID dock_right_bottom = 0;
         ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up, 0.50f, &dock_right_top, &dock_right_bottom);
 
-        // Dock windows
         ImGui::DockBuilderDockWindow(m_Scene.GetName().c_str(), dock_left);
         ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
         ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
@@ -46,13 +73,27 @@ namespace Nova::App {
 
     void AppLayer::OnEvent(Event& e) {
         EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<MouseButtonPressedEvent>([this](MouseButtonPressedEvent& ev) { return OnMouseButtonPressed(ev); });
-		dispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& ev) { return OnMouseButtonReleased(ev); });
-		dispatcher.Dispatch<MouseMovedEvent>([this](MouseMovedEvent& ev) { return OnMouseMoved(ev); });
-		dispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent& ev) { return OnMouseScrolled(ev); });
-		dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) { return OnKeyPressed(ev); });
-		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) { return OnWindowResized(ev); });
-		dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) { return OnImGuiPanelResize(ev); });
+        dispatcher.Dispatch<MouseButtonPressedEvent>([this](MouseButtonPressedEvent& ev) {
+            return OnMouseButtonPressed(ev);
+        });
+        dispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& ev) {
+            return OnMouseButtonReleased(ev);
+        });
+        dispatcher.Dispatch<MouseMovedEvent>([this](MouseMovedEvent& ev) {
+            return OnMouseMoved(ev);
+        });
+        dispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent& ev) {
+            return OnMouseScrolled(ev);
+        });
+        dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
+            return OnKeyPressed(ev);
+        });
+        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
+            return OnWindowResized(ev);
+        });
+        dispatcher.Dispatch<ImGuiPanelResizeEvent>([this](ImGuiPanelResizeEvent& ev) {
+            return OnImGuiPanelResize(ev);
+        });
     }
 
     void AppLayer::RequestPlay() {
@@ -64,7 +105,6 @@ namespace Nova::App {
             return;
         }
 
-        // Replace the current EditorLayer with GameLayer (keep AppLayer alive for UI).
         Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<GameLayer>(m_EditorLayer);
         std::cout << "AppLayer: Transition to GameLayer requested.\n";
 
@@ -80,7 +120,6 @@ namespace Nova::App {
             return;
         }
 
-        // Replace the current GameLayer with EditorLayer (keep AppLayer alive for UI).
         Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EditorLayer>(m_GameLayer);
         std::cout << "AppLayer: Transition to EditorLayer requested.\n";
 
@@ -88,30 +127,29 @@ namespace Nova::App {
     }
 
     void* AppLayer::GetPlayIconImGuiID() const {
-        if (!m_PlayIcon || !m_Renderer)
+        if (!m_PlayIcon)
             return nullptr;
-        return m_Renderer->GetTextureImGuiID(m_PlayIcon->GetCPUTexture());
+        auto* renderer = m_EditorRenderer.GetRenderer();
+        if (!renderer)
+            return nullptr;
+        return renderer->GetTextureImGuiID(m_PlayIcon->GetCPUTexture());
     }
 
     void* AppLayer::GetPauseIconImGuiID() const {
-        if (!m_PauseIcon || !m_Renderer)
+        if (!m_PauseIcon)
             return nullptr;
-        return m_Renderer->GetTextureImGuiID(m_PauseIcon->GetCPUTexture());
+        auto* renderer = m_EditorRenderer.GetRenderer();
+        if (!renderer)
+            return nullptr;
+        return renderer->GetTextureImGuiID(m_PauseIcon->GetCPUTexture());
     }
 
     void AppLayer::OnAttach() {
         g_AppLayer = this;
 
-        GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
+        Nova::Core::GraphicsAPI api = Nova::Core::Application::Get().GetWindow().GetGraphicsAPI();
 
-		Nova::Core::Renderer::RHI::RHI_SwapchainDesc swapDesc{};
-        swapDesc.m_FramesInFlight = 3;
-        swapDesc.m_CreateSurface = true;
-        swapDesc.m_EnableSwapchain = true;
-        swapDesc.m_PreferredPresentMode = Nova::Core::Renderer::RHI::RHI_PresentMode::Default;
-		m_Renderer = Nova::Core::Renderer::RHI::IRenderer::Create(api, swapDesc);
-
-		int initialW = 1280, initialH = 720;
+        int initialW = 1280, initialH = 720;
         Nova::Core::Application::Get().GetWindow().GetWindowSize(initialW, initialH);
         if (initialW <= 0 || initialH <= 0) {
             initialW = 1280;
@@ -119,323 +157,11 @@ namespace Nova::App {
         }
         m_ViewportSize = { static_cast<float>(initialW), static_cast<float>(initialH) };
 
-		namespace RG = Nova::Core::Renderer::RHI;
-        RG::RHI_RenderGraphBuilder fg;
+        m_EditorRenderer.Initialize(
+            api,
+            static_cast<uint32_t>(initialW),
+            static_cast<uint32_t>(initialH));
 
-        const uint32_t width = static_cast<uint32_t>(initialW);
-        const uint32_t height = static_cast<uint32_t>(initialH);
-
-        const auto backbuffer = fg.ImportTexture({
-            width,
-            height,
-            RG::RHI_TextureFormat::RGBA8,
-            RG::RHI_TextureUsage::ColorAttachment,
-        }, RG::RHI_ResourceState::Present);
-
-        // Editor viewport renders into offscreen textures sampled by ImGui.
-        RG::RHI_TextureHandle color = fg.CreateTexture({
-            width,
-            height,
-            RG::RHI_TextureFormat::RGBA8,
-            RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled,
-        });
-
-        RG::RHI_TextureHandle depth = fg.CreateTexture({
-            width,
-            height,
-            RG::RHI_TextureFormat::Depth32,
-            RG::RHI_TextureUsage::DepthAttachment | RG::RHI_TextureUsage::Sampled,
-        });
-
-        RG::RHI_TextureHandle shadowMaps = fg.CreateTexture({
-            Nova::Core::Renderer::RHI::SHADOW_MAP_RESOLUTION,
-            Nova::Core::Renderer::RHI::SHADOW_MAP_RESOLUTION,
-            RG::RHI_TextureFormat::Depth32,
-            RG::RHI_TextureUsage::DepthAttachment | RG::RHI_TextureUsage::Sampled,
-            Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS,
-            /*m_ResizeWithViewport*/ false,
-            /*m_ComparisonSampler*/ true,
-        });
-
-        const RG::RHI_TextureUsage selectionRtUsage =
-            RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled;
-
-        RG::RHI_TextureHandle selectionMask = fg.CreateTexture({
-            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
-            /*m_Layers*/ 1,
-            /*m_ResizeWithViewport*/ true,
-            /*m_ComparisonSampler*/ false,
-            /*m_RegisterImGui*/ false,
-        });
-        RG::RHI_TextureHandle selectionBlurTemp = fg.CreateTexture({
-            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
-            /*m_Layers*/ 1,
-            /*m_ResizeWithViewport*/ true,
-            /*m_ComparisonSampler*/ false,
-            /*m_RegisterImGui*/ false,
-        });
-        RG::RHI_TextureHandle selectionBlurred = fg.CreateTexture({
-            width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
-            /*m_Layers*/ 1,
-            /*m_ResizeWithViewport*/ true,
-            /*m_ComparisonSampler*/ false,
-            /*m_RegisterImGui*/ false,
-        });
-
-        m_SceneColor = color;
-        m_SceneDepth = depth;
-        m_ShadowMaps = shadowMaps;
-        m_SelectionMask = selectionMask;
-        m_SelectionBlurTemp = selectionBlurTemp;
-        m_SelectionBlurred = selectionBlurred;
-
-        auto acquireShader = [](const std::filesystem::path& uri) {
-            auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
-            if (!asset || !asset->Compile()) {
-                NV_LOG_WARN(("Failed to compile shader asset: " + uri.generic_string()).c_str());
-            }
-            return asset;
-        };
-
-        auto gridVert = acquireShader("Editor://Shaders/Grid.vert.slang");
-        auto gridFrag = acquireShader("Editor://Shaders/Grid.frag.slang");
-        auto sceneVert = acquireShader("Engine://Shaders/Scene.vert.slang");
-        auto sceneFrag = acquireShader("Engine://Shaders/Scene.frag.slang");
-        auto shadowVert = acquireShader("Engine://Shaders/Shadow.vert.slang");
-        auto normalsFrag = acquireShader("Engine://Shaders/NormalsDebug.frag.slang");
-        auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
-        auto vertexColorFrag = acquireShader("Engine://Shaders/VertexColor.frag.slang");
-        auto depthFrag = acquireShader("Engine://Shaders/DepthDebug.frag.slang");
-        auto selectionFullscreenVert = acquireShader("Editor://Shaders/SelectionFullscreen.vert.slang");
-        auto selectionMaskVert = acquireShader("Editor://Shaders/SelectionMask.vert.slang");
-        auto selectionMaskFrag = acquireShader("Editor://Shaders/SelectionMask.frag.slang");
-        auto selectionMaskOccludedFrag = acquireShader("Editor://Shaders/SelectionMaskOccluded.frag.slang");
-        auto selectionBlurHFrag = acquireShader("Editor://Shaders/SelectionOutlineBlurH.frag.slang");
-        auto selectionBlurVFrag = acquireShader("Editor://Shaders/SelectionOutlineBlurV.frag.slang");
-        auto selectionCompositeFrag = acquireShader("Editor://Shaders/SelectionOutlineComposite.frag.slang");
-
-        m_GridShader = fg.RegisterShader({
-            .m_Name = "Grid",
-            .m_Vertex = gridVert,
-            .m_Fragment = gridFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
-            .m_AlphaBlend = true,
-        });
-
-        m_SceneShader = fg.RegisterShader({
-            .m_Name = "Scene",
-            .m_Vertex = sceneVert,
-            .m_Fragment = sceneFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-        });
-        m_ShadowShader = fg.RegisterShader({
-            .m_Name = "Shadow",
-            .m_Vertex = shadowVert,
-            .m_Fragment = nullptr,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_AlphaBlend = false,
-            .m_DepthTest = true,
-            .m_DepthWrite = true,
-            .m_DepthOnly = true,
-            .m_CullMode = RG::RHI_CullMode::Front,
-            .m_DepthBiasConstant = 0.5f,
-            .m_DepthBiasSlope = 1.0f,
-        });
-        m_NormalsShader = fg.RegisterShader({
-            .m_Name = "NormalsDebug",
-            .m_Vertex = sceneVert,
-            .m_Fragment = normalsFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-        });
-        m_PositionsShader = fg.RegisterShader({
-            .m_Name = "PositionsDebug",
-            .m_Vertex = sceneVert,
-            .m_Fragment = positionsFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-        });
-        m_VertexColorShader = fg.RegisterShader({
-            .m_Name = "VertexColor",
-            .m_Vertex = sceneVert,
-            .m_Fragment = vertexColorFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-        });
-        m_DepthShader = fg.RegisterShader({
-            .m_Name = "DepthDebug",
-            .m_Vertex = sceneVert,
-            .m_Fragment = depthFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-        });
-        m_AABBShader = fg.RegisterShader({
-            .m_Name = "AABBDebug",
-            .m_Vertex = sceneVert,
-            .m_Fragment = vertexColorFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_PrimitiveTopology = RG::RHI_PrimitiveTopology::Lines,
-            .m_DepthTest = false,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::None,
-        });
-        // Selection outline: solid mask → separable blur → soft halo composite (+ x-ray).
-        m_SelectionMaskShader = fg.RegisterShader({
-            .m_Name = "SelectionMask",
-            .m_Vertex = selectionMaskVert,
-            .m_Fragment = selectionMaskFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_DepthTest = false,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::Back,
-        });
-        m_SelectionMaskOccludedShader = fg.RegisterShader({
-            .m_Name = "SelectionMaskOccluded",
-            .m_Vertex = selectionMaskVert,
-            .m_Fragment = selectionMaskOccludedFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_DepthTest = true,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::Back,
-            .m_DepthCompare = RG::RHI_DepthCompare::Greater,
-        });
-        m_SelectionBlurHShader = fg.RegisterShader({
-            .m_Name = "SelectionBlurH",
-            .m_Vertex = selectionFullscreenVert,
-            .m_Fragment = selectionBlurHFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
-            .m_DepthTest = false,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::None,
-        });
-        m_SelectionBlurVShader = fg.RegisterShader({
-            .m_Name = "SelectionBlurV",
-            .m_Vertex = selectionFullscreenVert,
-            .m_Fragment = selectionBlurVFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
-            .m_DepthTest = false,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::None,
-        });
-        m_SelectionCompositeShader = fg.RegisterShader({
-            .m_Name = "SelectionComposite",
-            .m_Vertex = selectionFullscreenVert,
-            .m_Fragment = selectionCompositeFrag,
-            .m_VertexLayout = RG::RHI_VertexLayout::FullscreenQuad,
-            .m_AlphaBlend = true,
-            .m_AdditiveBlend = true,
-            .m_DepthTest = false,
-            .m_DepthWrite = false,
-            .m_CullMode = RG::RHI_CullMode::None,
-        });
-
-        fg.AddPass("Shadow",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Write(shadowMaps);
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderShadowPass(ctx);
-            });
-
-        fg.AddPass("Grid",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Write(color);
-                if (depth.IsValid())
-                    b.Write(depth);
-            },
-            [this](RG::IPassContext& ctx) {
-                if (!m_ShowGrid)
-                    return;
-                auto* shader = ctx.GetShader(m_GridShader);
-                if (!shader) return;
-                const glm::vec3 resolution(ctx.GetRenderWidth(), ctx.GetRenderHeight(), 1.0f);
-                shader->SetParameter("iResolution", resolution);
-                ctx.DrawFullscreen(m_GridShader);
-            });
-
-        fg.AddPass("Scene",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Read(color);
-                b.Write(color);
-                if (depth.IsValid()) {
-                    b.Read(depth);
-                    b.Write(depth);
-                }
-                b.Read(shadowMaps);
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderScene(ctx);
-                if (m_ShowAABB)
-                    RenderAABBs(ctx);
-            });
-
-        // Mask of selected meshes: R = full coverage, G = occluded (depth Greater).
-        fg.AddPass("SelectionMask",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Write(selectionMask);
-                if (depth.IsValid()) {
-                    b.Read(depth);
-                    b.Write(depth);
-                }
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderSelectionMask(ctx);
-            });
-
-        fg.AddPass("SelectionBlurH",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Read(selectionMask);
-                b.Write(selectionBlurTemp);
-                if (depth.IsValid()) {
-                    b.Read(depth);
-                    b.Write(depth);
-                }
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderSelectionBlur(ctx, m_SelectionBlurHShader);
-            });
-
-        fg.AddPass("SelectionBlurV",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Read(selectionBlurTemp);
-                b.Write(selectionBlurred);
-                if (depth.IsValid()) {
-                    b.Read(depth);
-                    b.Write(depth);
-                }
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderSelectionBlur(ctx, m_SelectionBlurVShader);
-            });
-
-        fg.AddPass("SelectionComposite",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Read(selectionMask);
-                b.Read(selectionBlurred);
-                b.Read(color);
-                b.Write(color);
-                if (depth.IsValid()) {
-                    b.Read(depth);
-                    b.Write(depth);
-                }
-            },
-            [this](RG::IPassContext& ctx) {
-                RenderSelectionComposite(ctx);
-            });
-
-        fg.AddPass("UI",
-            [&](RG::RHI_PassBuilder& b) {
-                b.Write(backbuffer);
-                b.PresentOnly();
-            },
-            [](RG::IPassContext& /*ctx*/) {
-                // ImGui draw data is rendered by ImGuiLayer during the present pass.
-            });
-
-        m_Renderer->SetRenderGraph(fg.Build(api));
-
-        if (auto* graph = m_Renderer->GetRenderGraph()) {
-            graph->BindEngineShadowMaps(m_ShadowMaps);
-            BindSelectionOutlineTextures();
-        }
-
-        // Editor toolbar icons (PNG via TextureAsset → RHI_Texture → GetOrUploadTexture).
         {
             auto acquireTexture = [this](const std::filesystem::path& uri) -> std::shared_ptr<TextureAsset> {
                 auto asset = AssetManager::Get().Acquire<TextureAsset>(uri).GetAssetRef();
@@ -443,7 +169,8 @@ namespace Nova::App {
                     NV_LOG_WARN(("Failed to load texture asset: " + uri.generic_string()).c_str());
                     return nullptr;
                 }
-                if (!m_Renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
+                auto* renderer = m_EditorRenderer.GetRenderer();
+                if (!renderer || !renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
                     NV_LOG_WARN(("Failed to upload texture asset: " + uri.generic_string()).c_str());
                     return nullptr;
                 }
@@ -453,62 +180,56 @@ namespace Nova::App {
             m_PauseIcon = acquireTexture("Editor://Icons/pause-48.png");
         }
 
-        m_AABBWireframeMesh = Nova::Core::Math::CreateUnitAABBWireframeMesh(glm::vec3(0.0f, 1.0f, 0.0f));
+        SetupDefaultScene();
+        m_Orbit.ApplyTo(*m_Camera);
+    }
 
-        // camera setup
-		m_Camera = std::make_shared<Math::Camera>(
-            glm::vec3(5.0f, 5.0f, 5.0f),               // lookFrom
-            glm::vec3(0.0f, 0.0f, 0.0f),                // lookAt
-            glm::vec3(0.0f, 1.0f, 0.0f),                // up
-            45.0f,                                      // FOV in degree
-            16.0f / 9.0f,                               // aspect ratio
-            0.1f,                                       // near
-            100.0f,                                     // far
-            true                                        // perspective
+    void AppLayer::SetupDefaultScene() {
+        m_Camera = std::make_shared<Camera>(
+            glm::vec3(5.0f, 5.0f, 5.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            45.0f,
+            16.0f / 9.0f,
+            0.1f,
+            100.0f,
+            true
         );
-		m_Camera->m_IsPerspective = true;
-		m_Camera->m_FOV = 45.0f;
-		m_Camera->m_NearPlane = 0.1f;
-		m_Camera->m_FarPlane = 100.0f;
-		m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
+        m_Camera->m_IsPerspective = true;
+        m_Camera->m_FOV = 45.0f;
+        m_Camera->m_NearPlane = 0.1f;
+        m_Camera->m_FarPlane = 100.0f;
+        m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
 
         entt::entity cameraEntity = m_Scene.CreateEntity("Camera");
-
         m_Scene.SetMainCamera(cameraEntity);
 
-		auto& registry = m_Scene.GetRegistry();
-        registry.emplace<CameraComponent>(
-            cameraEntity,
-            m_Camera,
-            true // isPrimary
-        );
+        auto& registry = m_Scene.GetRegistry();
+        registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
 
-		// CUBE
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-		cubeAsset->Load();
-		entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
-
-		registry.emplace<TransformComponent>(cubeEntity,
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>(
+            "Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        cubeAsset->Load();
+        entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
+        registry.emplace<TransformComponent>(cubeEntity,
             glm::vec3(0.0f, 0.5f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
-		{
-			Nova::Core::Renderer::RHI::Material mat{};
-			mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
-			registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
-			registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
-		}
+            glm::vec3(1.0f, 1.0f, 1.0f));
+        {
+            Nova::Core::Renderer::RHI::Material mat{};
+            mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
+            registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+            registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
+        }
 
-		// TORUS
-        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>(
+            "Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         torusAsset->Load();
         entt::entity torusEntity = m_Scene.CreateEntity("Torus");
         registry.emplace<TransformComponent>(torusEntity,
             glm::vec3(2.0f, 0.25f, 1.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
+            glm::vec3(1.0f, 1.0f, 1.0f));
         {
             Nova::Core::Renderer::RHI::Material mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
@@ -516,15 +237,14 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(torusEntity, torusAsset);
         }
 
-        // SPHERE
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>(
+            "Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         sphereAsset->Load();
         entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
         registry.emplace<TransformComponent>(sphereEntity,
             glm::vec3(0.0f, 0.5f, -1.5f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
-        );
+            glm::vec3(1.0f, 1.0f, 1.0f));
         {
             Nova::Core::Renderer::RHI::Material mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -532,24 +252,20 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
         }
 
-		// GROUND
-		auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-		planeAsset->Load();
-		entt::entity planeEntity = m_Scene.CreateEntity("Plane");
-
-		registry.emplace<TransformComponent>(planeEntity,
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>(
+            "Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        planeAsset->Load();
+        entt::entity planeEntity = m_Scene.CreateEntity("Plane");
+        registry.emplace<TransformComponent>(planeEntity,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(10.0f, 10.0f, 10.0f)
-        );
+            glm::vec3(10.0f, 10.0f, 10.0f));
+        {
+            Nova::Core::Renderer::RHI::Material mat{};
+            registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
+            registry.emplace<MeshComponent>(planeEntity, planeAsset);
+        }
 
-		{
-			Nova::Core::Renderer::RHI::Material mat{};
-			registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
-			registry.emplace<MeshComponent>(planeEntity, planeAsset);
-		}
-
-        // Directional light (shadow casting)
         {
             entt::entity dirLightEntity = m_Scene.CreateEntity("DirectionalLight");
             registry.emplace<TransformComponent>(dirLightEntity,
@@ -568,7 +284,6 @@ namespace Nova::App {
             registry.emplace<LightComponent>(dirLightEntity, dirLight);
         }
 
-        // Spot light demo (shadow casting)
         {
             entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
             registry.emplace<TransformComponent>(spotEntity,
@@ -584,22 +299,17 @@ namespace Nova::App {
             spot->m_InnerCone = 15.0f;
             spot->m_OuterCone = 30.0f;
             spot->m_LightShadow = true;
-            // Perspective shadows amplify bias into peter panning — keep these lower than dir.
             spot->m_ShadowBiasConstant = 0.2f;
             spot->m_ShadowBiasSlope = 0.4f;
             spot->m_ShadowNormalBias = 0.003f;
             registry.emplace<LightComponent>(spotEntity, spot);
         }
-
-    	UpdateCameraFromOrbit();
     }
 
     void AppLayer::OnDetach() {
-        NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         m_PlayIcon.reset();
         m_PauseIcon.reset();
-		m_Renderer->Destroy();
-		m_Renderer.reset();
+        m_EditorRenderer.Shutdown();
         m_Scene.Clear();
 
         if (g_AppLayer == this)
@@ -611,274 +321,27 @@ namespace Nova::App {
         m_ElapsedTime += dt;
     }
 
-	Nova::Core::Renderer::RHI::RHI_ShaderHandle AppLayer::GetActiveSceneShader() const {
-		switch (m_RenderDebugMode) {
-            case RenderDebugMode::Normals:     return m_NormalsShader;
-            case RenderDebugMode::Positions:   return m_PositionsShader;
-            case RenderDebugMode::VertexColor: return m_VertexColorShader;
-            case RenderDebugMode::Depth:       return m_DepthShader;
-            case RenderDebugMode::Lit:
-            default:
-                return m_SceneShader;
-        }
-	}
-	
-	void AppLayer::OnBegin() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-		
-        if (m_ViewportResizePending)
-			ApplyPendingViewportResize();
-		m_Renderer->BeginFrame();
-        UploadLights();
-
-		const glm::mat4 view = m_Camera->GetViewMatrix();
-		const glm::mat4 proj = m_Camera->GetProjectionMatrix();
-		const glm::mat4 viewProj = proj * view;
-		const glm::mat4 invViewProj = glm::inverse(viewProj);
-        const int lightCount = static_cast<int>(m_GpuLights.size());
-
-		auto setGlobals = [this, view, proj, viewProj, invViewProj, lightCount](Nova::Core::Renderer::RHI::IShaders* shader) {
-			if (!shader) return;
-			shader->SetParameter("iTime", m_ElapsedTime);
-			shader->SetParameter("iTimeDelta", m_DeltaTime);
-			shader->SetParameter("iFrameRate", m_DeltaTime > 0.0f ? 1.0f / m_DeltaTime : 0.0f);
-			shader->SetParameter("iFrame", static_cast<int>(m_FrameIndex++));
-			shader->SetParameter("iResolution", glm::vec3(m_ViewportSize.x, m_ViewportSize.y, 1.0f));
-			shader->SetParameter("view", view);
-			shader->SetParameter("proj", proj);
-			shader->SetParameter("viewProj", viewProj);
-			shader->SetParameter("invViewProj", invViewProj);
-            shader->SetParameter("lightCount", lightCount);
-		};
-
-		if (auto* graph = m_Renderer->GetRenderGraph()) {
-			setGlobals(graph->GetShader(m_GridShader));
-			setGlobals(graph->GetShader(m_SceneShader));
-            setGlobals(graph->GetShader(m_ShadowShader));
-			setGlobals(graph->GetShader(m_NormalsShader));
-			setGlobals(graph->GetShader(m_PositionsShader));
-			setGlobals(graph->GetShader(m_VertexColorShader));
-			setGlobals(graph->GetShader(m_DepthShader));
-			setGlobals(graph->GetShader(m_AABBShader));
-			setGlobals(graph->GetShader(m_SelectionMaskShader));
-			setGlobals(graph->GetShader(m_SelectionMaskOccludedShader));
-			// Blur / composite have no nova ParameterBlock — do not push engine globals.
-		}
-	}
-
-	void AppLayer::OnRender() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+    void AppLayer::OnBegin() {
         NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-		m_Renderer->RenderFrame();
-	}
 
-	void AppLayer::OnEnd() {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-		m_Renderer->EndFrame();
-	}
+        if (m_ViewportResizePending)
+            ApplyPendingViewportResize();
 
-	void AppLayer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-		NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        m_EditorRenderer.BeginFrame();
+        m_EditorRenderer.BindFrame(m_Scene, *m_Camera, m_Selection);
+        m_EditorRenderer.UploadLights();
+        m_EditorRenderer.PushGlobals(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
+    }
 
-		const auto shaderHandle = GetActiveSceneShader();
-        auto* sceneShader = ctx.GetShader(shaderHandle);
-        if (!sceneShader) return;
+    void AppLayer::OnRender() {
+        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        m_EditorRenderer.RenderFrame();
+    }
 
-		auto& registry = m_Scene.GetRegistry();
-		auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
-		for (auto entity : viewMeshes) {
-			auto& tc = viewMeshes.get<TransformComponent>(entity);
-			auto& mrc = viewMeshes.get<MeshRendererComponent>(entity);
-
-			if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
-				continue;
-
-			auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
-			if (!cpuMesh)
-				continue;
-
-			sceneShader->SetParameter("model", tc.GetTransform());
-			sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
-
-			sceneShader->SetParameter("base", mrc.m_Material.m_Base);
-			sceneShader->SetParameter("baseColor", mrc.m_Material.m_BaseColor);
-			sceneShader->SetParameter("diffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
-			sceneShader->SetParameter("metalness", mrc.m_Material.m_Metalness);
-			sceneShader->SetParameter("metalColor", mrc.m_Material.m_MetalColor);
-			sceneShader->SetParameter("specular", mrc.m_Material.m_Specular);
-			sceneShader->SetParameter("specularColor", mrc.m_Material.m_SpecularColor);
-			sceneShader->SetParameter("specularRoughness", mrc.m_Material.m_SpecularRoughness);
-			sceneShader->SetParameter("specularIOR", mrc.m_Material.m_SpecularIOR);
-			sceneShader->SetParameter("specularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
-			sceneShader->SetParameter("specularRotation", mrc.m_Material.m_SpecularRotation);
-			sceneShader->SetParameter("transmission", mrc.m_Material.m_Transmission);
-			sceneShader->SetParameter("transmissionColor", mrc.m_Material.m_TransmissionColor);
-			sceneShader->SetParameter("subsurface", mrc.m_Material.m_Subsurface);
-			sceneShader->SetParameter("subsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
-			sceneShader->SetParameter("subsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
-			sceneShader->SetParameter("subsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
-			sceneShader->SetParameter("subsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
-			sceneShader->SetParameter("sheen", mrc.m_Material.m_Sheen);
-			sceneShader->SetParameter("sheenColor", mrc.m_Material.m_SheenColor);
-			sceneShader->SetParameter("sheenRoughness", mrc.m_Material.m_SheenRoughness);
-			sceneShader->SetParameter("coat", mrc.m_Material.m_Coat);
-			sceneShader->SetParameter("coatColor", mrc.m_Material.m_CoatColor);
-			sceneShader->SetParameter("coatRoughness", mrc.m_Material.m_CoatRoughness);
-			sceneShader->SetParameter("coatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
-			sceneShader->SetParameter("coatRotation", mrc.m_Material.m_CoatRotation);
-			sceneShader->SetParameter("coatIOR", mrc.m_Material.m_CoatIOR);
-			sceneShader->SetParameter("coatAffectColor", mrc.m_Material.m_CoatAffectColor);
-			sceneShader->SetParameter("coatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
-			sceneShader->SetParameter("emission", mrc.m_Material.m_Emission);
-			sceneShader->SetParameter("emissionColor", mrc.m_Material.m_EmissionColor);
-			sceneShader->SetParameter("opacity", mrc.m_Material.m_Opacity);
-			sceneShader->SetParameter("thinWalled", mrc.m_Material.m_ThinWalled);
-			sceneShader->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
-
-			ctx.BindShader(shaderHandle);
-
-			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-			cmd.m_Mesh = cpuMesh;
-			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
-			ctx.DrawIndexed(cmd);
-		}
-	}
-
-	void AppLayer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		if (m_SelectedEntities.empty())
-			return;
-
-		auto& registry = m_Scene.GetRegistry();
-
-		// Drop destroyed entities from the selection list.
-		std::erase_if(m_SelectedEntities, [&](entt::entity entity) {
-			return !registry.valid(entity);
-		});
-		if (m_SelectedEntities.empty())
-			return;
-
-		for (entt::entity entity : m_SelectedEntities) {
-			auto* tc = registry.try_get<TransformComponent>(entity);
-			auto* mrc = registry.try_get<MeshRendererComponent>(entity);
-			if (!tc || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
-				continue;
-
-			auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
-			if (!cpuMesh)
-				continue;
-
-			const glm::mat4 model = tc->GetTransform();
-
-			Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-			cmd.m_Mesh = cpuMesh;
-			cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-			cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-			cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
-
-			if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
-				mask->SetParameter("model", model);
-				ctx.BindShader(m_SelectionMaskShader);
-				ctx.DrawIndexed(cmd);
-			}
-
-			if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
-				occluded->SetParameter("model", model);
-				ctx.BindShader(m_SelectionMaskOccludedShader);
-				ctx.DrawIndexed(cmd);
-			}
-		}
-	}
-
-	void AppLayer::RenderSelectionBlur(Nova::Core::Renderer::RHI::IPassContext& ctx, Nova::Core::Renderer::RHI::RHI_ShaderHandle blurShader) {
-		if (m_SelectedEntities.empty() || !blurShader.IsValid())
-			return;
-		ctx.DrawFullscreen(blurShader);
-	}
-
-	void AppLayer::RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		if (m_SelectedEntities.empty() || !m_SelectionCompositeShader.IsValid())
-			return;
-		ctx.DrawFullscreen(m_SelectionCompositeShader);
-	}
-
-	void AppLayer::BindSelectionOutlineTextures() {
-		auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
-		if (!graph)
-			return;
-
-		auto bindOutlineTexture = [&](
-			Nova::Core::Renderer::RHI::RHI_ShaderHandle shaderHandle,
-			const char* textureName,
-			const char* samplerName,
-			Nova::Core::Renderer::RHI::RHI_TextureHandle textureHandle)
-		{
-			auto* shader = graph->GetShader(shaderHandle);
-			if (!shader)
-				return;
-			uint64_t imageView = 0;
-			uint64_t sampler = 0;
-			if (!graph->GetSampledTextureNativeHandles(textureHandle, imageView, sampler))
-				return;
-			shader->BindSampledTexture(textureName, samplerName, imageView, sampler);
-		};
-
-		// Views are stable until viewport resize / shader reload.
-		bindOutlineTexture(
-			m_SelectionBlurHShader, "outline.source", "outline.sourceSampler", m_SelectionMask);
-		bindOutlineTexture(
-			m_SelectionBlurVShader, "outline.source", "outline.sourceSampler", m_SelectionBlurTemp);
-		bindOutlineTexture(
-			m_SelectionCompositeShader,
-			"outline.selectionMask", "outline.selectionMaskSampler",
-			m_SelectionMask);
-		bindOutlineTexture(
-			m_SelectionCompositeShader,
-			"outline.selectionBlurred", "outline.selectionBlurredSampler",
-			m_SelectionBlurred);
-	}
-
-	void AppLayer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-		if (!m_AABBWireframeMesh)
-			return;
-
-		auto* aabbShader = ctx.GetShader(m_AABBShader);
-		if (!aabbShader)
-			return;
-
-		auto& registry = m_Scene.GetRegistry();
-		auto view = registry.view<TransformComponent, MeshComponent>();
-
-		for (auto entity : view) {
-			auto& tc = view.get<TransformComponent>(entity);
-			auto& mc = view.get<MeshComponent>(entity);
-
-			if (!mc.m_AABBTree.IsBuilt())
-				continue;
-
-			const glm::mat4 entityTransform = tc.GetTransform();
-			const auto& nodes = mc.m_AABBTree.GetNodes();
-
-			for (const auto& node : nodes) {
-				const glm::mat4 model = entityTransform * Nova::Core::Math::AABBToModelMatrix(node.m_Bounds);
-				aabbShader->SetParameter("model", model);
-				aabbShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
-
-				ctx.BindShader(m_AABBShader);
-
-				Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-				cmd.m_Mesh = m_AABBWireframeMesh;
-				cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Lines;
-				cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-				cmd.m_IndexCount = static_cast<uint32_t>(m_AABBWireframeMesh->GetIndices().size());
-				ctx.DrawIndexed(cmd);
-			}
-		}
-	}
+    void AppLayer::OnEnd() {
+        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        m_EditorRenderer.EndFrame();
+    }
 
     void AppLayer::OnImGuiRender() {
         UI::Panels::MainMenuBar::Render();
@@ -910,7 +373,6 @@ namespace Nova::App {
         SetupDockSpace(dockspace_id);
         ImGui::End();
 
-        // Docked windows
         UI::Panels::ScenePanel::Render(m_Scene.GetName());
         UI::Panels::HierarchyPanel::Render();
         UI::Panels::InspectorPanel::Render();
@@ -918,150 +380,54 @@ namespace Nova::App {
     }
 
     bool AppLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
-		// Only start orbit rotation when the mouse is inside the rendered viewport.
-		if (!m_ViewportHovered)
-			return false;
+        return m_Orbit.OnMouseButtonPressed(e, m_ViewportHovered);
+    }
 
-		if (e.GetMouseButton() == SDL_BUTTON_RIGHT) {
-			m_Orbit.m_IsRotating = true;
-			m_Orbit.m_HasLastMousePos = false;
-			return true;
-		}
-		return false;
-	}
+    bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
+        return m_Orbit.OnMouseButtonReleased(e);
+    }
 
-	void AppLayer::SetSelectedEntity(entt::entity entity) {
-		m_SelectedEntities.clear();
-		if (entity != entt::null)
-			m_SelectedEntities.push_back(entity);
-	}
+    bool AppLayer::OnMouseMoved(MouseMovedEvent& e) {
+        if (!m_Camera)
+            return false;
+        return m_Orbit.OnMouseMoved(e, *m_Camera);
+    }
 
-	bool AppLayer::IsSelected(entt::entity entity) const {
-		return std::find(m_SelectedEntities.begin(), m_SelectedEntities.end(), entity)
-			!= m_SelectedEntities.end();
-	}
+    bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
+        if (!m_Camera)
+            return false;
+        return m_Orbit.OnMouseScrolled(e, m_ViewportHovered, *m_Camera);
+    }
 
-	void AppLayer::PickAtViewportUV(float u, float v, bool addToSelection) {
-		if (!m_Camera)
-			return;
+    bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {
+        if (e.IsRepeat())
+            return false;
 
-		u = std::clamp(u, 0.0f, 1.0f);
-		v = std::clamp(v, 0.0f, 1.0f);
-
-		const Math::Ray ray = Nova::Core::Scene::ScreenPointToRay(*m_Camera, u, v);
-		Nova::Core::Scene::RaycastHit hit{};
-
-		if (Nova::Core::Scene::Raycast(m_Scene, ray, hit)) {
-			if (addToSelection) {
-				if (!IsSelected(hit.m_Entity))
-					m_SelectedEntities.push_back(hit.m_Entity);
-			} else {
-				SetSelectedEntity(hit.m_Entity);
-			}
-
-			std::string name = "unnamed";
-			if (auto* nc = m_Scene.GetRegistry().try_get<NameComponent>(hit.m_Entity))
-				name = nc->m_Name;
-
-			std::cout << "[Pick] Selected \"" << name
-			          << "\" (count=" << m_SelectedEntities.size()
-			          << ") dist=" << hit.m_Distance
-			          << " tri=" << hit.m_TriangleIndex << '\n';
-		} else {
-			if (!addToSelection)
-				ClearSelection();
-			std::cout << "[Pick] Nothing hit\n";
-		}
-	}
-
-	bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
-		// Always stop rotation, even if the mouse left the viewport while dragging.
-		if (e.GetMouseButton() == SDL_BUTTON_RIGHT) {
-			m_Orbit.m_IsRotating = false;
-			return true;
-		}
-		return false;
-	}
-
-	bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {
-		if (e.IsRepeat())
-			return false;
-
-		if (e.GetKeyCode() == SDLK_ESCAPE) {
-			ClearSelection();
-			return true;
-		}
-		return false;
-	}
-
-	bool AppLayer::OnMouseMoved(MouseMovedEvent& e) {
-		const glm::vec2 mousePos{ e.GetX(), e.GetY() };
-
-		if (!m_Orbit.m_IsRotating) {
-			// Track position continuously so there is no jump when rotation starts.
-			m_Orbit.m_LastMousePos = mousePos;
-			m_Orbit.m_HasLastMousePos = true;
-			return false;
-		}
-
-		// While rotating, continue even if the mouse left the viewport (standard editor behaviour).
-		if (!m_Orbit.m_HasLastMousePos) {
-			m_Orbit.m_LastMousePos = mousePos;
-			m_Orbit.m_HasLastMousePos = true;
-			return true;
-		}
-
-		const glm::vec2 delta = mousePos - m_Orbit.m_LastMousePos;
-		m_Orbit.m_LastMousePos = mousePos;
-
-		m_Orbit.m_Yaw   -= delta.x * m_Orbit.m_RotateSensitivity;
-		m_Orbit.m_Pitch += delta.y * m_Orbit.m_RotateSensitivity;
-
-		UpdateCameraFromOrbit();
-		return true;
-	}
-
-	bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
-		// Only zoom when the mouse is inside the rendered viewport.
-		if (!m_ViewportHovered)
-			return false;
-
-		m_Orbit.m_Distance -= e.GetYOffset() * m_Orbit.m_ZoomSensitivity;
-		UpdateCameraFromOrbit();
-		return true;
-	}
-
-	bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
-		RequestViewportResize(static_cast<float>(e.GetWidth()), static_cast<float>(e.GetHeight()));
+        if (e.GetKeyCode() == SDLK_ESCAPE) {
+            ClearSelection();
+            return true;
+        }
         return false;
-	}
+    }
+
+    bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
+        RequestViewportResize(static_cast<float>(e.GetWidth()), static_cast<float>(e.GetHeight()));
+        return false;
+    }
 
     bool AppLayer::OnImGuiPanelResize(ImGuiPanelResizeEvent& e) {
-		RequestViewportResize(e.GetWidth(), e.GetHeight());
-		return false;
-	}
+        RequestViewportResize(e.GetWidth(), e.GetHeight());
+        return false;
+    }
 
-    void AppLayer::UpdateCameraFromOrbit() {
-		// Clamp pitch to avoid gimbal singularities (flip at ±90°).
-		const float maxPitch = glm::radians(89.0f);
-		m_Orbit.m_Pitch = std::clamp(m_Orbit.m_Pitch, -maxPitch, maxPitch);
-		m_Orbit.m_Distance = std::max(0.2f, m_Orbit.m_Distance);
+    void AppLayer::PickAtViewportUV(float u, float v, bool addToSelection) {
+        if (!m_Camera)
+            return;
+        m_Selection.PickAtViewportUV(m_Scene, *m_Camera, u, v, addToSelection);
+    }
 
-		const float cp = std::cos(m_Orbit.m_Pitch);
-
-		// yaw=0 places the camera on the +Z axis.
-		glm::vec3 offset;
-		offset.x = m_Orbit.m_Distance * cp * std::sin(m_Orbit.m_Yaw);
-		offset.y = m_Orbit.m_Distance * std::sin(m_Orbit.m_Pitch);
-		offset.z = m_Orbit.m_Distance * cp * std::cos(m_Orbit.m_Yaw);
-
-		m_Camera->m_LookAt = m_Orbit.m_Target;
-		m_Camera->m_LookFrom = m_Orbit.m_Target + offset;
-		m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
-	}
-
-	void AppLayer::RequestViewportResize(float width, float height) {
-		if (width <= 0.0f || height <= 0.0f)
+    void AppLayer::RequestViewportResize(float width, float height) {
+        if (width <= 0.0f || height <= 0.0f)
             return;
 
         const int newW = static_cast<int>(std::lround(width));
@@ -1081,9 +447,9 @@ namespace Nova::App {
 
         m_PendingViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
         m_ViewportResizePending = true;
-	}
+    }
 
-	void AppLayer::ApplyPendingViewportResize() {
+    void AppLayer::ApplyPendingViewportResize() {
         const int newW = static_cast<int>(std::lround(m_PendingViewportSize.x));
         const int newH = static_cast<int>(std::lround(m_PendingViewportSize.y));
         if (newW <= 0 || newH <= 0) {
@@ -1099,141 +465,13 @@ namespace Nova::App {
         }
 
         m_ViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
-        m_Renderer->Resize(newW, newH);
-
-        if (auto* graph = m_Renderer->GetRenderGraph()) {
-            graph->BindEngineShadowMaps(m_ShadowMaps);
-            BindSelectionOutlineTextures();
-        }
+        m_EditorRenderer.Resize(newW, newH);
+        m_EditorRenderer.RebindAfterResize();
 
         if (m_Camera)
             m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
 
         m_ViewportResizePending = false;
-    }
-
-    void AppLayer::UploadLights() {
-        m_GpuLights.clear();
-        auto& registry = m_Scene.GetRegistry();
-        auto view = registry.view<TransformComponent, LightComponent>();
-
-        int nextShadow = 0;
-        for (auto entity : view) {
-            if (m_GpuLights.size() >= Nova::Core::Renderer::RHI::MAX_LIGHTS)
-                break;
-
-            auto& tc = view.get<TransformComponent>(entity);
-            auto& lc = view.get<LightComponent>(entity);
-            if (!lc.m_Light)
-                continue;
-
-            const Light& light = *lc.m_Light;
-            const glm::vec3 position = tc.m_Translation;
-            const glm::vec3 travelDir = glm::length(light.m_Direction) > 1e-6f
-                ? glm::normalize(light.m_Direction)
-                : glm::vec3(0.0f, -1.0f, 0.0f);
-
-            Nova::Core::Renderer::RHI::LightGPU gpu{};
-            gpu.m_Type = static_cast<int>(light.m_Type);
-            gpu.m_Intensity = light.m_Intensity;
-            gpu.m_Color = light.m_Color;
-            gpu.m_Range = light.m_Range;
-            gpu.m_Direction = travelDir;
-            gpu.m_InnerConeCos = light.InnerCos();
-            gpu.m_Position = position;
-            gpu.m_OuterConeCos = light.OuterCos();
-            gpu.m_ShadowBiasConstant = light.m_ShadowBiasConstant;
-            gpu.m_ShadowBiasSlope = light.m_ShadowBiasSlope;
-            gpu.m_ShadowNormalBias = light.m_ShadowNormalBias;
-            gpu.m_CastShadow = 0;
-            gpu.m_ShadowMapIndex = -1;
-
-            const bool canShadow = light.m_LightShadow
-                && (light.m_Type == LightType::Directional || light.m_Type == LightType::Spot)
-                && nextShadow < static_cast<int>(Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS);
-            if (canShadow) {
-                gpu.m_CastShadow = 1;
-                gpu.m_ShadowMapIndex = nextShadow++;
-                gpu.m_LightViewProj = BuildLightViewProj(
-                    light.m_Type, position, travelDir, light.m_Range, light.m_OuterCone,
-                    Nova::Core::Renderer::RHI::SHADOW_DIR_ORTHO_HALF_EXTENT);
-            }
-
-            m_GpuLights.push_back(gpu);
-        }
-
-        auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
-        const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
-        if (!engine || !engine->m_Lights.IsValid())
-            return;
-
-        if (!m_GpuLights.empty()) {
-            m_Renderer->UpdateGpuBuffer(
-                engine->m_Lights,
-                m_GpuLights.data(),
-                sizeof(Nova::Core::Renderer::RHI::LightGPU) * m_GpuLights.size(),
-                0);
-        }
-    }
-
-    void AppLayer::RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-        if (!m_Renderer || !m_ShadowMaps.IsValid())
-            return;
-
-        // Clear every layer so unused maps stay at far depth and the image layout is valid
-        // even when there are zero shadow casters this frame.
-        for (uint32_t layer = 0; layer < Nova::Core::Renderer::RHI::MAX_SHADOW_MAPS; ++layer) {
-            ctx.BeginDepthLayer(m_ShadowMaps, layer, true);
-            ctx.EndDepthLayer();
-        }
-
-        auto* shadowShader = ctx.GetShader(m_ShadowShader);
-        if (!shadowShader)
-            return;
-
-        auto& registry = m_Scene.GetRegistry();
-        auto meshView = registry.view<TransformComponent, MeshRendererComponent>();
-
-        for (const auto& light : m_GpuLights) {
-            if (!light.m_CastShadow || light.m_ShadowMapIndex < 0)
-                continue;
-
-            ctx.BeginDepthLayer(m_ShadowMaps, static_cast<uint32_t>(light.m_ShadowMapIndex), true);
-            // Same idea as Light::ShadowAngleBiasFactor: less raster bias when light is grazing.
-            const float dirLen2 = glm::dot(light.m_Direction, light.m_Direction);
-            const float angleFactor = dirLen2 > 1e-12f
-                ? std::max(std::abs(light.m_Direction.y) / std::sqrt(dirLen2), 0.35f)
-                : 1.0f;
-            // Spot uses perspective — same constant/slope as ortho over-pushes contact shadows.
-            const float typeScale = (light.m_Type == static_cast<int>(LightType::Spot)) ? 0.35f : 1.0f;
-            ctx.SetDepthBias(
-                light.m_ShadowBiasConstant * angleFactor * typeScale,
-                light.m_ShadowBiasSlope * angleFactor * typeScale);
-
-            for (auto entity : meshView) {
-                auto& tc = meshView.get<TransformComponent>(entity);
-                auto& mrc = meshView.get<MeshRendererComponent>(entity);
-                if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
-                    continue;
-                auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
-                if (!cpuMesh)
-                    continue;
-
-                const glm::mat4 model = tc.GetTransform();
-                shadowShader->SetParameter("model", model);
-                shadowShader->SetParameter("viewProj", light.m_LightViewProj);
-                ctx.BindShader(m_ShadowShader);
-
-                Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-                cmd.m_Mesh = cpuMesh;
-                cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-                cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-                cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
-                ctx.DrawIndexed(cmd);
-            }
-
-            ctx.EndDepthLayer();
-        }
     }
 
 } // namespace Nova::App
