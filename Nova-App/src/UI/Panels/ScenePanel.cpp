@@ -115,6 +115,52 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::TextUnformatted(fpsText);
         ImGui::SetCursorPosX(contentMax.x - ImGui::CalcTextSize(msText).x - pad);
         ImGui::TextUnformatted(msText);
+
+        if (app->HasFocus()) {
+            if (const auto focusInfo = app->GetFocusInfo()) {
+                char focusName[128];
+                std::snprintf(focusName, sizeof(focusName), "Focus: %s", focusInfo->m_Name.c_str());
+
+                char centerText[128];
+                std::snprintf(centerText, sizeof(centerText), "Center: %.2f, %.2f, %.2f",
+                    focusInfo->m_AabbCenter.x,
+                    focusInfo->m_AabbCenter.y,
+                    focusInfo->m_AabbCenter.z);
+
+                char sizeText[128];
+                std::snprintf(sizeText, sizeof(sizeText), "Size: %.2f, %.2f, %.2f",
+                    focusInfo->m_AabbExtents.x * 2.0f,
+                    focusInfo->m_AabbExtents.y * 2.0f,
+                    focusInfo->m_AabbExtents.z * 2.0f);
+
+                const float focusW = (std::max)({
+                    ImGui::CalcTextSize(focusName).x,
+                    ImGui::CalcTextSize(centerText).x,
+                    ImGui::CalcTextSize(sizeText).x,
+                });
+
+                char escapeText[128];
+                std::snprintf(escapeText, sizeof(escapeText), "Press ESC to quit focus mode");
+
+                const float lineH = ImGui::GetTextLineHeightWithSpacing();
+                float y = pad + lineH * 2.0f;
+
+                ImGui::SetCursorPos(ImVec2(contentMax.x - focusW - pad, y));
+                ImGui::TextUnformatted(focusName);
+                y += lineH;
+
+                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(centerText).x - pad, y));
+                ImGui::TextUnformatted(centerText);
+                y += lineH;
+
+                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(sizeText).x - pad, y));
+                ImGui::TextUnformatted(sizeText);
+                y += lineH;
+
+                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(escapeText).x - pad, y));
+                ImGui::TextUnformatted(escapeText);
+            }
+        }
     }
 
     void Render(const std::string& sceneName) {
@@ -151,9 +197,8 @@ namespace Nova::App::UI::Panels::ScenePanel {
             if (void* textureId = Nova::App::g_AppLayer->GetRenderer()->GetTextureImGuiID(Nova::App::g_AppLayer->GetSceneColor())) {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
 
-                // Left-click on the framebuffer image → closest-mesh picking.
-                // Hold Left Shift to add to the current selection.
-                if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                // Left-click: select. Double-click: focus (orbit camera on object AABB).
+                if (ImGui::IsItemHovered()) {
                     const ImVec2 mouse = ImGui::GetMousePos();
                     const ImVec2 min = ImGui::GetItemRectMin();
                     const ImVec2 max = ImGui::GetItemRectMax();
@@ -162,8 +207,13 @@ namespace Nova::App::UI::Panels::ScenePanel {
                     if (w > 1e-3f && h > 1e-3f) {
                         const float u = (mouse.x - min.x) / w;
                         const float v = (mouse.y - min.y) / h;
-                        const bool addToSelection = ImGui::IsKeyDown(ImGuiKey_LeftShift);
-                        Nova::App::g_AppLayer->PickAtViewportUV(u, v, addToSelection);
+
+                        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                            Nova::App::g_AppLayer->FocusAtViewportUV(u, v);
+                        } else if (!Nova::App::g_AppLayer->HasFocus() && ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                            const bool addToSelection = ImGui::IsKeyDown(ImGuiKey_LeftShift);
+                            Nova::App::g_AppLayer->PickAtViewportUV(u, v, addToSelection);
+                        }
                     }
                 }
             }

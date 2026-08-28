@@ -20,6 +20,7 @@
 #include "ECS/Components/LightComponent.h"
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
+#include "ECS/Components/NameComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Math/Light.h"
 
@@ -181,7 +182,7 @@ namespace Nova::App {
         }
 
         SetupDefaultScene();
-        m_Orbit.ApplyTo(*m_Camera);
+        m_CameraController.SetNavigationFromCamera(*m_Camera);
     }
 
     void AppLayer::SetupDefaultScene() {
@@ -319,6 +320,9 @@ namespace Nova::App {
     void AppLayer::OnUpdate(float dt) {
         m_DeltaTime = dt;
         m_ElapsedTime += dt;
+
+        if (m_Camera)
+            m_CameraController.Update(dt, *m_Camera);
     }
 
     void AppLayer::OnBegin() {
@@ -380,23 +384,23 @@ namespace Nova::App {
     }
 
     bool AppLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e) {
-        return m_Orbit.OnMouseButtonPressed(e, m_ViewportHovered);
+        return m_CameraController.OnMouseButtonPressed(e, m_ViewportHovered);
     }
 
     bool AppLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e) {
-        return m_Orbit.OnMouseButtonReleased(e);
+        return m_CameraController.OnMouseButtonReleased(e);
     }
 
     bool AppLayer::OnMouseMoved(MouseMovedEvent& e) {
         if (!m_Camera)
             return false;
-        return m_Orbit.OnMouseMoved(e, *m_Camera);
+        return m_CameraController.OnMouseMoved(e, *m_Camera);
     }
 
     bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
         if (!m_Camera)
             return false;
-        return m_Orbit.OnMouseScrolled(e, m_ViewportHovered, *m_Camera);
+        return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_Camera);
     }
 
     bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {
@@ -404,7 +408,7 @@ namespace Nova::App {
             return false;
 
         if (e.GetKeyCode() == SDLK_ESCAPE) {
-            ClearSelection();
+            ClearFocus();
             return true;
         }
         return false;
@@ -424,6 +428,39 @@ namespace Nova::App {
         if (!m_Camera)
             return;
         m_Selection.PickAtViewportUV(m_Scene, *m_Camera, u, v, addToSelection);
+    }
+
+    void AppLayer::FocusAtViewportUV(float u, float v) {
+        if (!m_Camera)
+            return;
+
+        Nova::Core::Math::AABB worldAabb{};
+        const entt::entity entity = EditorSelection::PickEntityAtViewportUV(
+            m_Scene, *m_Camera, u, v, &worldAabb);
+        if (entity == entt::null)
+            return;
+
+        if (!EditorSelection::ComputeEntityWorldAABB(m_Scene, entity, worldAabb))
+            return;
+
+        std::string name = "unnamed";
+        if (auto* nc = m_Scene.GetRegistry().try_get<Nova::Core::ECS::Components::NameComponent>(entity))
+            name = nc->m_Name;
+
+        const glm::vec3 center = worldAabb.GetCenter();
+        const glm::vec3 extents = worldAabb.GetExtents();
+
+        m_Selection.SetFocused(entity, center, extents, name);
+        m_CameraController.BeginOrbitFocus(center, extents, *m_Camera);
+
+        std::cout << "[Focus] \"" << name << "\" center=("
+                  << center.x << ", " << center.y << ", " << center.z << ")\n";
+    }
+
+    void AppLayer::ClearFocus() {
+        m_Selection.Clear();
+        if (m_Camera)
+            m_CameraController.ExitOrbitMode(*m_Camera);
     }
 
     void AppLayer::RequestViewportResize(float width, float height) {

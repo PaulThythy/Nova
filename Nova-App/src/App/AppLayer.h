@@ -2,6 +2,7 @@
 #define APPLAYER_H
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <entt/entt.hpp>
@@ -88,6 +89,12 @@ namespace Nova::App {
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
 
         void PickAtViewportUV(float u, float v, bool addToSelection = false);
+        void FocusAtViewportUV(float u, float v);
+        void ClearFocus();
+
+        entt::entity GetFocusedEntity() const { return m_Selection.GetFocused(); }
+        bool HasFocus() const { return m_Selection.HasFocus(); }
+        std::optional<FocusInfo> GetFocusInfo() const { return m_Selection.GetFocusInfo(); }
 
         const std::vector<entt::entity>& GetSelectedEntities() const {
             return m_Selection.GetEntities();
@@ -110,7 +117,7 @@ namespace Nova::App {
         void SetupDefaultScene();
 
         EditorRenderer m_EditorRenderer;
-        CameraController m_Orbit;
+        CameraController m_CameraController;
         EditorSelection m_Selection;
 
         SceneState m_SceneState{ SceneState::Edit };
