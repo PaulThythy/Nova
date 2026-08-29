@@ -7,6 +7,7 @@
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
+#include "Core/Log.h"
 #include "Math/AABB.h"
 #include "Math/Camera.h"
 #include "Scene/Scene.h"
@@ -18,6 +19,7 @@ namespace Nova::App {
         std::string m_Name;
         glm::vec3 m_AabbCenter{0.0f};
         glm::vec3 m_AabbExtents{0.0f};
+        uint32_t m_TriangleCount = 0;
     };
 
     class EditorSelection {
@@ -39,7 +41,7 @@ namespace Nova::App {
         std::optional<FocusInfo> GetFocusInfo() const { return m_FocusInfo; }
 
         void ClearFocus();
-        void SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name);
+        void SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name, uint32_t triangleCount = 0);
 
         /** Viewport picking: UV in [0,1], (0,0) = top-left of the rendered image. */
         void PickAtViewportUV(Nova::Core::Scene::Scene& scene, const Nova::Core::Math::Camera& camera, float u, float v, bool addToSelection = false);

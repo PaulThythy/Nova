@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <string>
 
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/NameComponent.h"
@@ -29,7 +30,7 @@ namespace Nova::App {
         m_FocusInfo.reset();
     }
 
-    void EditorSelection::SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name) {
+    void EditorSelection::SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name, uint32_t triangleCount) {
         m_FocusedEntity = entity;
         SetSelected(entity);
 
@@ -38,6 +39,7 @@ namespace Nova::App {
         info.m_Name = name;
         info.m_AabbCenter = aabbCenter;
         info.m_AabbExtents = aabbExtents;
+        info.m_TriangleCount = triangleCount;
         m_FocusInfo = info;
     }
 
@@ -115,19 +117,10 @@ namespace Nova::App {
             } else {
                 SetSelected(hit.m_Entity);
             }
-
-            std::string name = "unnamed";
-            if (auto* nc = scene.GetRegistry().try_get<NameComponent>(hit.m_Entity))
-                name = nc->m_Name;
-
-            std::cout << "[Pick] Selected \"" << name
-                      << "\" (count=" << m_Entities.size()
-                      << ") dist=" << hit.m_Distance
-                      << " tri=" << hit.m_TriangleIndex << '\n';
         } else {
             if (!addToSelection)
                 Clear();
-            std::cout << "[Pick] Nothing hit\n";
+            NV_LOG_DEBUG("[EditorSelection] Nothing hit");
         }
     }
 

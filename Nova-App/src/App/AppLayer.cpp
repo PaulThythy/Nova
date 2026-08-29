@@ -102,12 +102,12 @@ namespace Nova::App {
             return;
 
         if (!m_EditorLayer) {
-            std::cerr << "[AppLayer] Cannot Play: EditorLayer not registered.\n";
+            NV_LOG_ERROR("[AppLayer] Cannot Play: EditorLayer not registered.");
             return;
         }
 
         Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<GameLayer>(m_EditorLayer);
-        std::cout << "AppLayer: Transition to GameLayer requested.\n";
+        NV_LOG_DEBUG("[AppLayer] Transition to GameLayer requested.");
 
         SetSceneState(SceneState::Play);
     }
@@ -117,12 +117,12 @@ namespace Nova::App {
             return;
 
         if (!m_GameLayer) {
-            std::cerr << "[AppLayer] Cannot Stop: GameLayer not registered.\n";
+            NV_LOG_ERROR("[AppLayer] Cannot Stop: GameLayer not registered.");
             return;
         }
 
         Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EditorLayer>(m_GameLayer);
-        std::cout << "AppLayer: Transition to EditorLayer requested.\n";
+        NV_LOG_DEBUG("[AppLayer] Transition to EditorLayer requested.");
 
         SetSceneState(SceneState::Edit);
     }
@@ -447,10 +447,18 @@ namespace Nova::App {
         if (auto* nc = m_Scene.GetRegistry().try_get<Nova::Core::ECS::Components::NameComponent>(entity))
             name = nc->m_Name;
 
+        uint32_t triangleCount = 0;
+        if (auto* mc = m_Scene.GetRegistry().try_get<Nova::Core::ECS::Components::MeshComponent>(entity)) {
+            if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
+                if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
+                    triangleCount = static_cast<uint32_t>(cpuMesh->GetIndices().size() / 3);
+            }
+        }
+
         const glm::vec3 center = worldAabb.GetCenter();
         const glm::vec3 extents = worldAabb.GetExtents();
 
-        m_Selection.SetFocused(entity, center, extents, name);
+        m_Selection.SetFocused(entity, center, extents, name, triangleCount);
         m_CameraController.BeginOrbitFocus(center, extents, *m_Camera);
 
         std::cout << "[Focus] \"" << name << "\" center=("

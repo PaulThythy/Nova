@@ -133,10 +133,14 @@ namespace Nova::App::UI::Panels::ScenePanel {
                     focusInfo->m_AabbExtents.y * 2.0f,
                     focusInfo->m_AabbExtents.z * 2.0f);
 
+                char triangleText[64];
+                std::snprintf(triangleText, sizeof(triangleText), "Triangles: %u", focusInfo->m_TriangleCount);
+
                 const float focusW = (std::max)({
                     ImGui::CalcTextSize(focusName).x,
                     ImGui::CalcTextSize(centerText).x,
                     ImGui::CalcTextSize(sizeText).x,
+                    ImGui::CalcTextSize(triangleText).x,
                 });
 
                 char escapeText[128];
@@ -155,6 +159,10 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
                 ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(sizeText).x - pad, y));
                 ImGui::TextUnformatted(sizeText);
+                y += lineH;
+
+                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(triangleText).x - pad, y));
+                ImGui::TextUnformatted(triangleText);
                 y += lineH;
 
                 ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(escapeText).x - pad, y));
