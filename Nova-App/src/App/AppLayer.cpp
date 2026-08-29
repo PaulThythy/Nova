@@ -460,9 +460,6 @@ namespace Nova::App {
 
         m_Selection.SetFocused(entity, center, extents, name, triangleCount);
         m_CameraController.BeginOrbitFocus(center, extents, *m_Camera);
-
-        std::cout << "[Focus] \"" << name << "\" center=("
-                  << center.x << ", " << center.y << ", " << center.z << ")\n";
     }
 
     void AppLayer::ClearFocus() {

@@ -120,7 +120,6 @@ namespace Nova::App {
         } else {
             if (!addToSelection)
                 Clear();
-            NV_LOG_DEBUG("[EditorSelection] Nothing hit");
         }
     }
 
