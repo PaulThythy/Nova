@@ -2,10 +2,7 @@
 #define APPLAYER_H
 
 #include <memory>
-#include <optional>
-#include <vector>
 
-#include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
 #include "imgui.h"
@@ -20,9 +17,8 @@
 #include "Renderer/RHI/RHI_Renderer.h"
 #include "Scene/Scene.h"
 
-#include "App/EditorSelection.h"
 #include "App/CameraController.h"
-#include "App/EditorRenderer.h"
+#include "App/AppRenderer.h"
 #include "App/RenderDebugMode.h"
 
 namespace Nova::App {
@@ -50,7 +46,7 @@ namespace Nova::App {
         SceneState GetSceneState() const { return m_SceneState; }
         void SetSceneState(SceneState state) { m_SceneState = state; }
 
-        Nova::Core::Renderer::RHI::IRenderer* GetRenderer() const { return m_EditorRenderer.GetRenderer(); }
+        Nova::Core::Renderer::RHI::IRenderer* GetRenderer() const { return m_AppRenderer.GetRenderer(); }
 
         void SetViewportHovered(bool hovered) { m_ViewportHovered = hovered; }
         bool IsViewportHovered() const { return m_ViewportHovered; }
@@ -58,22 +54,22 @@ namespace Nova::App {
         /** Viewport cursor UV in [0,1], (0,0) = top-left of the rendered image. */
         void SetViewportCursorUV(float u, float v) { m_ViewportCursorUV = { u, v }; }
 
-        void ShowGrid(bool show) { m_EditorRenderer.SetShowGrid(show); }
-        bool IsGridVisible() const { return m_EditorRenderer.IsGridVisible(); }
+        void ShowGrid(bool show) { m_AppRenderer.SetShowGrid(show); }
+        bool IsGridVisible() const { return m_AppRenderer.IsGridVisible(); }
 
-        void ShowAABB(bool show) { m_EditorRenderer.SetShowAABB(show); }
-        bool IsAABBVisible() const { return m_EditorRenderer.IsAABBVisible(); }
+        void ShowAABB(bool show) { m_AppRenderer.SetShowAABB(show); }
+        bool IsAABBVisible() const { return m_AppRenderer.IsAABBVisible(); }
 
         float GetDeltaTime() const { return m_DeltaTime; }
 
-        RenderDebugMode GetRenderDebugMode() const { return m_EditorRenderer.GetRenderDebugMode(); }
-        void SetRenderDebugMode(RenderDebugMode mode) { m_EditorRenderer.SetRenderDebugMode(mode); }
+        RenderDebugMode GetRenderDebugMode() const { return m_AppRenderer.GetRenderDebugMode(); }
+        void SetRenderDebugMode(RenderDebugMode mode) { m_AppRenderer.SetRenderDebugMode(mode); }
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const {
-            return m_EditorRenderer.GetSceneColor();
+            return m_AppRenderer.GetSceneColor();
         }
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const {
-            return m_EditorRenderer.GetSceneDepth();
+            return m_AppRenderer.GetSceneDepth();
         }
 
         void* GetPlayIconImGuiID() const;
@@ -88,40 +84,31 @@ namespace Nova::App {
         void RegisterEditorLayer(EditorLayer* layer) { m_EditorLayer = layer; }
         void RegisterGameLayer(GameLayer* layer) { m_GameLayer = layer; }
 
+        EditorLayer* GetEditorLayer() const { return m_EditorLayer; }
+        GameLayer* GetGameLayer() const { return m_GameLayer; }
+
         const Nova::Core::Scene::Scene& GetScene() const { return m_Scene; }
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
 
-        void PickAtViewportUV(float u, float v, bool addToSelection = false);
-        void FocusAtViewportUV(float u, float v);
-        void ClearFocus();
+        Nova::Core::Math::Camera* GetCamera() { return m_Camera.get(); }
+        const Nova::Core::Math::Camera* GetCamera() const { return m_Camera.get(); }
 
-        entt::entity GetFocusedEntity() const { return m_Selection.GetFocused(); }
-        bool HasFocus() const { return m_Selection.HasFocus(); }
-        std::optional<FocusInfo> GetFocusInfo() const { return m_Selection.GetFocusInfo(); }
-
-        const std::vector<entt::entity>& GetSelectedEntities() const {
-            return m_Selection.GetEntities();
-        }
-        entt::entity GetSelectedEntity() const { return m_Selection.GetSelected(); }
-        void SetSelectedEntity(entt::entity entity) { m_Selection.SetSelected(entity); }
-        void ClearSelection() { m_Selection.Clear(); }
-        bool IsSelected(entt::entity entity) const { return m_Selection.IsSelected(entity); }
+        void BeginOrbitFocus(const glm::vec3& center, const glm::vec3& extents);
+        void ExitOrbitMode();
 
     private:
         bool OnMouseButtonPressed(Nova::Core::Events::MouseButtonPressedEvent& e);
         bool OnMouseButtonReleased(Nova::Core::Events::MouseButtonReleasedEvent& e);
         bool OnMouseMoved(Nova::Core::Events::MouseMovedEvent& e);
         bool OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e);
-        bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
         bool OnWindowResized(Nova::Core::Events::WindowResizeEvent& e);
         bool OnImGuiPanelResize(Nova::Core::Events::ImGuiPanelResizeEvent& e);
 
         void SetupDockSpace(ImGuiID dockspace_id);
         void SetupDefaultScene();
 
-        EditorRenderer m_EditorRenderer;
+        AppRenderer m_AppRenderer;
         CameraController m_CameraController;
-        EditorSelection m_Selection;
 
         SceneState m_SceneState{ SceneState::Edit };
         Nova::Core::Scene::Scene m_Scene{"Scene_test"};

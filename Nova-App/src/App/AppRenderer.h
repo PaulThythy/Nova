@@ -1,5 +1,5 @@
-#ifndef EDITORRENDERER_H
-#define EDITORRENDERER_H
+#ifndef APPRENDERER_H
+#define APPRENDERER_H
 
 #include <memory>
 #include <vector>
@@ -17,7 +17,7 @@
 
 namespace Nova::App {
 
-    class EditorRenderer {
+    class AppRenderer {
     public:
         void Initialize(Nova::Core::GraphicsAPI api, uint32_t width, uint32_t height);
         void Shutdown();
@@ -29,8 +29,9 @@ namespace Nova::App {
         void EndFrame();
         void Resize(int width, int height);
 
-        /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals). */
-        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, EditorSelection& selection);
+        /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals).
+         *  Selection is optional — omit (or pass nullptr) outside editor mode. */
+        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, EditorSelection* selection = nullptr);
 
         void UploadLights();
         void PushGlobals(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
@@ -96,4 +97,4 @@ namespace Nova::App {
 
 } // namespace Nova::App
 
-#endif // EDITORRENDERER_H
+#endif // APPRENDERER_H

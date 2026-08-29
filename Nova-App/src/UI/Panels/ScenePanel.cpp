@@ -5,6 +5,7 @@
 
 #include "imgui.h"
 #include "App/AppLayer.h"
+#include "App/EditorLayer.h"
 #include "Events/ApplicationEvents.h"
 #include "Core/Application.h"
 
@@ -116,8 +117,9 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::SetCursorPosX(contentMax.x - ImGui::CalcTextSize(msText).x - pad);
         ImGui::TextUnformatted(msText);
 
-        if (app->HasFocus()) {
-            if (const auto focusInfo = app->GetFocusInfo()) {
+        EditorLayer* editor = app->GetEditorLayer();
+        if (editor && editor->HasFocus()) {
+            if (const auto focusInfo = editor->GetFocusInfo()) {
                 char focusName[128];
                 std::snprintf(focusName, sizeof(focusName), "Focus: %s", focusInfo->m_Name.c_str());
 
@@ -206,6 +208,8 @@ namespace Nova::App::UI::Panels::ScenePanel {
                 ImGui::Image(textureId, size, ImVec2(0, 0), ImVec2(1, 1));
 
                 // Left-click: select. Double-click: focus (orbit camera on object AABB).
+                // Selection is editor-only (EditorLayer must be active).
+                EditorLayer* editor = Nova::App::g_AppLayer->GetEditorLayer();
                 if (ImGui::IsItemHovered()) {
                     const ImVec2 mouse = ImGui::GetMousePos();
                     const ImVec2 min = ImGui::GetItemRectMin();
@@ -217,11 +221,13 @@ namespace Nova::App::UI::Panels::ScenePanel {
                         const float v = (mouse.y - min.y) / h;
                         Nova::App::g_AppLayer->SetViewportCursorUV(u, v);
 
-                        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                            Nova::App::g_AppLayer->FocusAtViewportUV(u, v);
-                        } else if (!Nova::App::g_AppLayer->HasFocus() && ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-                            const bool addToSelection = ImGui::IsKeyDown(ImGuiKey_LeftShift);
-                            Nova::App::g_AppLayer->PickAtViewportUV(u, v, addToSelection);
+                        if (editor) {
+                            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                                editor->FocusAtViewportUV(u, v);
+                            } else if (!editor->HasFocus() && ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                                const bool addToSelection = ImGui::IsKeyDown(ImGuiKey_LeftShift);
+                                editor->PickAtViewportUV(u, v, addToSelection);
+                            }
                         }
                     }
                 }

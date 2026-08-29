@@ -1,4 +1,4 @@
-#include "App/EditorRenderer.h"
+#include "App/AppRenderer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -23,7 +23,7 @@ namespace Nova::App {
     using namespace Nova::Core::ECS::Components;
     using namespace Nova::Core::Math;
 
-    void EditorRenderer::Initialize(
+    void AppRenderer::Initialize(
         Nova::Core::GraphicsAPI api,
         uint32_t width,
         uint32_t height)
@@ -348,44 +348,44 @@ namespace Nova::App {
         m_AABBWireframeMesh = Nova::Core::Math::CreateUnitAABBWireframeMesh(glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
-    void EditorRenderer::Shutdown() {
+    void AppRenderer::Shutdown() {
         if (m_Renderer) {
             m_Renderer->Destroy();
             m_Renderer.reset();
         }
     }
 
-    void EditorRenderer::BeginFrame() {
+    void AppRenderer::BeginFrame() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         m_Renderer->BeginFrame();
     }
 
-    void EditorRenderer::RenderFrame() {
+    void AppRenderer::RenderFrame() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         m_Renderer->RenderFrame();
     }
 
-    void EditorRenderer::EndFrame() {
+    void AppRenderer::EndFrame() {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         m_Renderer->EndFrame();
     }
 
-    void EditorRenderer::Resize(int width, int height) {
+    void AppRenderer::Resize(int width, int height) {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         m_Renderer->Resize(width, height);
     }
 
-    void EditorRenderer::BindFrame(
+    void AppRenderer::BindFrame(
         Nova::Core::Scene::Scene& scene,
         Nova::Core::Math::Camera& camera,
-        EditorSelection& selection)
+        EditorSelection* selection)
     {
         m_Scene = &scene;
         m_Camera = &camera;
-        m_Selection = &selection;
+        m_Selection = selection;
     }
 
-    void EditorRenderer::RebindAfterResize() {
+    void AppRenderer::RebindAfterResize() {
         if (!m_Renderer)
             return;
         if (auto* graph = m_Renderer->GetRenderGraph()) {
@@ -394,7 +394,7 @@ namespace Nova::App {
         }
     }
 
-    Nova::Core::Renderer::RHI::RHI_ShaderHandle EditorRenderer::GetActiveSceneShader() const {
+    Nova::Core::Renderer::RHI::RHI_ShaderHandle AppRenderer::GetActiveSceneShader() const {
         switch (m_RenderDebugMode) {
             case RenderDebugMode::Normals:     return m_NormalsShader;
             case RenderDebugMode::Positions:   return m_PositionsShader;
@@ -406,7 +406,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::PushGlobals(
+    void AppRenderer::PushGlobals(
         float elapsedTime,
         float deltaTime,
         uint32_t& frameIndex,
@@ -451,7 +451,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+    void AppRenderer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         NV_ASSERT_MSG(m_Camera, "Camera is not bound for this frame.");
         NV_ASSERT_MSG(m_Scene, "Scene is not bound for this frame.");
@@ -522,7 +522,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+    void AppRenderer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         if (!m_Selection || !m_Scene || m_Selection->Empty())
             return;
 
@@ -567,7 +567,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::RenderSelectionBlur(
+    void AppRenderer::RenderSelectionBlur(
         Nova::Core::Renderer::RHI::IPassContext& ctx,
         Nova::Core::Renderer::RHI::RHI_ShaderHandle blurShader)
     {
@@ -576,13 +576,13 @@ namespace Nova::App {
         ctx.DrawFullscreen(blurShader);
     }
 
-    void EditorRenderer::RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+    void AppRenderer::RenderSelectionComposite(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         if (!m_Selection || m_Selection->Empty() || !m_SelectionCompositeShader.IsValid())
             return;
         ctx.DrawFullscreen(m_SelectionCompositeShader);
     }
 
-    void EditorRenderer::BindSelectionOutlineTextures() {
+    void AppRenderer::BindSelectionOutlineTextures() {
         auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
         if (!graph)
             return;
@@ -617,7 +617,7 @@ namespace Nova::App {
             m_SelectionBlurred);
     }
 
-    void EditorRenderer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+    void AppRenderer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         if (!m_AABBWireframeMesh || !m_Scene || !m_Camera)
             return;
 
@@ -655,7 +655,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::UploadLights() {
+    void AppRenderer::UploadLights() {
         NV_ASSERT_MSG(m_Scene, "Scene is not bound for this frame.");
 
         m_GpuLights.clear();
@@ -721,7 +721,7 @@ namespace Nova::App {
         }
     }
 
-    void EditorRenderer::RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx) {
+    void AppRenderer::RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         if (!m_Renderer || !m_ShadowMaps.IsValid() || !m_Scene)
             return;
 

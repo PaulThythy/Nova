@@ -4,10 +4,10 @@
 #include <filesystem>
 #include <iostream>
 
-#include <SDL3/SDL.h>
 #include "imgui_internal.h"
 
 #include "App/EditorLayer.h"
+#include "App/EditorSelection.h"
 #include "App/GameLayer.h"
 
 #include "Asset/AssetManager.h"
@@ -86,9 +86,6 @@ namespace Nova::App {
         dispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent& ev) {
             return OnMouseScrolled(ev);
         });
-        dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
-            return OnKeyPressed(ev);
-        });
         dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
             return OnWindowResized(ev);
         });
@@ -130,7 +127,7 @@ namespace Nova::App {
     void* AppLayer::GetPlayIconImGuiID() const {
         if (!m_PlayIcon)
             return nullptr;
-        auto* renderer = m_EditorRenderer.GetRenderer();
+        auto* renderer = m_AppRenderer.GetRenderer();
         if (!renderer)
             return nullptr;
         return renderer->GetTextureImGuiID(m_PlayIcon->GetCPUTexture());
@@ -139,7 +136,7 @@ namespace Nova::App {
     void* AppLayer::GetPauseIconImGuiID() const {
         if (!m_PauseIcon)
             return nullptr;
-        auto* renderer = m_EditorRenderer.GetRenderer();
+        auto* renderer = m_AppRenderer.GetRenderer();
         if (!renderer)
             return nullptr;
         return renderer->GetTextureImGuiID(m_PauseIcon->GetCPUTexture());
@@ -158,7 +155,7 @@ namespace Nova::App {
         }
         m_ViewportSize = { static_cast<float>(initialW), static_cast<float>(initialH) };
 
-        m_EditorRenderer.Initialize(
+        m_AppRenderer.Initialize(
             api,
             static_cast<uint32_t>(initialW),
             static_cast<uint32_t>(initialH));
@@ -170,7 +167,7 @@ namespace Nova::App {
                     NV_LOG_WARN(("Failed to load texture asset: " + uri.generic_string()).c_str());
                     return nullptr;
                 }
-                auto* renderer = m_EditorRenderer.GetRenderer();
+                auto* renderer = m_AppRenderer.GetRenderer();
                 if (!renderer || !renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
                     NV_LOG_WARN(("Failed to upload texture asset: " + uri.generic_string()).c_str());
                     return nullptr;
@@ -310,7 +307,7 @@ namespace Nova::App {
     void AppLayer::OnDetach() {
         m_PlayIcon.reset();
         m_PauseIcon.reset();
-        m_EditorRenderer.Shutdown();
+        m_AppRenderer.Shutdown();
         m_Scene.Clear();
 
         if (g_AppLayer == this)
@@ -331,20 +328,21 @@ namespace Nova::App {
         if (m_ViewportResizePending)
             ApplyPendingViewportResize();
 
-        m_EditorRenderer.BeginFrame();
-        m_EditorRenderer.BindFrame(m_Scene, *m_Camera, m_Selection);
-        m_EditorRenderer.UploadLights();
-        m_EditorRenderer.PushGlobals(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
+        m_AppRenderer.BeginFrame();
+        EditorSelection* selection = m_EditorLayer ? &m_EditorLayer->GetSelection() : nullptr;
+        m_AppRenderer.BindFrame(m_Scene, *m_Camera, selection);
+        m_AppRenderer.UploadLights();
+        m_AppRenderer.PushGlobals(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
     }
 
     void AppLayer::OnRender() {
         NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-        m_EditorRenderer.RenderFrame();
+        m_AppRenderer.RenderFrame();
     }
 
     void AppLayer::OnEnd() {
         NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
-        m_EditorRenderer.EndFrame();
+        m_AppRenderer.EndFrame();
     }
 
     void AppLayer::OnImGuiRender() {
@@ -403,17 +401,6 @@ namespace Nova::App {
         return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_Camera, m_ViewportCursorUV.x, m_ViewportCursorUV.y);
     }
 
-    bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {
-        if (e.IsRepeat())
-            return false;
-
-        if (e.GetKeyCode() == SDLK_ESCAPE) {
-            ClearFocus();
-            return true;
-        }
-        return false;
-    }
-
     bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
         RequestViewportResize(static_cast<float>(e.GetWidth()), static_cast<float>(e.GetHeight()));
         return false;
@@ -424,48 +411,16 @@ namespace Nova::App {
         return false;
     }
 
-    void AppLayer::PickAtViewportUV(float u, float v, bool addToSelection) {
+    void AppLayer::BeginOrbitFocus(const glm::vec3& center, const glm::vec3& extents) {
         if (!m_Camera)
             return;
-        m_Selection.PickAtViewportUV(m_Scene, *m_Camera, u, v, addToSelection);
-    }
-
-    void AppLayer::FocusAtViewportUV(float u, float v) {
-        if (!m_Camera)
-            return;
-
-        Nova::Core::Math::AABB worldAabb{};
-        const entt::entity entity = EditorSelection::PickEntityAtViewportUV(
-            m_Scene, *m_Camera, u, v, &worldAabb);
-        if (entity == entt::null)
-            return;
-
-        if (!EditorSelection::ComputeEntityWorldAABB(m_Scene, entity, worldAabb))
-            return;
-
-        std::string name = "unnamed";
-        if (auto* nc = m_Scene.GetRegistry().try_get<Nova::Core::ECS::Components::NameComponent>(entity))
-            name = nc->m_Name;
-
-        uint32_t triangleCount = 0;
-        if (auto* mc = m_Scene.GetRegistry().try_get<Nova::Core::ECS::Components::MeshComponent>(entity)) {
-            if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
-                if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
-                    triangleCount = static_cast<uint32_t>(cpuMesh->GetIndices().size() / 3);
-            }
-        }
-
-        const glm::vec3 center = worldAabb.GetCenter();
-        const glm::vec3 extents = worldAabb.GetExtents();
-
-        m_Selection.SetFocused(entity, center, extents, name, triangleCount);
         m_CameraController.BeginOrbitFocus(center, extents, *m_Camera);
     }
 
-    void AppLayer::ClearFocus() {
-        m_Selection.Clear();
-        if (m_Camera)
-            m_CameraController.ExitOrbitMode(*m_Camera);
+    void AppLayer::ExitOrbitMode() {
+        if (!m_Camera)
+            return;
+        m_CameraController.ExitOrbitMode(*m_Camera);
     }
 
     void AppLayer::RequestViewportResize(float width, float height) {
@@ -507,8 +462,8 @@ namespace Nova::App {
         }
 
         m_ViewportSize = { static_cast<float>(newW), static_cast<float>(newH) };
-        m_EditorRenderer.Resize(newW, newH);
-        m_EditorRenderer.RebindAfterResize();
+        m_AppRenderer.Resize(newW, newH);
+        m_AppRenderer.RebindAfterResize();
 
         if (m_Camera)
             m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
