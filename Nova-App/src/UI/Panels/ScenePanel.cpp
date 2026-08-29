@@ -207,6 +207,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
                     if (w > 1e-3f && h > 1e-3f) {
                         const float u = (mouse.x - min.x) / w;
                         const float v = (mouse.y - min.y) / h;
+                        Nova::App::g_AppLayer->SetViewportCursorUV(u, v);
 
                         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                             Nova::App::g_AppLayer->FocusAtViewportUV(u, v);

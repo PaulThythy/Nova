@@ -18,7 +18,7 @@ namespace Nova::App {
         bool OnMouseButtonPressed(Nova::Core::Events::MouseButtonPressedEvent& e, bool viewportHovered);
         bool OnMouseButtonReleased(Nova::Core::Events::MouseButtonReleasedEvent& e);
         bool OnMouseMoved(Nova::Core::Events::MouseMovedEvent& e, Nova::Core::Math::Camera& camera);
-        bool OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e, bool viewportHovered, Nova::Core::Math::Camera& camera);
+        bool OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e, bool viewportHovered, Nova::Core::Math::Camera& camera, float viewportU, float viewportV);
 
         void Update(float dt, Nova::Core::Math::Camera& camera);
 

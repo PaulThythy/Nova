@@ -5,6 +5,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "Scene/SceneQuery.h"
+
 namespace Nova::App {
 
     glm::vec3 CameraController::ForwardFromAngles(float yaw, float pitch) {
@@ -149,7 +151,7 @@ namespace Nova::App {
         return true;
     }
 
-    bool CameraController::OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e, bool viewportHovered, Nova::Core::Math::Camera& camera) {
+    bool CameraController::OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e, bool viewportHovered, Nova::Core::Math::Camera& camera, float viewportU, float viewportV) {
         if (!viewportHovered)
             return false;
 
@@ -157,8 +159,10 @@ namespace Nova::App {
             m_Orbit.m_Distance -= static_cast<float>(e.GetYOffset()) * m_OrbitZoomSensitivity;
             ApplyOrbit(camera);
         } else {
-            const glm::vec3 forward = ForwardFromAngles(m_Navigation.m_Yaw, m_Navigation.m_Pitch);
-            m_Navigation.m_Position += forward * (static_cast<float>(e.GetYOffset()) * m_NavigationMoveSensitivity);
+            const float u = std::clamp(viewportU, 0.0f, 1.0f);
+            const float v = std::clamp(viewportV, 0.0f, 1.0f);
+            const Nova::Core::Math::Ray ray = Nova::Core::Scene::ScreenPointToRay(camera, u, v);
+            m_Navigation.m_Position += ray.m_Direction * (static_cast<float>(e.GetYOffset()) * m_NavigationMoveSensitivity);
             ApplyNavigation(camera);
         }
         return true;

@@ -400,7 +400,7 @@ namespace Nova::App {
     bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
         if (!m_Camera)
             return false;
-        return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_Camera);
+        return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_Camera, m_ViewportCursorUV.x, m_ViewportCursorUV.y);
     }
 
     bool AppLayer::OnKeyPressed(KeyPressedEvent& e) {

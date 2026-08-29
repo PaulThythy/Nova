@@ -55,6 +55,9 @@ namespace Nova::App {
         void SetViewportHovered(bool hovered) { m_ViewportHovered = hovered; }
         bool IsViewportHovered() const { return m_ViewportHovered; }
 
+        /** Viewport cursor UV in [0,1], (0,0) = top-left of the rendered image. */
+        void SetViewportCursorUV(float u, float v) { m_ViewportCursorUV = { u, v }; }
+
         void ShowGrid(bool show) { m_EditorRenderer.SetShowGrid(show); }
         bool IsGridVisible() const { return m_EditorRenderer.IsGridVisible(); }
 
@@ -132,6 +135,7 @@ namespace Nova::App {
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
         bool m_ViewportResizePending{ false };
         bool m_ViewportHovered{ false };
+        glm::vec2 m_ViewportCursorUV{ 0.5f, 0.5f };
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
