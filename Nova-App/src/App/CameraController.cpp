@@ -138,12 +138,12 @@ namespace Nova::App {
         m_LastMousePos = mousePos;
 
         if (m_Mode == CameraMode::Orbit) {
-            m_Orbit.m_Yaw   -= delta.x * m_RotateSensitivity;
-            m_Orbit.m_Pitch += delta.y * m_RotateSensitivity;
+            m_Orbit.m_Yaw   -= delta.x * m_OrbitRotateSensitivity;
+            m_Orbit.m_Pitch += delta.y * m_OrbitRotateSensitivity;
             ApplyOrbit(camera);
         } else {
-            m_Navigation.m_Yaw   -= delta.x * m_RotateSensitivity;
-            m_Navigation.m_Pitch -= delta.y * m_RotateSensitivity;
+            m_Navigation.m_Yaw   -= delta.x * m_NavigationRotateSensitivity;
+            m_Navigation.m_Pitch -= delta.y * m_NavigationRotateSensitivity;
             ApplyNavigation(camera);
         }
         return true;

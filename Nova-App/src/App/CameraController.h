@@ -59,7 +59,8 @@ namespace Nova::App {
         OrbitState m_Orbit{};
         NavigationState m_Navigation{};
 
-        float m_RotateSensitivity = 0.0025f;
+        float m_OrbitRotateSensitivity = 0.025f;
+        float m_NavigationRotateSensitivity = 0.0025f;
         float m_OrbitZoomSensitivity = 0.5f;
         float m_NavigationMoveSensitivity = 0.35f;
 
