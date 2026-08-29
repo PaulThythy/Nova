@@ -1,7 +1,6 @@
 #ifndef EDITORLAYER_H
 #define EDITORLAYER_H
 
-#include <optional>
 #include <vector>
 
 #include <entt/entt.hpp>
@@ -39,7 +38,7 @@ namespace Nova::App {
 
         entt::entity GetFocusedEntity() const { return m_Selection.GetFocused(); }
         bool HasFocus() const { return m_Selection.HasFocus(); }
-        std::optional<FocusInfo> GetFocusInfo() const { return m_Selection.GetFocusInfo(); }
+        const FocusInfo& GetFocusInfo() const { return m_Selection.GetFocusInfo(); }
 
         const std::vector<entt::entity>& GetSelectedEntities() const {
             return m_Selection.GetEntities();

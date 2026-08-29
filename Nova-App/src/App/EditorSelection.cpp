@@ -27,20 +27,18 @@ namespace Nova::App {
 
     void EditorSelection::ClearFocus() {
         m_FocusedEntity = entt::null;
-        m_FocusInfo.reset();
+        m_FocusInfo = {};
     }
 
     void EditorSelection::SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name, uint32_t triangleCount) {
         m_FocusedEntity = entity;
         SetSelected(entity);
 
-        FocusInfo info{};
-        info.m_Entity = entity;
-        info.m_Name = name;
-        info.m_AabbCenter = aabbCenter;
-        info.m_AabbExtents = aabbExtents;
-        info.m_TriangleCount = triangleCount;
-        m_FocusInfo = info;
+        m_FocusInfo.m_Entity = entity;
+        m_FocusInfo.m_Name = name;
+        m_FocusInfo.m_AabbCenter = aabbCenter;
+        m_FocusInfo.m_AabbExtents = aabbExtents;
+        m_FocusInfo.m_TriangleCount = triangleCount;
     }
 
     bool EditorSelection::IsSelected(entt::entity entity) const {

@@ -119,57 +119,57 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         EditorLayer* editor = app->GetEditorLayer();
         if (editor && editor->HasFocus()) {
-            if (const auto focusInfo = editor->GetFocusInfo()) {
-                char focusName[128];
-                std::snprintf(focusName, sizeof(focusName), "Focus: %s", focusInfo->m_Name.c_str());
+            const FocusInfo& focusInfo = editor->GetFocusInfo();
 
-                char centerText[128];
-                std::snprintf(centerText, sizeof(centerText), "Center: %.2f, %.2f, %.2f",
-                    focusInfo->m_AabbCenter.x,
-                    focusInfo->m_AabbCenter.y,
-                    focusInfo->m_AabbCenter.z);
+            char focusName[128];
+            std::snprintf(focusName, sizeof(focusName), "Focus: %s", focusInfo.m_Name.c_str());
 
-                char sizeText[128];
-                std::snprintf(sizeText, sizeof(sizeText), "Size: %.2f, %.2f, %.2f",
-                    focusInfo->m_AabbExtents.x * 2.0f,
-                    focusInfo->m_AabbExtents.y * 2.0f,
-                    focusInfo->m_AabbExtents.z * 2.0f);
+            char centerText[128];
+            std::snprintf(centerText, sizeof(centerText), "Center: %.2f, %.2f, %.2f",
+                focusInfo.m_AabbCenter.x,
+                focusInfo.m_AabbCenter.y,
+                focusInfo.m_AabbCenter.z);
 
-                char triangleText[64];
-                std::snprintf(triangleText, sizeof(triangleText), "Triangles: %u", focusInfo->m_TriangleCount);
+            char sizeText[128];
+            std::snprintf(sizeText, sizeof(sizeText), "Size: %.2f, %.2f, %.2f",
+                focusInfo.m_AabbExtents.x * 2.0f,
+                focusInfo.m_AabbExtents.y * 2.0f,
+                focusInfo.m_AabbExtents.z * 2.0f);
 
-                const float focusW = (std::max)({
-                    ImGui::CalcTextSize(focusName).x,
-                    ImGui::CalcTextSize(centerText).x,
-                    ImGui::CalcTextSize(sizeText).x,
-                    ImGui::CalcTextSize(triangleText).x,
-                });
+            char triangleText[64];
+            std::snprintf(triangleText, sizeof(triangleText), "Triangles: %u", focusInfo.m_TriangleCount);
 
-                char escapeText[128];
-                std::snprintf(escapeText, sizeof(escapeText), "Press ESC to quit focus mode");
+            const float focusW = (std::max)({
+                ImGui::CalcTextSize(focusName).x,
+                ImGui::CalcTextSize(centerText).x,
+                ImGui::CalcTextSize(sizeText).x,
+                ImGui::CalcTextSize(triangleText).x,
+            });
 
-                const float lineH = ImGui::GetTextLineHeightWithSpacing();
-                float y = pad + lineH * 2.0f;
+            char escapeText[128];
+            std::snprintf(escapeText, sizeof(escapeText), "Press ESC to quit focus mode");
 
-                ImGui::SetCursorPos(ImVec2(contentMax.x - focusW - pad, y));
-                ImGui::TextUnformatted(focusName);
-                y += lineH;
+            const float lineH = ImGui::GetTextLineHeightWithSpacing();
+            float y = pad + lineH * 2.0f;
 
-                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(centerText).x - pad, y));
-                ImGui::TextUnformatted(centerText);
-                y += lineH;
+            ImGui::SetCursorPos(ImVec2(contentMax.x - focusW - pad, y));
+            ImGui::TextUnformatted(focusName);
+            y += lineH;
 
-                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(sizeText).x - pad, y));
-                ImGui::TextUnformatted(sizeText);
-                y += lineH;
+            ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(centerText).x - pad, y));
+            ImGui::TextUnformatted(centerText);
+            y += lineH;
 
-                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(triangleText).x - pad, y));
-                ImGui::TextUnformatted(triangleText);
-                y += lineH;
+            ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(sizeText).x - pad, y));
+            ImGui::TextUnformatted(sizeText);
+            y += lineH;
 
-                ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(escapeText).x - pad, y));
-                ImGui::TextUnformatted(escapeText);
-            }
+            ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(triangleText).x - pad, y));
+            ImGui::TextUnformatted(triangleText);
+            y += lineH;
+
+            ImGui::SetCursorPos(ImVec2(contentMax.x - ImGui::CalcTextSize(escapeText).x - pad, y));
+            ImGui::TextUnformatted(escapeText);
         }
     }
 
