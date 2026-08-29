@@ -29,6 +29,8 @@ namespace Nova::App {
         void EndFrame();
         void Resize(int width, int height);
 
+        // TODO remove Bind Frame, UploadLights, PushGlobals, and shadow maps bindings from App (I think it should be hidden)
+
         /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals).
          *  Selection is optional — omit (or pass nullptr) outside editor mode. */
         void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, EditorSelection* selection = nullptr);
