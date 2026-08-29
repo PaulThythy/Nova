@@ -75,6 +75,7 @@ namespace Nova::App {
 
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_WireframeShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_NormalsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};

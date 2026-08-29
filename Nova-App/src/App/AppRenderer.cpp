@@ -141,6 +141,14 @@ namespace Nova::App {
             .m_Fragment = sceneFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
         });
+        m_WireframeShader = fg.RegisterShader({
+            .m_Name = "SceneWireframe",
+            .m_Vertex = sceneVert,
+            .m_Fragment = sceneFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+            .m_CullMode = RG::RHI_CullMode::None,
+            .m_PolygonMode = RG::RHI_PolygonMode::Line,
+        });
         m_ShadowShader = fg.RegisterShader({
             .m_Name = "Shadow",
             .m_Vertex = shadowVert,
@@ -396,6 +404,7 @@ namespace Nova::App {
 
     Nova::Core::Renderer::RHI::RHI_ShaderHandle AppRenderer::GetActiveSceneShader() const {
         switch (m_RenderDebugMode) {
+            case RenderDebugMode::Wireframe:   return m_WireframeShader;
             case RenderDebugMode::Normals:     return m_NormalsShader;
             case RenderDebugMode::Positions:   return m_PositionsShader;
             case RenderDebugMode::VertexColor: return m_VertexColorShader;
@@ -440,6 +449,7 @@ namespace Nova::App {
         if (auto* graph = m_Renderer->GetRenderGraph()) {
             setGlobals(graph->GetShader(m_GridShader));
             setGlobals(graph->GetShader(m_SceneShader));
+            setGlobals(graph->GetShader(m_WireframeShader));
             setGlobals(graph->GetShader(m_ShadowShader));
             setGlobals(graph->GetShader(m_NormalsShader));
             setGlobals(graph->GetShader(m_PositionsShader));
