@@ -2,73 +2,35 @@
 #define APPLAYER_H
 
 #include <memory>
+#include <optional>
 #include <vector>
-#include <entt/entt.hpp>
-#include <SDL3/SDL.h>
 
+#include <entt/entt.hpp>
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include "imgui.h"
-#include "imgui_internal.h"
 
-#include "Core/Application.h"
 #include "Core/Layer.h"
-#include "Core/Assert.h"
-
-#include "Asset/AssetManager.h"
-#include "Asset/Assets/MeshAsset.h"
-#include "Asset/Assets/ShaderAsset.h"
-#include "Asset/Assets/TextureAsset.h"
-
-#include "Scene/Scene.h"
-#include "Math/AABB.h"
-#include "ECS/Components/TransformComponent.h"
-#include "ECS/Components/MeshComponent.h"
-#include "ECS/Components/MeshRendererComponent.h"
-#include "ECS/Components/CameraComponent.h"
-#include "ECS/Components/LightComponent.h"
-
-#include "Renderer/RHI/RHI_Renderer.h"
-#include "Renderer/RHI/RHI_RenderGraph.h"
-#include "Renderer/RHI/RHI_ShaderUniforms.h"
-#include "Math/Light.h"
-
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
 #include "Events/ApplicationEvents.h"
 
-#include "UI/Panels/HierarchyPanel.h"
-#include "UI/Panels/InspectorPanel.h"
-#include "UI/Panels/AssetBrowserPanel.h"
-#include "UI/Panels/MainMenuBar.h"
-#include "UI/Panels/ScenePanel.h"
+#include "Asset/Assets/TextureAsset.h"
+#include "Math/Camera.h"
+#include "Renderer/RHI/RHI_Renderer.h"
+#include "Scene/Scene.h"
 
-using namespace Nova::Core;
-using namespace Nova::Core::Events;
-using namespace Nova::Core::Scene;
-using namespace Nova::Core::Renderer;
-using namespace Nova::Core::Math;
-using namespace Nova::Core::ECS::Components;
-
-using namespace Nova::Core::Asset;
-using namespace Nova::Core::Asset::Assets;
+#include "App/EditorSelection.h"
+#include "App/CameraController.h"
+#include "App/EditorRenderer.h"
+#include "App/RenderDebugMode.h"
 
 namespace Nova::App {
-
-    enum class RenderDebugMode : int {
-        Lit = 0,
-        Normals,
-        Positions,
-        VertexColor,
-        Depth,
-        Count
-    };
 
     class EditorLayer;
     class GameLayer;
 
-    class AppLayer : public Layer {
+    class AppLayer : public Nova::Core::Layer {
     public:
         explicit AppLayer(): Layer("AppLayer") {}
         ~AppLayer() override;
@@ -80,13 +42,7 @@ namespace Nova::App {
         void OnRender() override;
         void OnEnd() override;
         void OnImGuiRender() override;
-        void OnEvent(Event& e) override;
-
-        // ---- Scene rendering (from RG passes) ----
-        void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
-        void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
-        void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
-        void UploadLights();
+        void OnEvent(Nova::Core::Events::Event& e) override;
 
         enum class SceneState {
             Edit = 0, Play = 1
@@ -94,27 +50,32 @@ namespace Nova::App {
         SceneState GetSceneState() const { return m_SceneState; }
         void SetSceneState(SceneState state) { m_SceneState = state; }
 
-        Nova::Core::Renderer::RHI::IRenderer* GetRenderer() const { return m_Renderer.get(); }
+        Nova::Core::Renderer::RHI::IRenderer* GetRenderer() const { return m_EditorRenderer.GetRenderer(); }
 
-        // Called each frame by ScenePanel to indicate whether the mouse hovers the rendered viewport.
         void SetViewportHovered(bool hovered) { m_ViewportHovered = hovered; }
-        bool IsViewportHovered() const        { return m_ViewportHovered; }
+        bool IsViewportHovered() const { return m_ViewportHovered; }
 
-        void ShowGrid(bool show) { m_ShowGrid = show; }
-        bool IsGridVisible() const { return m_ShowGrid; }
+        /** Viewport cursor UV in [0,1], (0,0) = top-left of the rendered image. */
+        void SetViewportCursorUV(float u, float v) { m_ViewportCursorUV = { u, v }; }
 
-        void ShowAABB(bool show) { m_ShowAABB = show; }
-        bool IsAABBVisible() const { return m_ShowAABB; }
+        void ShowGrid(bool show) { m_EditorRenderer.SetShowGrid(show); }
+        bool IsGridVisible() const { return m_EditorRenderer.IsGridVisible(); }
+
+        void ShowAABB(bool show) { m_EditorRenderer.SetShowAABB(show); }
+        bool IsAABBVisible() const { return m_EditorRenderer.IsAABBVisible(); }
 
         float GetDeltaTime() const { return m_DeltaTime; }
 
-        RenderDebugMode GetRenderDebugMode() const { return m_RenderDebugMode; }
-        void SetRenderDebugMode(RenderDebugMode mode) { m_RenderDebugMode = mode; }
+        RenderDebugMode GetRenderDebugMode() const { return m_EditorRenderer.GetRenderDebugMode(); }
+        void SetRenderDebugMode(RenderDebugMode mode) { m_EditorRenderer.SetRenderDebugMode(mode); }
 
-        Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
-        Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const { return m_SceneDepth; }
+        Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const {
+            return m_EditorRenderer.GetSceneColor();
+        }
+        Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneDepth() const {
+            return m_EditorRenderer.GetSceneDepth();
+        }
 
-        /** Editor toolbar icons (ImGui IDs); nullptr if not loaded. */
         void* GetPlayIconImGuiID() const;
         void* GetPauseIconImGuiID() const;
 
@@ -129,81 +90,58 @@ namespace Nova::App {
 
         const Nova::Core::Scene::Scene& GetScene() const { return m_Scene; }
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
-    
+
+        void PickAtViewportUV(float u, float v, bool addToSelection = false);
+        void FocusAtViewportUV(float u, float v);
+        void ClearFocus();
+
+        entt::entity GetFocusedEntity() const { return m_Selection.GetFocused(); }
+        bool HasFocus() const { return m_Selection.HasFocus(); }
+        std::optional<FocusInfo> GetFocusInfo() const { return m_Selection.GetFocusInfo(); }
+
+        const std::vector<entt::entity>& GetSelectedEntities() const {
+            return m_Selection.GetEntities();
+        }
+        entt::entity GetSelectedEntity() const { return m_Selection.GetSelected(); }
+        void SetSelectedEntity(entt::entity entity) { m_Selection.SetSelected(entity); }
+        void ClearSelection() { m_Selection.Clear(); }
+        bool IsSelected(entt::entity entity) const { return m_Selection.IsSelected(entity); }
+
     private:
-        // ---- Orbit camera helpers ----
-		void UpdateCameraFromOrbit();
+        bool OnMouseButtonPressed(Nova::Core::Events::MouseButtonPressedEvent& e);
+        bool OnMouseButtonReleased(Nova::Core::Events::MouseButtonReleasedEvent& e);
+        bool OnMouseMoved(Nova::Core::Events::MouseMovedEvent& e);
+        bool OnMouseScrolled(Nova::Core::Events::MouseScrolledEvent& e);
+        bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
+        bool OnWindowResized(Nova::Core::Events::WindowResizeEvent& e);
+        bool OnImGuiPanelResize(Nova::Core::Events::ImGuiPanelResizeEvent& e);
 
-        // ---- Mouse event handlers ----
-        bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
-		bool OnMouseButtonReleased(MouseButtonReleasedEvent& e);
-		bool OnMouseMoved(MouseMovedEvent& e);
-		bool OnMouseScrolled(MouseScrolledEvent& e);
-		bool OnWindowResized(WindowResizeEvent& e);
-		bool OnImGuiPanelResize(ImGuiPanelResizeEvent& e);
+        void SetupDockSpace(ImGuiID dockspace_id);
+        void SetupDefaultScene();
 
-    private: 
-        std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle GetActiveSceneShader() const;
+        EditorRenderer m_EditorRenderer;
+        CameraController m_CameraController;
+        EditorSelection m_Selection;
 
-        SceneState  m_SceneState{ SceneState::Edit };
+        SceneState m_SceneState{ SceneState::Edit };
         Nova::Core::Scene::Scene m_Scene{"Scene_test"};
         float m_DeltaTime = 0.0f;
         float m_ElapsedTime{0.0f};
-		uint32_t m_FrameIndex{0};
+        uint32_t m_FrameIndex{0};
 
-        // ---- Camera ----
-        std::shared_ptr<Camera> m_Camera;
-
-        // ---- Orbit camera state ----
-        struct OrbitState {
-			glm::vec3 m_Target{0.0f, 0.0f, 0.0f};
-			float m_Distance = 18.0f;
-
-			float m_Yaw = glm::radians(35.0f);
-			float m_Pitch = glm::radians(25.0f);
-
-			float m_RotateSensitivity = 0.025f;
-			float m_ZoomSensitivity = 0.5f;
-
-			bool m_IsRotating = false;
-			bool m_HasLastMousePos = false;
-			glm::vec2 m_LastMousePos{0.0f, 0.0f};
-		} m_Orbit;
-
-        void SetupDockSpace(ImGuiID dockspace_id);
-
-        Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
-        Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};
-        Nova::Core::Renderer::RHI::RHI_TextureHandle m_ShadowMaps{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_NormalsShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_VertexColorShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_DepthShader{};
-        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_AABBShader{};
-
-        RenderDebugMode m_RenderDebugMode = RenderDebugMode::Lit;
-        bool m_ShowGrid = true;
-        bool m_ShowAABB = false;
-
-        std::shared_ptr<Nova::Core::Renderer::RHI::RHI_Mesh> m_AABBWireframeMesh;
+        std::shared_ptr<Nova::Core::Math::Camera> m_Camera;
 
         glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
-        bool      m_ViewportResizePending{ false };
-        bool      m_ViewportHovered{ false };
+        bool m_ViewportResizePending{ false };
+        bool m_ViewportHovered{ false };
+        glm::vec2 m_ViewportCursorUV{ 0.5f, 0.5f };
 
         EditorLayer* m_EditorLayer{ nullptr };
         GameLayer* m_GameLayer{ nullptr };
 
-        /** CPU mirror of nova.lights uploaded each frame (shadow casters keep lightViewProj). */
-        std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
-
-        std::shared_ptr<TextureAsset> m_PlayIcon;
-        std::shared_ptr<TextureAsset> m_PauseIcon;
+        std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PlayIcon;
+        std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PauseIcon;
     };
 
     extern AppLayer* g_AppLayer;
