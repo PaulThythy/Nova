@@ -63,8 +63,10 @@ namespace Nova::App {
         float m_NavigationRotateSensitivity = 0.0025f;
         float m_OrbitZoomSensitivity = 0.5f;
         float m_NavigationMoveSensitivity = 0.35f;
+        float m_NavigationPanSensitivity = 0.01f;
 
         bool m_IsRotating = false;
+        bool m_IsPanning = false;
         bool m_HasLastMousePos = false;
         glm::vec2 m_LastMousePos{0.0f, 0.0f};
 

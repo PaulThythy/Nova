@@ -35,6 +35,7 @@ namespace Nova::App {
         m_Mode = CameraMode::Navigation;
         m_FocusAnimating = false;
         m_IsRotating = false;
+        m_IsPanning = false;
 
         m_Navigation.m_Position = camera.m_LookFrom;
         AnglesFromForward(camera.m_LookAt - camera.m_LookFrom, m_Navigation.m_Yaw, m_Navigation.m_Pitch);
@@ -53,6 +54,7 @@ namespace Nova::App {
     void CameraController::BeginOrbitFocus(const glm::vec3& target, const glm::vec3& extents, Nova::Core::Math::Camera& camera) {
         m_Mode = CameraMode::Orbit;
         m_IsRotating = false;
+        m_IsPanning = false;
 
         OrbitState start{};
         SyncOrbitFromCamera(camera);
@@ -110,6 +112,12 @@ namespace Nova::App {
             m_HasLastMousePos = false;
             return true;
         }
+
+        if (m_Mode == CameraMode::Navigation && e.GetMouseButton() == SDL_BUTTON_MIDDLE) {
+            m_IsPanning = true;
+            m_HasLastMousePos = false;
+            return true;
+        }
         return false;
     }
 
@@ -118,13 +126,17 @@ namespace Nova::App {
             m_IsRotating = false;
             return true;
         }
+        if (e.GetMouseButton() == SDL_BUTTON_MIDDLE) {
+            m_IsPanning = false;
+            return true;
+        }
         return false;
     }
 
     bool CameraController::OnMouseMoved(Nova::Core::Events::MouseMovedEvent& e, Nova::Core::Math::Camera& camera) {
         const glm::vec2 mousePos{ e.GetX(), e.GetY() };
 
-        if (!m_IsRotating) {
+        if (!m_IsRotating && !m_IsPanning) {
             m_LastMousePos = mousePos;
             m_HasLastMousePos = true;
             return false;
@@ -139,14 +151,32 @@ namespace Nova::App {
         const glm::vec2 delta = mousePos - m_LastMousePos;
         m_LastMousePos = mousePos;
 
-        if (m_Mode == CameraMode::Orbit) {
-            m_Orbit.m_Yaw   -= delta.x * m_OrbitRotateSensitivity;
-            m_Orbit.m_Pitch += delta.y * m_OrbitRotateSensitivity;
-            ApplyOrbit(camera);
-        } else {
-            m_Navigation.m_Yaw   -= delta.x * m_NavigationRotateSensitivity;
-            m_Navigation.m_Pitch -= delta.y * m_NavigationRotateSensitivity;
+        if (m_IsPanning && m_Mode == CameraMode::Navigation) {
+            const glm::vec3 forward = ForwardFromAngles(m_Navigation.m_Yaw, m_Navigation.m_Pitch);
+            const glm::vec3 worldUp{0.0f, 1.0f, 0.0f};
+            glm::vec3 right = glm::cross(forward, worldUp);
+            if (glm::dot(right, right) < 1e-8f)
+                right = glm::vec3(1.0f, 0.0f, 0.0f);
+            else
+                right = glm::normalize(right);
+            const glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
+            m_Navigation.m_Position -= right * (delta.x * m_NavigationPanSensitivity);
+            m_Navigation.m_Position += up * (delta.y * m_NavigationPanSensitivity);
             ApplyNavigation(camera);
+            return true;
+        }
+
+        if (m_IsRotating) {
+            if (m_Mode == CameraMode::Orbit) {
+                m_Orbit.m_Yaw   -= delta.x * m_OrbitRotateSensitivity;
+                m_Orbit.m_Pitch += delta.y * m_OrbitRotateSensitivity;
+                ApplyOrbit(camera);
+            } else {
+                m_Navigation.m_Yaw   -= delta.x * m_NavigationRotateSensitivity;
+                m_Navigation.m_Pitch -= delta.y * m_NavigationRotateSensitivity;
+                ApplyNavigation(camera);
+            }
         }
         return true;
     }
