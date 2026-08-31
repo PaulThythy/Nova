@@ -1,5 +1,5 @@
-// Minimal MVP block only — do not reflect nova.frame / nova.scene / lights / shadows.
-// Otherwise ApplyParameters would overwrite the shared frame/scene UBOs after Scene
+// Minimal MVP block only — do not reflect nova.scene / lights / shadows.
+// Otherwise ApplyParameters would overwrite the shared scene UBOs after Scene
 // and the GPU would light the scene with stale/zero m_LightCount.
 
 struct MVP {
