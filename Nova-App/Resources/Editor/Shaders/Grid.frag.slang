@@ -30,9 +30,9 @@ PSOut main(PSIn input)
 
     float2 ndc = input.v_UV * 2.0 - 1.0;
 
-    float4 nearH = mul(nova.mvp.invViewProj, float4(ndc, 0.0, 1.0));
+    float4 nearH = mul(nova.mvp.m_InvViewProj, float4(ndc, 0.0, 1.0));
 
-    float4 farH = mul(nova.mvp.invViewProj, float4(ndc, 1.0, 1.0));
+    float4 farH = mul(nova.mvp.m_InvViewProj, float4(ndc, 1.0, 1.0));
 
     float3 nearP = nearH.xyz / nearH.w;
     float3 farP = farH.xyz / farH.w;
@@ -59,7 +59,7 @@ PSOut main(PSIn input)
     // Compute depth
     //----------------------------------------------------------
 
-    float4 clip = mul(nova.mvp.viewProj, float4(pos, 1.0));
+    float4 clip = mul(nova.mvp.m_ViewProj, float4(pos, 1.0));
 
     float ndcDepth = clip.z / clip.w;
 
@@ -67,7 +67,7 @@ PSOut main(PSIn input)
     // Compute distance from camera for fog
     //----------------------------------------------------------
 
-    float3 viewPos = mul(nova.mvp.view, float4(pos, 1.0)).xyz;
+    float3 viewPos = mul(nova.mvp.m_View, float4(pos, 1.0)).xyz;
 
     float viewDist = length(viewPos);
 

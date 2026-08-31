@@ -265,7 +265,7 @@ namespace Nova::App {
                 auto* shader = ctx.GetShader(m_GridShader);
                 if (!shader) return;
                 const glm::vec3 resolution(ctx.GetRenderWidth(), ctx.GetRenderHeight(), 1.0f);
-                shader->SetParameter("iResolution", resolution);
+                shader->SetParameter("m_Resolution", resolution);
                 ctx.DrawFullscreen(m_GridShader);
             });
 
@@ -430,34 +430,47 @@ namespace Nova::App {
         const glm::mat4 invViewProj = glm::inverse(viewProj);
         const int lightCount = static_cast<int>(m_GpuLights.size());
 
-        auto setGlobals = [elapsedTime, deltaTime, &frameIndex, viewportSize, view, proj, viewProj, invViewProj, lightCount](
+        auto setFrameGlobals = [elapsedTime, deltaTime, &frameIndex, viewportSize, view, proj, viewProj, invViewProj](
             Nova::Core::Renderer::RHI::IShaders* shader)
         {
             if (!shader) return;
-            shader->SetParameter("iTime", elapsedTime);
-            shader->SetParameter("iTimeDelta", deltaTime);
-            shader->SetParameter("iFrameRate", deltaTime > 0.0f ? 1.0f / deltaTime : 0.0f);
-            shader->SetParameter("iFrame", static_cast<int>(frameIndex++));
-            shader->SetParameter("iResolution", glm::vec3(viewportSize.x, viewportSize.y, 1.0f));
-            shader->SetParameter("view", view);
-            shader->SetParameter("proj", proj);
-            shader->SetParameter("viewProj", viewProj);
-            shader->SetParameter("invViewProj", invViewProj);
-            shader->SetParameter("lightCount", lightCount);
+            shader->SetParameter("m_Time", elapsedTime);
+            shader->SetParameter("m_TimeDelta", deltaTime);
+            shader->SetParameter("m_FrameRate", deltaTime > 0.0f ? 1.0f / deltaTime : 0.0f);
+            shader->SetParameter("m_Frame", static_cast<int>(frameIndex++));
+            shader->SetParameter("m_Resolution", glm::vec3(viewportSize.x, viewportSize.y, 1.0f));
+            shader->SetParameter("m_View", view);
+            shader->SetParameter("m_Proj", proj);
+            shader->SetParameter("m_ViewProj", viewProj);
+            shader->SetParameter("m_InvViewProj", invViewProj);
+        };
+
+        auto setSceneGlobals = [this, lightCount](Nova::Core::Renderer::RHI::IShaders* shader) {
+            if (!shader) return;
+            shader->SetParameter("m_CameraPos", m_Camera->m_LookFrom);
+            shader->SetParameter("m_LightCount", lightCount);
         };
 
         if (auto* graph = m_Renderer->GetRenderGraph()) {
-            setGlobals(graph->GetShader(m_GridShader));
-            setGlobals(graph->GetShader(m_SceneShader));
-            setGlobals(graph->GetShader(m_WireframeShader));
-            setGlobals(graph->GetShader(m_ShadowShader));
-            setGlobals(graph->GetShader(m_NormalsShader));
-            setGlobals(graph->GetShader(m_PositionsShader));
-            setGlobals(graph->GetShader(m_VertexColorShader));
-            setGlobals(graph->GetShader(m_DepthShader));
-            setGlobals(graph->GetShader(m_AABBShader));
-            setGlobals(graph->GetShader(m_SelectionMaskShader));
-            setGlobals(graph->GetShader(m_SelectionMaskOccludedShader));
+            setFrameGlobals(graph->GetShader(m_GridShader));
+            setFrameGlobals(graph->GetShader(m_SceneShader));
+            setFrameGlobals(graph->GetShader(m_WireframeShader));
+            setFrameGlobals(graph->GetShader(m_ShadowShader));
+            setFrameGlobals(graph->GetShader(m_NormalsShader));
+            setFrameGlobals(graph->GetShader(m_PositionsShader));
+            setFrameGlobals(graph->GetShader(m_VertexColorShader));
+            setFrameGlobals(graph->GetShader(m_DepthShader));
+            setFrameGlobals(graph->GetShader(m_AABBShader));
+            setFrameGlobals(graph->GetShader(m_SelectionMaskShader));
+            setFrameGlobals(graph->GetShader(m_SelectionMaskOccludedShader));
+
+            setSceneGlobals(graph->GetShader(m_SceneShader));
+            setSceneGlobals(graph->GetShader(m_WireframeShader));
+            setSceneGlobals(graph->GetShader(m_NormalsShader));
+            setSceneGlobals(graph->GetShader(m_PositionsShader));
+            setSceneGlobals(graph->GetShader(m_VertexColorShader));
+            setSceneGlobals(graph->GetShader(m_DepthShader));
+            setSceneGlobals(graph->GetShader(m_AABBShader));
         }
     }
 
@@ -483,43 +496,42 @@ namespace Nova::App {
             if (!cpuMesh)
                 continue;
 
-            sceneShader->SetParameter("model", tc.GetTransform());
-            sceneShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+            sceneShader->SetParameter("m_Model", tc.GetTransform());
 
-            sceneShader->SetParameter("base", mrc.m_Material.m_Base);
-            sceneShader->SetParameter("baseColor", mrc.m_Material.m_BaseColor);
-            sceneShader->SetParameter("diffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
-            sceneShader->SetParameter("metalness", mrc.m_Material.m_Metalness);
-            sceneShader->SetParameter("metalColor", mrc.m_Material.m_MetalColor);
-            sceneShader->SetParameter("specular", mrc.m_Material.m_Specular);
-            sceneShader->SetParameter("specularColor", mrc.m_Material.m_SpecularColor);
-            sceneShader->SetParameter("specularRoughness", mrc.m_Material.m_SpecularRoughness);
-            sceneShader->SetParameter("specularIOR", mrc.m_Material.m_SpecularIOR);
-            sceneShader->SetParameter("specularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
-            sceneShader->SetParameter("specularRotation", mrc.m_Material.m_SpecularRotation);
-            sceneShader->SetParameter("transmission", mrc.m_Material.m_Transmission);
-            sceneShader->SetParameter("transmissionColor", mrc.m_Material.m_TransmissionColor);
-            sceneShader->SetParameter("subsurface", mrc.m_Material.m_Subsurface);
-            sceneShader->SetParameter("subsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
-            sceneShader->SetParameter("subsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
-            sceneShader->SetParameter("subsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
-            sceneShader->SetParameter("subsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
-            sceneShader->SetParameter("sheen", mrc.m_Material.m_Sheen);
-            sceneShader->SetParameter("sheenColor", mrc.m_Material.m_SheenColor);
-            sceneShader->SetParameter("sheenRoughness", mrc.m_Material.m_SheenRoughness);
-            sceneShader->SetParameter("coat", mrc.m_Material.m_Coat);
-            sceneShader->SetParameter("coatColor", mrc.m_Material.m_CoatColor);
-            sceneShader->SetParameter("coatRoughness", mrc.m_Material.m_CoatRoughness);
-            sceneShader->SetParameter("coatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
-            sceneShader->SetParameter("coatRotation", mrc.m_Material.m_CoatRotation);
-            sceneShader->SetParameter("coatIOR", mrc.m_Material.m_CoatIOR);
-            sceneShader->SetParameter("coatAffectColor", mrc.m_Material.m_CoatAffectColor);
-            sceneShader->SetParameter("coatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
-            sceneShader->SetParameter("emission", mrc.m_Material.m_Emission);
-            sceneShader->SetParameter("emissionColor", mrc.m_Material.m_EmissionColor);
-            sceneShader->SetParameter("opacity", mrc.m_Material.m_Opacity);
-            sceneShader->SetParameter("thinWalled", mrc.m_Material.m_ThinWalled);
-            sceneShader->SetParameter("isOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
+            sceneShader->SetParameter("m_Base", mrc.m_Material.m_Base);
+            sceneShader->SetParameter("m_BaseColor", mrc.m_Material.m_BaseColor);
+            sceneShader->SetParameter("m_DiffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
+            sceneShader->SetParameter("m_Metalness", mrc.m_Material.m_Metalness);
+            sceneShader->SetParameter("m_MetalColor", mrc.m_Material.m_MetalColor);
+            sceneShader->SetParameter("m_Specular", mrc.m_Material.m_Specular);
+            sceneShader->SetParameter("m_SpecularColor", mrc.m_Material.m_SpecularColor);
+            sceneShader->SetParameter("m_SpecularRoughness", mrc.m_Material.m_SpecularRoughness);
+            sceneShader->SetParameter("m_SpecularIOR", mrc.m_Material.m_SpecularIOR);
+            sceneShader->SetParameter("m_SpecularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
+            sceneShader->SetParameter("m_SpecularRotation", mrc.m_Material.m_SpecularRotation);
+            sceneShader->SetParameter("m_Transmission", mrc.m_Material.m_Transmission);
+            sceneShader->SetParameter("m_TransmissionColor", mrc.m_Material.m_TransmissionColor);
+            sceneShader->SetParameter("m_Subsurface", mrc.m_Material.m_Subsurface);
+            sceneShader->SetParameter("m_SubsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
+            sceneShader->SetParameter("m_SubsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
+            sceneShader->SetParameter("m_SubsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
+            sceneShader->SetParameter("m_SubsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
+            sceneShader->SetParameter("m_Sheen", mrc.m_Material.m_Sheen);
+            sceneShader->SetParameter("m_SheenColor", mrc.m_Material.m_SheenColor);
+            sceneShader->SetParameter("m_SheenRoughness", mrc.m_Material.m_SheenRoughness);
+            sceneShader->SetParameter("m_Coat", mrc.m_Material.m_Coat);
+            sceneShader->SetParameter("m_CoatColor", mrc.m_Material.m_CoatColor);
+            sceneShader->SetParameter("m_CoatRoughness", mrc.m_Material.m_CoatRoughness);
+            sceneShader->SetParameter("m_CoatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
+            sceneShader->SetParameter("m_CoatRotation", mrc.m_Material.m_CoatRotation);
+            sceneShader->SetParameter("m_CoatIOR", mrc.m_Material.m_CoatIOR);
+            sceneShader->SetParameter("m_CoatAffectColor", mrc.m_Material.m_CoatAffectColor);
+            sceneShader->SetParameter("m_CoatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
+            sceneShader->SetParameter("m_Emission", mrc.m_Material.m_Emission);
+            sceneShader->SetParameter("m_EmissionColor", mrc.m_Material.m_EmissionColor);
+            sceneShader->SetParameter("m_Opacity", mrc.m_Material.m_Opacity);
+            sceneShader->SetParameter("m_ThinWalled", mrc.m_Material.m_ThinWalled);
+            sceneShader->SetParameter("m_IsOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
 
             ctx.BindShader(shaderHandle);
 
@@ -564,13 +576,13 @@ namespace Nova::App {
             cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
 
             if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
-                mask->SetParameter("model", model);
+                mask->SetParameter("m_Model", model);
                 ctx.BindShader(m_SelectionMaskShader);
                 ctx.DrawIndexed(cmd);
             }
 
             if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
-                occluded->SetParameter("model", model);
+                occluded->SetParameter("m_Model", model);
                 ctx.BindShader(m_SelectionMaskOccludedShader);
                 ctx.DrawIndexed(cmd);
             }
@@ -650,8 +662,7 @@ namespace Nova::App {
 
             for (const auto& node : nodes) {
                 const glm::mat4 model = entityTransform * Nova::Core::Math::AABBToModelMatrix(node.m_Bounds);
-                aabbShader->SetParameter("model", model);
-                aabbShader->SetParameter("u_CameraPos", m_Camera->m_LookFrom);
+                aabbShader->SetParameter("m_Model", model);
 
                 ctx.BindShader(m_AABBShader);
 
@@ -771,8 +782,8 @@ namespace Nova::App {
                     continue;
 
                 const glm::mat4 model = tc.GetTransform();
-                shadowShader->SetParameter("model", model);
-                shadowShader->SetParameter("viewProj", light.m_LightViewProj);
+                shadowShader->SetParameter("m_Model", model);
+                shadowShader->SetParameter("m_ViewProj", light.m_LightViewProj);
                 ctx.BindShader(m_ShadowShader);
 
                 Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};

@@ -1,13 +1,13 @@
-// Minimal MVP block only — do not reflect nova.frame / lights / shadows.
-// Otherwise ApplyParameters would overwrite the shared frame UBO after Scene
-// and the GPU would light the scene with stale/zero lightCount.
+// Minimal MVP block only — do not reflect nova.frame / nova.scene / lights / shadows.
+// Otherwise ApplyParameters would overwrite the shared frame/scene UBOs after Scene
+// and the GPU would light the scene with stale/zero m_LightCount.
 
 struct MVP {
-    float4x4 model;
-    float4x4 view;
-    float4x4 proj;
-    float4x4 viewProj;
-    float4x4 invViewProj;
+    float4x4 m_Model;
+    float4x4 m_View;
+    float4x4 m_Proj;
+    float4x4 m_ViewProj;
+    float4x4 m_InvViewProj;
 };
 
 struct SelectionMaskEngine {
@@ -31,10 +31,10 @@ struct VSOut {
 
 [shader("vertex")]
 VSOut main(VSIn input) {
-    float4 world = mul(nova.mvp.model, float4(input.a_Position, 1.0));
-    float4 viewPos = mul(nova.mvp.view, world);
+    float4 world = mul(nova.mvp.m_Model, float4(input.a_Position, 1.0));
+    float4 viewPos = mul(nova.mvp.m_View, world);
 
     VSOut o;
-    o.sv_position = mul(nova.mvp.proj, viewPos);
+    o.sv_position = mul(nova.mvp.m_Proj, viewPos);
     return o;
 }
