@@ -1,4 +1,4 @@
-#include "App/EditorSelection.h"
+#include "Editor/EditorSelection.h"
 
 #include <algorithm>
 #include <iostream>
@@ -9,7 +9,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "Scene/SceneQuery.h"
 
-namespace Nova::App {
+namespace Nova::App::Editor {
 
     using namespace Nova::Core::ECS::Components;
     using namespace Nova::Core::Math;
@@ -121,4 +121,4 @@ namespace Nova::App {
         }
     }
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor

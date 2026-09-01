@@ -6,23 +6,14 @@
 
 #include "imgui_internal.h"
 
-#include "App/EditorLayer.h"
-#include "App/EditorSelection.h"
-#include "App/GameLayer.h"
+#include "Editor/EditorLayer.h"
+#include "Game/GameLayer.h"
 
 #include "Asset/AssetManager.h"
-#include "Asset/Assets/MeshAsset.h"
 #include "Asset/Assets/TextureAsset.h"
 #include "Core/Application.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "ECS/Components/CameraComponent.h"
-#include "ECS/Components/LightComponent.h"
-#include "ECS/Components/MeshComponent.h"
-#include "ECS/Components/MeshRendererComponent.h"
-#include "ECS/Components/NameComponent.h"
-#include "ECS/Components/TransformComponent.h"
-#include "Math/Light.h"
 
 #include "UI/Panels/AssetBrowserPanel.h"
 #include "UI/Panels/HierarchyPanel.h"
@@ -34,9 +25,7 @@ namespace Nova::App {
 
     using namespace Nova::Core::Asset;
     using namespace Nova::Core::Asset::Assets;
-    using namespace Nova::Core::ECS::Components;
     using namespace Nova::Core::Events;
-    using namespace Nova::Core::Math;
 
     AppLayer* g_AppLayer = nullptr;
 
@@ -63,7 +52,7 @@ namespace Nova::App {
         ImGuiID dock_right_bottom = 0;
         ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up, 0.50f, &dock_right_top, &dock_right_bottom);
 
-        ImGui::DockBuilderDockWindow(m_Scene.GetName().c_str(), dock_left);
+        ImGui::DockBuilderDockWindow(m_AppScene.GetName().c_str(), dock_left);
         ImGui::DockBuilderDockWindow("Hierarchy", dock_right_top);
         ImGui::DockBuilderDockWindow("Inspector", dock_right_bottom);
         ImGui::DockBuilderDockWindow("Asset Browser", dock_down);
@@ -103,7 +92,7 @@ namespace Nova::App {
             return;
         }
 
-        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<GameLayer>(m_EditorLayer);
+        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<Game::GameLayer>(m_EditorLayer);
         NV_LOG_DEBUG("[AppLayer] Transition to GameLayer requested.");
 
         SetSceneState(SceneState::Play);
@@ -118,7 +107,7 @@ namespace Nova::App {
             return;
         }
 
-        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EditorLayer>(m_GameLayer);
+        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<Editor::EditorLayer>(m_GameLayer);
         NV_LOG_DEBUG("[AppLayer] Transition to EditorLayer requested.");
 
         SetSceneState(SceneState::Edit);
@@ -178,137 +167,15 @@ namespace Nova::App {
             m_PauseIcon = acquireTexture("Editor://Icons/pause-48.png");
         }
 
-        SetupDefaultScene();
-        m_CameraController.SetNavigationFromCamera(*m_Camera);
-    }
-
-    void AppLayer::SetupDefaultScene() {
-        m_Camera = std::make_shared<Camera>(
-            glm::vec3(5.0f, 5.0f, 5.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f),
-            45.0f,
-            16.0f / 9.0f,
-            0.1f,
-            100.0f,
-            true
-        );
-        m_Camera->m_IsPerspective = true;
-        m_Camera->m_FOV = 45.0f;
-        m_Camera->m_NearPlane = 0.1f;
-        m_Camera->m_FarPlane = 1000.0f;
-        m_Camera->m_Up = {0.0f, 1.0f, 0.0f};
-
-        entt::entity cameraEntity = m_Scene.CreateEntity("Camera");
-        m_Scene.SetMainCamera(cameraEntity);
-
-        auto& registry = m_Scene.GetRegistry();
-        registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
-
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        cubeAsset->Load();
-        entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
-        registry.emplace<TransformComponent>(cubeEntity,
-            glm::vec3(0.0f, 0.5f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f));
-        {
-            Nova::Core::Renderer::RHI::Material mat{};
-            mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
-            registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
-            registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
-        }
-
-        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        torusAsset->Load();
-        entt::entity torusEntity = m_Scene.CreateEntity("Torus");
-        registry.emplace<TransformComponent>(torusEntity,
-            glm::vec3(2.0f, 0.25f, 1.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f));
-        {
-            Nova::Core::Renderer::RHI::Material mat{};
-            mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
-            registry.emplace<MeshRendererComponent>(torusEntity, torusAsset, mat);
-            registry.emplace<MeshComponent>(torusEntity, torusAsset);
-        }
-
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        sphereAsset->Load();
-        entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
-        registry.emplace<TransformComponent>(sphereEntity,
-            glm::vec3(0.0f, 0.5f, -1.5f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f));
-        {
-            Nova::Core::Renderer::RHI::Material mat{};
-            mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
-            registry.emplace<MeshRendererComponent>(sphereEntity, sphereAsset, mat);
-            registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
-        }
-
-        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        planeAsset->Load();
-        entt::entity planeEntity = m_Scene.CreateEntity("Plane");
-        registry.emplace<TransformComponent>(planeEntity,
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(10.0f, 10.0f, 10.0f));
-        {
-            Nova::Core::Renderer::RHI::Material mat{};
-            registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
-            registry.emplace<MeshComponent>(planeEntity, planeAsset);
-        }
-
-        {
-            entt::entity dirLightEntity = m_Scene.CreateEntity("DirectionalLight");
-            registry.emplace<TransformComponent>(dirLightEntity,
-                glm::vec3(0.0f, 8.0f, 0.0f),
-                glm::vec3(glm::radians(-45.0f), glm::radians(45.0f), 0.0f),
-                glm::vec3(1.0f));
-            auto dirLight = std::make_shared<Light>();
-            dirLight->m_Type = LightType::Directional;
-            dirLight->m_Color = glm::vec3(1.0f);
-            dirLight->m_Intensity = 3.0f;
-            dirLight->m_Direction = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
-            dirLight->m_LightShadow = true;
-            dirLight->m_ShadowBiasConstant = 0.5f;
-            dirLight->m_ShadowBiasSlope = 1.0f;
-            dirLight->m_ShadowNormalBias = 0.012f;
-            registry.emplace<LightComponent>(dirLightEntity, dirLight);
-        }
-
-        {
-            entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
-            registry.emplace<TransformComponent>(spotEntity,
-                glm::vec3(2.0f, 6.0f, 2.0f),
-                glm::vec3(glm::radians(-60.0f), glm::radians(-20.0f), 0.0f),
-                glm::vec3(1.0f));
-            auto spot = std::make_shared<Light>();
-            spot->m_Type = LightType::Spot;
-            spot->m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
-            spot->m_Intensity = 8.0f;
-            spot->m_Direction = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
-            spot->m_Range = 20.0f;
-            spot->m_InnerCone = 15.0f;
-            spot->m_OuterCone = 30.0f;
-            spot->m_LightShadow = true;
-            spot->m_ShadowBiasConstant = 0.2f;
-            spot->m_ShadowBiasSlope = 0.4f;
-            spot->m_ShadowNormalBias = 0.003f;
-            registry.emplace<LightComponent>(spotEntity, spot);
-        }
+        m_AppScene.SetupDefaultScene();
+        m_CameraController.SetNavigationFromCamera(*m_AppScene.GetCamera());
     }
 
     void AppLayer::OnDetach() {
         m_PlayIcon.reset();
         m_PauseIcon.reset();
         m_AppRenderer.Shutdown();
-        m_Scene.Clear();
+        m_AppScene.Clear();
 
         if (g_AppLayer == this)
             g_AppLayer = nullptr;
@@ -318,30 +185,30 @@ namespace Nova::App {
         m_DeltaTime = dt;
         m_ElapsedTime += dt;
 
-        if (m_Camera)
-            m_CameraController.Update(dt, *m_Camera);
+        if (m_AppScene.GetCamera())
+            m_CameraController.Update(dt, *m_AppScene.GetCamera());
     }
 
     void AppLayer::OnBegin() {
-        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        NV_ASSERT_MSG(m_AppScene.GetCamera(), "Camera is not initialized.");
 
         if (m_ViewportResizePending)
             ApplyPendingViewportResize();
 
         m_AppRenderer.BeginFrame();
-        EditorSelection* selection = m_EditorLayer ? &m_EditorLayer->GetSelection() : nullptr;
-        m_AppRenderer.BindFrame(m_Scene, *m_Camera, selection);
+        Editor::EditorSelection* selection = m_EditorLayer ? &m_EditorLayer->GetSelection() : nullptr;
+        m_AppRenderer.BindFrame(m_AppScene.GetScene(), *m_AppScene.GetCamera(), selection);
         m_AppRenderer.UploadLights();
         m_AppRenderer.PushGlobals(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
     }
 
     void AppLayer::OnRender() {
-        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        NV_ASSERT_MSG(m_AppScene.GetCamera(), "Camera is not initialized.");
         m_AppRenderer.RenderFrame();
     }
 
     void AppLayer::OnEnd() {
-        NV_ASSERT_MSG(m_Camera, "Camera is not initialized.");
+        NV_ASSERT_MSG(m_AppScene.GetCamera(), "Camera is not initialized.");
         m_AppRenderer.EndFrame();
     }
 
@@ -375,7 +242,7 @@ namespace Nova::App {
         SetupDockSpace(dockspace_id);
         ImGui::End();
 
-        UI::Panels::ScenePanel::Render(m_Scene.GetName());
+        UI::Panels::ScenePanel::Render(m_AppScene.GetName());
         UI::Panels::HierarchyPanel::Render();
         UI::Panels::InspectorPanel::Render();
         UI::Panels::AssetBrowserPanel::Render();
@@ -390,15 +257,15 @@ namespace Nova::App {
     }
 
     bool AppLayer::OnMouseMoved(MouseMovedEvent& e) {
-        if (!m_Camera)
+        if (!m_AppScene.GetCamera())
             return false;
-        return m_CameraController.OnMouseMoved(e, *m_Camera);
+        return m_CameraController.OnMouseMoved(e, *m_AppScene.GetCamera());
     }
 
     bool AppLayer::OnMouseScrolled(MouseScrolledEvent& e) {
-        if (!m_Camera)
+        if (!m_AppScene.GetCamera())
             return false;
-        return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_Camera, m_ViewportCursorUV.x, m_ViewportCursorUV.y);
+        return m_CameraController.OnMouseScrolled(e, m_ViewportHovered, *m_AppScene.GetCamera(), m_ViewportCursorUV.x, m_ViewportCursorUV.y);
     }
 
     bool AppLayer::OnWindowResized(WindowResizeEvent& e) {
@@ -412,15 +279,15 @@ namespace Nova::App {
     }
 
     void AppLayer::BeginOrbitFocus(const glm::vec3& center, const glm::vec3& extents) {
-        if (!m_Camera)
+        if (!m_AppScene.GetCamera())
             return;
-        m_CameraController.BeginOrbitFocus(center, extents, *m_Camera);
+        m_CameraController.BeginOrbitFocus(center, extents, *m_AppScene.GetCamera());
     }
 
     void AppLayer::ExitOrbitMode() {
-        if (!m_Camera)
+        if (!m_AppScene.GetCamera())
             return;
-        m_CameraController.ExitOrbitMode(*m_Camera);
+        m_CameraController.ExitOrbitMode(*m_AppScene.GetCamera());
     }
 
     void AppLayer::RequestViewportResize(float width, float height) {
@@ -465,8 +332,8 @@ namespace Nova::App {
         m_AppRenderer.Resize(newW, newH);
         m_AppRenderer.RebindAfterResize();
 
-        if (m_Camera)
-            m_Camera->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
+        if (m_AppScene.GetCamera())
+            m_AppScene.GetCamera()->m_AspectRatio = static_cast<float>(newW) / static_cast<float>(newH);
 
         m_ViewportResizePending = false;
     }

@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "App/EditorSelection.h"
+#include "Editor/EditorSelection.h"
 #include "App/RenderDebugMode.h"
 #include "Core/GraphicsAPI.h"
 #include "Math/Camera.h"
@@ -33,7 +33,7 @@ namespace Nova::App {
 
         /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals).
          *  Selection is optional — omit (or pass nullptr) outside editor mode. */
-        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, EditorSelection* selection = nullptr);
+        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, Editor::EditorSelection* selection = nullptr);
 
         void UploadLights();
         void PushGlobals(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
@@ -66,7 +66,7 @@ namespace Nova::App {
         std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
         Nova::Core::Scene::Scene* m_Scene{ nullptr };
         Nova::Core::Math::Camera* m_Camera{ nullptr };
-        EditorSelection* m_Selection{ nullptr };
+        Editor::EditorSelection* m_Selection{ nullptr };
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};

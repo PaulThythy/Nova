@@ -6,14 +6,16 @@
 #include <entt/entt.hpp>
 #include <glm/glm.hpp>
 
-#include "App/EditorSelection.h"
+#include "Editor/EditorSelection.h"
 #include "Core/Layer.h"
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
 
 namespace Nova::App {
-
     class AppLayer;
+} // namespace Nova::App
+
+namespace Nova::App::Editor {
 
     class EditorLayer : public Nova::Core::Layer {
     public:
@@ -54,6 +56,6 @@ namespace Nova::App {
         EditorSelection m_Selection;
     };
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor
 
 #endif // EDITORLAYER_H

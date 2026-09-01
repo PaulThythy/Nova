@@ -13,18 +13,15 @@
 #include "Events/ApplicationEvents.h"
 
 #include "Asset/Assets/TextureAsset.h"
-#include "Math/Camera.h"
-#include "Renderer/RHI/RHI_Renderer.h"
-#include "Scene/Scene.h"
-
+#include "App/AppScene.h"
 #include "App/CameraController.h"
 #include "App/AppRenderer.h"
 #include "App/RenderDebugMode.h"
 
 namespace Nova::App {
 
-    class EditorLayer;
-    class GameLayer;
+    namespace Editor { class EditorLayer; }
+    namespace Game { class GameLayer; }
 
     class AppLayer : public Nova::Core::Layer {
     public:
@@ -81,17 +78,17 @@ namespace Nova::App {
         void RequestViewportResize(float width, float height);
         void ApplyPendingViewportResize();
 
-        void RegisterEditorLayer(EditorLayer* layer) { m_EditorLayer = layer; }
-        void RegisterGameLayer(GameLayer* layer) { m_GameLayer = layer; }
+        void RegisterEditorLayer(Editor::EditorLayer* layer) { m_EditorLayer = layer; }
+        void RegisterGameLayer(Game::GameLayer* layer) { m_GameLayer = layer; }
 
-        EditorLayer* GetEditorLayer() const { return m_EditorLayer; }
-        GameLayer* GetGameLayer() const { return m_GameLayer; }
+        Editor::EditorLayer* GetEditorLayer() const { return m_EditorLayer; }
+        Game::GameLayer* GetGameLayer() const { return m_GameLayer; }
 
-        const Nova::Core::Scene::Scene& GetScene() const { return m_Scene; }
-        Nova::Core::Scene::Scene& GetScene() { return m_Scene; }
+        const Nova::Core::Scene::Scene& GetScene() const { return m_AppScene.GetScene(); }
+        Nova::Core::Scene::Scene& GetScene() { return m_AppScene.GetScene(); }
 
-        Nova::Core::Math::Camera* GetCamera() { return m_Camera.get(); }
-        const Nova::Core::Math::Camera* GetCamera() const { return m_Camera.get(); }
+        Nova::Core::Math::Camera* GetCamera() { return m_AppScene.GetCamera(); }
+        const Nova::Core::Math::Camera* GetCamera() const { return m_AppScene.GetCamera(); }
 
         void BeginOrbitFocus(const glm::vec3& center, const glm::vec3& extents);
         void ExitOrbitMode();
@@ -105,18 +102,15 @@ namespace Nova::App {
         bool OnImGuiPanelResize(Nova::Core::Events::ImGuiPanelResizeEvent& e);
 
         void SetupDockSpace(ImGuiID dockspace_id);
-        void SetupDefaultScene();
 
         AppRenderer m_AppRenderer;
+        AppScene m_AppScene;
         CameraController m_CameraController;
 
         SceneState m_SceneState{ SceneState::Edit };
-        Nova::Core::Scene::Scene m_Scene{"Scene_test"};
         float m_DeltaTime = 0.0f;
         float m_ElapsedTime{0.0f};
         uint32_t m_FrameIndex{0};
-
-        std::shared_ptr<Nova::Core::Math::Camera> m_Camera;
 
         glm::vec2 m_ViewportSize{ 0.0f, 0.0f };
         glm::vec2 m_PendingViewportSize{ 0.0f, 0.0f };
@@ -124,8 +118,8 @@ namespace Nova::App {
         bool m_ViewportHovered{ false };
         glm::vec2 m_ViewportCursorUV{ 0.5f, 0.5f };
 
-        EditorLayer* m_EditorLayer{ nullptr };
-        GameLayer* m_GameLayer{ nullptr };
+        Editor::EditorLayer* m_EditorLayer{ nullptr };
+        Game::GameLayer* m_GameLayer{ nullptr };
 
         std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PlayIcon;
         std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PauseIcon;

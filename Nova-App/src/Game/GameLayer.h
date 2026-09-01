@@ -5,8 +5,10 @@
 #include "Events/Event.h"
 
 namespace Nova::App {
-
     class AppLayer;
+} // namespace Nova::App
+
+namespace Nova::App::Game {
 
     class GameLayer : public Nova::Core::Layer {
     public:
@@ -23,6 +25,6 @@ namespace Nova::App {
         void OnEvent(Nova::Core::Events::Event& e) override;
     };
 
-} // namespace Nova::App
+} // namespace Nova::App::Game
 
 #endif // GAMELAYER_H

@@ -23,11 +23,7 @@ namespace Nova::App {
     using namespace Nova::Core::ECS::Components;
     using namespace Nova::Core::Math;
 
-    void AppRenderer::Initialize(
-        Nova::Core::GraphicsAPI api,
-        uint32_t width,
-        uint32_t height)
-    {
+    void AppRenderer::Initialize(Nova::Core::GraphicsAPI api, uint32_t width, uint32_t height) {
         Nova::Core::Renderer::RHI::RHI_SwapchainDesc swapDesc{};
         swapDesc.m_FramesInFlight = 3;
         swapDesc.m_CreateSurface = true;
@@ -70,8 +66,7 @@ namespace Nova::App {
             /*m_ComparisonSampler*/ true,
         });
 
-        const RG::RHI_TextureUsage selectionRtUsage =
-            RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled;
+        const RG::RHI_TextureUsage selectionRtUsage = RG::RHI_TextureUsage::ColorAttachment | RG::RHI_TextureUsage::Sampled;
 
         RG::RHI_TextureHandle selectionMask = fg.CreateTexture({
             width, height, RG::RHI_TextureFormat::RGBA8, selectionRtUsage,
@@ -386,7 +381,7 @@ namespace Nova::App {
     void AppRenderer::BindFrame(
         Nova::Core::Scene::Scene& scene,
         Nova::Core::Math::Camera& camera,
-        EditorSelection* selection)
+        Editor::EditorSelection* selection)
     {
         m_Scene = &scene;
         m_Camera = &camera;

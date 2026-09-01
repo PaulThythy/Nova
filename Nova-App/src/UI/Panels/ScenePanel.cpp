@@ -5,7 +5,7 @@
 
 #include "imgui.h"
 #include "App/AppLayer.h"
-#include "App/EditorLayer.h"
+#include "Editor/EditorLayer.h"
 #include "Events/ApplicationEvents.h"
 #include "Core/Application.h"
 
@@ -118,9 +118,9 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::SetCursorPosX(contentMax.x - ImGui::CalcTextSize(msText).x - pad);
         ImGui::TextUnformatted(msText);
 
-        EditorLayer* editor = app->GetEditorLayer();
+        Editor::EditorLayer* editor = app->GetEditorLayer();
         if (editor && editor->HasFocus()) {
-            const FocusInfo& focusInfo = editor->GetFocusInfo();
+            const Editor::FocusInfo& focusInfo = editor->GetFocusInfo();
 
             char focusName[128];
             std::snprintf(focusName, sizeof(focusName), "Focus: %s", focusInfo.m_Name.c_str());
@@ -210,7 +210,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
                 // Left-click: select. Double-click: focus (orbit camera on object AABB).
                 // Selection is editor-only (EditorLayer must be active).
-                EditorLayer* editor = Nova::App::g_AppLayer->GetEditorLayer();
+                Editor::EditorLayer* editor = Nova::App::g_AppLayer->GetEditorLayer();
                 if (ImGui::IsItemHovered()) {
                     const ImVec2 mouse = ImGui::GetMousePos();
                     const ImVec2 min = ImGui::GetItemRectMin();

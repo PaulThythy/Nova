@@ -12,7 +12,7 @@
 #include "Math/Camera.h"
 #include "Scene/Scene.h"
 
-namespace Nova::App {
+namespace Nova::App::Editor {
 
     struct FocusInfo {
         entt::entity m_Entity{ entt::null };
@@ -57,6 +57,6 @@ namespace Nova::App {
         FocusInfo m_FocusInfo;
     };
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor
 
 #endif // EDITORSELECTION_H

@@ -1,4 +1,4 @@
-#include "App/EditorLayer.h"
+#include "Editor/EditorLayer.h"
 
 #include <string>
 
@@ -12,7 +12,7 @@
 #include "Events/InputEvents.h"
 #include "Math/AABB.h"
 
-namespace Nova::App {
+namespace Nova::App::Editor {
 
     void EditorLayer::OnAttach() {
         if (g_AppLayer) {
@@ -109,4 +109,4 @@ namespace Nova::App {
             g_AppLayer->ExitOrbitMode();
     }
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor
