@@ -199,7 +199,8 @@ namespace Nova::App {
         Editor::EditorSelection* selection = m_EditorLayer ? &m_EditorLayer->GetSelection() : nullptr;
         m_AppRenderer.BindFrame(m_AppScene.GetScene(), *m_AppScene.GetCamera(), selection);
         m_AppRenderer.UploadLights();
-        m_AppRenderer.PushGlobals(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
+        m_AppRenderer.PushFrameUniforms(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
+        m_AppRenderer.PushSceneUniforms();
     }
 
     void AppLayer::OnRender() {

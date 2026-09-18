@@ -49,8 +49,7 @@ namespace Nova::App {
         auto& registry = m_Scene.GetRegistry();
         registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
 
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         cubeAsset->Load();
         entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
         registry.emplace<TransformComponent>(cubeEntity,
@@ -64,8 +63,7 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
         }
 
-        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         torusAsset->Load();
         entt::entity torusEntity = m_Scene.CreateEntity("Torus");
         registry.emplace<TransformComponent>(torusEntity,
@@ -79,8 +77,7 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(torusEntity, torusAsset);
         }
 
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         sphereAsset->Load();
         entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
         registry.emplace<TransformComponent>(sphereEntity,
@@ -94,8 +91,7 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
         }
 
-        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>(
-            "Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         planeAsset->Load();
         entt::entity planeEntity = m_Scene.CreateEntity("Plane");
         registry.emplace<TransformComponent>(planeEntity,

@@ -410,22 +410,15 @@ namespace Nova::App {
         }
     }
 
-    void AppRenderer::PushGlobals(
+    void AppRenderer::PushFrameUniforms(
         float elapsedTime,
         float deltaTime,
         uint32_t& frameIndex,
         const glm::vec2& viewportSize)
     {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
-        NV_ASSERT_MSG(m_Camera, "Camera is not bound for this frame.");
 
-        const glm::mat4 view = m_Camera->GetViewMatrix();
-        const glm::mat4 proj = m_Camera->GetProjectionMatrix();
-        const glm::mat4 viewProj = proj * view;
-        const glm::mat4 invViewProj = glm::inverse(viewProj);
-        const int lightCount = static_cast<int>(m_GpuLights.size());
-
-        auto setFrameGlobals = [elapsedTime, deltaTime, &frameIndex, viewportSize, view, proj, viewProj, invViewProj](
+        auto setFrameUniforms = [elapsedTime, deltaTime, &frameIndex, viewportSize](
             Nova::Core::Renderer::RHI::IShaders* shader)
         {
             if (!shader) return;
@@ -434,39 +427,45 @@ namespace Nova::App {
             shader->SetParameter("m_FrameRate", deltaTime > 0.0f ? 1.0f / deltaTime : 0.0f);
             shader->SetParameter("m_Frame", static_cast<int>(frameIndex++));
             shader->SetParameter("m_Resolution", glm::vec3(viewportSize.x, viewportSize.y, 1.0f));
-            shader->SetParameter("m_View", view);
-            shader->SetParameter("m_Proj", proj);
-            shader->SetParameter("m_ViewProj", viewProj);
-            shader->SetParameter("m_InvViewProj", invViewProj);
-        };
-
-        auto setSceneGlobals = [this, lightCount](Nova::Core::Renderer::RHI::IShaders* shader) {
-            if (!shader) return;
-            shader->SetParameter("m_CameraPos", m_Camera->m_LookFrom);
-            shader->SetParameter("m_LightCount", lightCount);
         };
 
         if (auto* graph = m_Renderer->GetRenderGraph()) {
-            setFrameGlobals(graph->GetShader(m_GridShader));
-            setFrameGlobals(graph->GetShader(m_SceneShader));
-            setFrameGlobals(graph->GetShader(m_WireframeShader));
-            setFrameGlobals(graph->GetShader(m_ShadowShader));
-            setFrameGlobals(graph->GetShader(m_NormalsShader));
-            setFrameGlobals(graph->GetShader(m_PositionsShader));
-            setFrameGlobals(graph->GetShader(m_VertexColorShader));
-            setFrameGlobals(graph->GetShader(m_DepthShader));
-            setFrameGlobals(graph->GetShader(m_AABBShader));
-            setFrameGlobals(graph->GetShader(m_SelectionMaskShader));
-            setFrameGlobals(graph->GetShader(m_SelectionMaskOccludedShader));
-
-            setSceneGlobals(graph->GetShader(m_SceneShader));
-            setSceneGlobals(graph->GetShader(m_WireframeShader));
-            setSceneGlobals(graph->GetShader(m_NormalsShader));
-            setSceneGlobals(graph->GetShader(m_PositionsShader));
-            setSceneGlobals(graph->GetShader(m_VertexColorShader));
-            setSceneGlobals(graph->GetShader(m_DepthShader));
-            setSceneGlobals(graph->GetShader(m_AABBShader));
+            setFrameUniforms(graph->GetShader(m_GridShader));
+            setFrameUniforms(graph->GetShader(m_SceneShader));
+            setFrameUniforms(graph->GetShader(m_WireframeShader));
+            setFrameUniforms(graph->GetShader(m_ShadowShader));
+            setFrameUniforms(graph->GetShader(m_NormalsShader));
+            setFrameUniforms(graph->GetShader(m_PositionsShader));
+            setFrameUniforms(graph->GetShader(m_VertexColorShader));
+            setFrameUniforms(graph->GetShader(m_DepthShader));
+            setFrameUniforms(graph->GetShader(m_AABBShader));
+            setFrameUniforms(graph->GetShader(m_SelectionMaskShader));
+            setFrameUniforms(graph->GetShader(m_SelectionMaskOccludedShader));
         }
+    }
+
+    void AppRenderer::PushSceneUniforms() {
+        NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+        NV_ASSERT_MSG(m_Camera, "Camera is not bound for this frame.");
+
+        auto* graph = m_Renderer->GetRenderGraph();
+        const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
+        if (!engine || !engine->m_Scene.m_Uniforms.IsValid())
+            return;
+
+        Nova::Core::Renderer::RHI::SceneUniforms scene{};
+        scene.m_Camera.m_View = m_Camera->GetViewMatrix();
+        scene.m_Camera.m_Proj = m_Camera->GetProjectionMatrix();
+        scene.m_Camera.m_ViewProj = scene.m_Camera.m_Proj * scene.m_Camera.m_View;
+        scene.m_Camera.m_InvViewProj = glm::inverse(scene.m_Camera.m_ViewProj);
+        scene.m_Camera.m_Position = m_Camera->m_LookFrom;
+        scene.m_LightCount = static_cast<int>(m_GpuLights.size());
+
+        m_Renderer->UpdateGpuBuffer(
+            engine->m_Scene.m_Uniforms,
+            &scene,
+            sizeof(scene),
+            0);
     }
 
     void AppRenderer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
@@ -725,12 +724,12 @@ namespace Nova::App {
 
         auto* graph = m_Renderer ? m_Renderer->GetRenderGraph() : nullptr;
         const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
-        if (!engine || !engine->m_Lights.IsValid())
+        if (!engine || !engine->m_Scene.m_Lights.IsValid())
             return;
 
         if (!m_GpuLights.empty()) {
             m_Renderer->UpdateGpuBuffer(
-                engine->m_Lights,
+                engine->m_Scene.m_Lights,
                 m_GpuLights.data(),
                 sizeof(Nova::Core::Renderer::RHI::LightGPU) * m_GpuLights.size(),
                 0);
@@ -753,7 +752,8 @@ namespace Nova::App {
         auto& registry = m_Scene->GetRegistry();
         auto meshView = registry.view<TransformComponent, MeshRendererComponent>();
 
-        for (const auto& light : m_GpuLights) {
+        for (size_t lightIdx = 0; lightIdx < m_GpuLights.size(); ++lightIdx) {
+            const auto& light = m_GpuLights[lightIdx];
             if (!light.m_CastShadow || light.m_ShadowMapIndex < 0)
                 continue;
 
@@ -767,6 +767,8 @@ namespace Nova::App {
                 light.m_ShadowBiasConstant * angleFactor * typeScale,
                 light.m_ShadowBiasSlope * angleFactor * typeScale);
 
+            shadowShader->SetParameter("m_LightIndex", static_cast<int>(lightIdx));
+
             for (auto entity : meshView) {
                 auto& tc = meshView.get<TransformComponent>(entity);
                 auto& mrc = meshView.get<MeshRendererComponent>(entity);
@@ -776,9 +778,7 @@ namespace Nova::App {
                 if (!cpuMesh)
                     continue;
 
-                const glm::mat4 model = tc.GetTransform();
-                shadowShader->SetParameter("m_Model", model);
-                shadowShader->SetParameter("m_ViewProj", light.m_LightViewProj);
+                shadowShader->SetParameter("m_Model", tc.GetTransform());
                 ctx.BindShader(m_ShadowShader);
 
                 Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};

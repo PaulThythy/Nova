@@ -29,14 +29,15 @@ namespace Nova::App {
         void EndFrame();
         void Resize(int width, int height);
 
-        // TODO remove Bind Frame, UploadLights, PushGlobals, and shadow maps bindings from App (I think it should be hidden)
+        // TODO remove Bind Frame, UploadLights, PushFrameUniforms / PushSceneUniforms, and shadow maps bindings from App (I think it should be hidden)
 
-        /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals).
+        /** Bind scene/camera/selection for the current frame (call before UploadLights / Push*Uniforms).
          *  Selection is optional — omit (or pass nullptr) outside editor mode. */
         void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, Editor::EditorSelection* selection = nullptr);
 
         void UploadLights();
-        void PushGlobals(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
+        void PushFrameUniforms(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
+        void PushSceneUniforms();
         void RebindAfterResize();
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
