@@ -15,6 +15,7 @@ namespace Nova::App {
         explicit AppScene(const std::string& name = "Scene_test");
 
         void SetupDefaultScene();
+        void SetupStressTestScene(int objectCount = 300);
         void Clear();
 
         Nova::Core::Scene::Scene& GetScene() { return m_Scene; }

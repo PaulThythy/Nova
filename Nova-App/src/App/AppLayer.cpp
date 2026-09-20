@@ -167,7 +167,7 @@ namespace Nova::App {
             m_PauseIcon = acquireTexture("Editor://Icons/pause-48.png");
         }
 
-        m_AppScene.SetupDefaultScene();
+        m_AppScene.SetupStressTestScene(500);
         m_CameraController.SetNavigationFromCamera(*m_AppScene.GetCamera());
     }
 
