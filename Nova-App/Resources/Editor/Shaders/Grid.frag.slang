@@ -82,7 +82,7 @@ PSOut main(PSIn input)
     float camHeight = abs(nova.scene.uniforms.m_Camera.m_Position.y);
     float minorT = saturate((camHeight - 3.0) / (20.0 - 3.0));
     float minorLod = 1.0 - (minorT * minorT * minorT * (minorT * (minorT * 6.0 - 15.0) + 10.0));
-    float majorLod = 1.0 - smoothstep(80.0, 350.0, camHeight);
+    float majorLod = 1.0 - smoothstep(80.0, 125.0, camHeight);
 
     float distFog = fogFade(viewDist, 10.0, 10000.0);
     float axisFog  = distFog;
