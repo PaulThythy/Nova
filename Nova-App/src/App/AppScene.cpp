@@ -39,13 +39,13 @@ namespace Nova::App {
             45.0f,
             16.0f / 9.0f,
             0.1f,
-            100.0f,
+            10000.0f,
             true
         );
         m_Camera->m_IsPerspective = true;
         m_Camera->m_FOV = 45.0f;
         m_Camera->m_NearPlane = 0.1f;
-        m_Camera->m_FarPlane = 1000.0f;
+        m_Camera->m_FarPlane = 10000.0f;
         m_Camera->m_Up = { 0.0f, 1.0f, 0.0f };
 
         entt::entity cameraEntity = m_Scene.CreateEntity("Camera");
@@ -160,13 +160,13 @@ namespace Nova::App {
             45.0f,
             16.0f / 9.0f,
             0.1f,
-            500.0f,
+            10000.0f,
             true
         );
         m_Camera->m_IsPerspective = true;
         m_Camera->m_FOV = 45.0f;
         m_Camera->m_NearPlane = 0.1f;
-        m_Camera->m_FarPlane = 500.0f;
+        m_Camera->m_FarPlane = 10000.0f;
         m_Camera->m_Up = { 0.0f, 1.0f, 0.0f };
 
         entt::entity cameraEntity = m_Scene.CreateEntity("Camera");
