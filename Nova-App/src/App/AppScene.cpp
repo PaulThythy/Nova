@@ -231,7 +231,7 @@ namespace Nova::App {
 
         std::mt19937 rng(42u);
         std::uniform_int_distribution<int> typeDist(0, static_cast<int>(kPrimitives.size()) - 1);
-        std::uniform_real_distribution<float> posDist(-40.0f, 40.0f);
+        std::uniform_real_distribution<float> posDist(-100.0f, 100.0f);
         std::uniform_real_distribution<float> yawDist(0.0f, glm::two_pi<float>());
         std::uniform_real_distribution<float> scaleDist(0.4f, 1.8f);
         std::uniform_real_distribution<float> colorDist(0.15f, 1.0f);
