@@ -25,6 +25,7 @@ namespace Nova::App::Editor {
     class EditorSelection {
     public:
         void SetSelected(entt::entity entity);
+        void AddSelected(entt::entity entity);
         void Clear();
         bool IsSelected(entt::entity entity) const;
 

@@ -36,6 +36,7 @@ namespace Nova::App::Editor {
 
         void PickAtViewportUV(float u, float v, bool addToSelection = false);
         void FocusAtViewportUV(float u, float v);
+        void FocusEntity(entt::entity entity);
         void ClearFocus();
 
         entt::entity GetFocusedEntity() const { return m_Selection.GetFocused(); }

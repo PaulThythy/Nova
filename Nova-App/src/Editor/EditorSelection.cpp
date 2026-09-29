@@ -20,6 +20,12 @@ namespace Nova::App::Editor {
             m_Entities.push_back(entity);
     }
 
+    void EditorSelection::AddSelected(entt::entity entity) {
+        if (entity == entt::null || IsSelected(entity))
+            return;
+        m_Entities.push_back(entity);
+    }
+
     void EditorSelection::Clear() {
         m_Entities.clear();
         ClearFocus();
@@ -111,7 +117,7 @@ namespace Nova::App::Editor {
         if (Nova::Core::Scene::Raycast(scene, ray, hit)) {
             if (addToSelection) {
                 if (!IsSelected(hit.m_Entity))
-                    m_Entities.push_back(hit.m_Entity);
+                    AddSelected(hit.m_Entity);
             } else {
                 SetSelected(hit.m_Entity);
             }

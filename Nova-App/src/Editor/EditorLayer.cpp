@@ -73,27 +73,38 @@ namespace Nova::App::Editor {
         if (!camera)
             return;
 
-        auto& scene = g_AppLayer->GetScene();
-
-        Nova::Core::Math::AABB worldAabb{};
         const entt::entity entity = EditorSelection::PickEntityAtViewportUV(
-            scene, *camera, u, v, &worldAabb);
+            g_AppLayer->GetScene(), *camera, u, v);
         if (entity == entt::null)
             return;
 
+        FocusEntity(entity);
+    }
+
+    void EditorLayer::FocusEntity(entt::entity entity) {
+        if (!g_AppLayer || entity == entt::null)
+            return;
+
+        auto& scene = g_AppLayer->GetScene();
+        auto& registry = scene.GetRegistry();
+
+        // TODO: support focusing lights (and other non-mesh entities).
+        auto* mc = registry.try_get<Nova::Core::ECS::Components::MeshComponent>(entity);
+        if (!mc)
+            return;
+
+        Nova::Core::Math::AABB worldAabb{};
         if (!EditorSelection::ComputeEntityWorldAABB(scene, entity, worldAabb))
             return;
 
         std::string name = "unnamed";
-        if (auto* nc = scene.GetRegistry().try_get<Nova::Core::ECS::Components::NameComponent>(entity))
+        if (auto* nc = registry.try_get<Nova::Core::ECS::Components::NameComponent>(entity))
             name = nc->m_Name;
 
         uint32_t triangleCount = 0;
-        if (auto* mc = scene.GetRegistry().try_get<Nova::Core::ECS::Components::MeshComponent>(entity)) {
-            if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
-                if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
-                    triangleCount = static_cast<uint32_t>(cpuMesh->GetIndices().size() / 3);
-            }
+        if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
+            if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
+                triangleCount = static_cast<uint32_t>(cpuMesh->GetIndices().size() / 3);
         }
 
         const glm::vec3 center = worldAabb.GetCenter();

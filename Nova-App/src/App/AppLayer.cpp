@@ -244,7 +244,7 @@ namespace Nova::App {
         ImGui::End();
 
         UI::Panels::ScenePanel::Render(m_AppScene.GetName());
-        UI::Panels::HierarchyPanel::Render();
+        UI::Panels::HierarchyPanel::Render(m_AppScene.GetScene(), m_EditorLayer);
         UI::Panels::InspectorPanel::Render();
         UI::Panels::AssetBrowserPanel::Render();
     }
