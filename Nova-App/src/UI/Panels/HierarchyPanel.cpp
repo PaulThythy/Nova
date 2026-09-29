@@ -14,6 +14,9 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
 
     using Nova::Core::ECS::Components::NameComponent;
 
+    // True once a hierarchy drag has started; reset when the mouse button is released.
+    bool s_HierarchyDragActive = false;
+
     const char* GetEntityLabel(Nova::Core::Scene::Scene& scene, entt::entity entity) {
         if (auto* name = scene.GetRegistry().try_get<NameComponent>(entity))
             return name->m_Name.c_str();
@@ -115,11 +118,25 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
         } else if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && selection) {
             if (ImGui::GetIO().KeyShift)
                 selection->AddSelected(entity);
-            else
+            else if (!isSelected)
+                // Keep multi-selection when re-clicking an already selected entity
+                // so drag-and-drop can move the whole group.
                 selection->SetSelected(entity);
         }
 
+        // Click (no drag) on one item of a multi-selection → select only that item.
+        if (selection
+            && isSelected
+            && !ImGui::GetIO().KeyShift
+            && selection->GetEntities().size() > 1
+            && ImGui::IsItemHovered()
+            && ImGui::IsMouseReleased(ImGuiMouseButton_Left)
+            && !s_HierarchyDragActive) {
+            selection->SetSelected(entity);
+        }
+
         if (IsHierarchyDraggable(scene, entity) && ImGui::BeginDragDropSource()) {
+            s_HierarchyDragActive = true;
             const std::vector<entt::entity> dragEntities = CollectDragEntities(scene, entity, selection);
             if (!dragEntities.empty()) {
                 ImGui::SetDragDropPayload(
@@ -164,6 +181,9 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
             && !ImGui::IsAnyItemHovered()) {
             editor->ClearSelection();
         }
+
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            s_HierarchyDragActive = false;
 
         ImGui::End();
     }
