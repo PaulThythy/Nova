@@ -21,10 +21,20 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
         Nova::Core::Scene::Scene& scene,
         entt::entity entity,
         Editor::EditorLayer* editor) {
+        if (entity == scene.GetMainCamera())
+            return;
+
         Editor::EditorSelection* selection = editor ? &editor->GetSelection() : nullptr;
 
         const auto& children = scene.GetChildren(entity);
-        const bool hasChildren = !children.empty();
+        bool hasVisibleChildren = false;
+        for (entt::entity child : children) {
+            if (child != scene.GetMainCamera()) {
+                hasVisibleChildren = true;
+                break;
+            }
+        }
+
         const bool isRoot = entity == scene.GetRootEntity();
         const bool isSelected = selection && selection->IsSelected(entity);
 
@@ -36,7 +46,7 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
             flags |= ImGuiTreeNodeFlags_Selected;
         if (isRoot)
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
-        if (!hasChildren)
+        if (!hasVisibleChildren)
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
         const void* nodeId = reinterpret_cast<void*>(
@@ -52,7 +62,7 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
                 selection->SetSelected(entity);
         }
 
-        if (opened && hasChildren) {
+        if (opened && hasVisibleChildren) {
             for (entt::entity child : children)
                 DrawEntityNode(scene, child, editor);
             ImGui::TreePop();
