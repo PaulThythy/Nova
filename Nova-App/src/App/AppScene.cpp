@@ -96,6 +96,9 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
         }
 
+        m_Scene.ParentEntity(torusEntity, cubeEntity);
+        m_Scene.ParentEntity(cubeEntity, sphereEntity);
+
         auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         planeAsset->Load();
         entt::entity planeEntity = m_Scene.CreateEntity("Plane");
