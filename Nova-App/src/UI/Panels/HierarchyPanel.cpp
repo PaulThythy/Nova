@@ -1,6 +1,7 @@
 #include "UI/Panels/HierarchyPanel.h"
 
 #include <cstdint>
+#include <vector>
 
 #include "imgui.h"
 
@@ -9,12 +10,68 @@
 
 namespace Nova::App::UI::Panels::HierarchyPanel {
 
+    constexpr const char* kHierarchyPayload = "HIERARCHY_ENTITIES";
+
     using Nova::Core::ECS::Components::NameComponent;
 
     const char* GetEntityLabel(Nova::Core::Scene::Scene& scene, entt::entity entity) {
         if (auto* name = scene.GetRegistry().try_get<NameComponent>(entity))
             return name->m_Name.c_str();
         return "Unnamed";
+    }
+
+    bool IsHierarchyDraggable(Nova::Core::Scene::Scene& scene, entt::entity entity) {
+        return entity != entt::null
+            && entity != scene.GetRootEntity()
+            && entity != scene.GetMainCamera();
+    }
+
+    std::vector<entt::entity> CollectDragEntities(
+        Nova::Core::Scene::Scene& scene,
+        entt::entity entity,
+        Editor::EditorSelection* selection) {
+        std::vector<entt::entity> entities;
+
+        if (selection && selection->IsSelected(entity) && selection->GetEntities().size() > 1) {
+            for (entt::entity selected : selection->GetEntities()) {
+                if (IsHierarchyDraggable(scene, selected))
+                    entities.push_back(selected);
+            }
+        } else if (IsHierarchyDraggable(scene, entity)) {
+            entities.push_back(entity);
+        }
+
+        return entities;
+    }
+
+    bool IsInList(const std::vector<entt::entity>& entities, entt::entity entity) {
+        for (entt::entity e : entities) {
+            if (e == entity)
+                return true;
+        }
+        return false;
+    }
+
+    void ParentDraggedEntities(
+        Nova::Core::Scene::Scene& scene,
+        entt::entity newParent,
+        const entt::entity* entities,
+        std::size_t count) {
+        if (!entities || count == 0 || newParent == entt::null)
+            return;
+
+        std::vector<entt::entity> dragged(entities, entities + count);
+
+        for (entt::entity child : dragged) {
+            if (child == newParent || !IsHierarchyDraggable(scene, child))
+                continue;
+
+            // Keep nested selection groups intact: only reparent selection roots.
+            if (IsInList(dragged, scene.GetParent(child)))
+                continue;
+
+            scene.ParentEntity(child, newParent);
+        }
     }
 
     void DrawEntityNode(
@@ -62,6 +119,31 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
                 selection->SetSelected(entity);
         }
 
+        if (IsHierarchyDraggable(scene, entity) && ImGui::BeginDragDropSource()) {
+            const std::vector<entt::entity> dragEntities = CollectDragEntities(scene, entity, selection);
+            if (!dragEntities.empty()) {
+                ImGui::SetDragDropPayload(
+                    kHierarchyPayload,
+                    dragEntities.data(),
+                    dragEntities.size() * sizeof(entt::entity));
+
+                if (dragEntities.size() == 1)
+                    ImGui::TextUnformatted(GetEntityLabel(scene, dragEntities.front()));
+                else
+                    ImGui::Text("%zu entities", dragEntities.size());
+            }
+            ImGui::EndDragDropSource();
+        }
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(kHierarchyPayload)) {
+                const auto* entities = static_cast<const entt::entity*>(payload->Data);
+                const std::size_t count = payload->DataSize / sizeof(entt::entity);
+                ParentDraggedEntities(scene, entity, entities, count);
+            }
+            ImGui::EndDragDropTarget();
+        }
+
         if (opened && hasVisibleChildren) {
             for (entt::entity child : children)
                 DrawEntityNode(scene, child, editor);
@@ -75,6 +157,13 @@ namespace Nova::App::UI::Panels::HierarchyPanel {
         const entt::entity root = scene.GetRootEntity();
         if (root != entt::null)
             DrawEntityNode(scene, root, editor);
+
+        if (editor
+            && ImGui::IsWindowHovered()
+            && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
+            && !ImGui::IsAnyItemHovered()) {
+            editor->ClearSelection();
+        }
 
         ImGui::End();
     }
