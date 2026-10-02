@@ -69,9 +69,8 @@ namespace Nova::App::UI::Components {
 
         // Stored in radians on the component; edited as degrees in the UI.
         glm::vec3 rotationDegrees = glm::degrees(tc->m_Rotation);
-        DrawTRSvectors("Rotation", "rotation", rotationDegrees, 1.0f, "%.2f\xc2\xb0");
+        DrawTRSvectors("Rotation", "rotation", rotationDegrees, 1.0f, "%.2f°");
         tc->m_Rotation = glm::radians(rotationDegrees);
-
         DrawTRSvectors("Scale", "scale", tc->m_Scale, 0.01f, "%.2f");
 
         ImGui::AlignTextToFramePadding();

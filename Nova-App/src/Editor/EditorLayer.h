@@ -17,6 +17,17 @@ namespace Nova::App {
 
 namespace Nova::App::Editor {
 
+    enum class GizmoOperation {
+        Translate = 0,
+        Rotate,
+        Scale,
+    };
+
+    enum class GizmoSpace {
+        Local = 0,
+        World,
+    };
+
     class EditorLayer : public Nova::Core::Layer {
     public:
         explicit EditorLayer(): Layer("EditorLayer") {}
@@ -50,11 +61,23 @@ namespace Nova::App::Editor {
         void SetSelectedEntity(entt::entity entity) { m_Selection.SetSelected(entity); }
         void ClearSelection() { m_Selection.Clear(); }
         bool IsSelected(entt::entity entity) const { return m_Selection.IsSelected(entity); }
+        GizmoOperation GetGizmoOperation() const { return m_GizmoOperation; }
+        void SetGizmoOperation(GizmoOperation operation) { m_GizmoOperation = operation; }
+        GizmoSpace GetGizmoSpace() const { return m_GizmoSpace; }
+        void SetGizmoSpace(GizmoSpace space) { m_GizmoSpace = space; }
+        bool IsGizmoDragging() const { return m_IsGizmoDragging; }
+        bool ShouldBlockViewportPick() const { return m_BlockViewportPick; }
+        void SetGizmoDragging(bool isDragging);
+        void ConsumeViewportPickBlock() { m_BlockViewportPick = false; }
 
     private:
         bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
 
         EditorSelection m_Selection;
+        GizmoOperation m_GizmoOperation{ GizmoOperation::Translate };
+        GizmoSpace m_GizmoSpace{ GizmoSpace::Local };
+        bool m_IsGizmoDragging{ false };
+        bool m_BlockViewportPick{ false };
     };
 
 } // namespace Nova::App::Editor

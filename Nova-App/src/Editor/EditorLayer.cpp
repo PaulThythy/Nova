@@ -57,6 +57,13 @@ namespace Nova::App::Editor {
         return false;
     }
 
+    void EditorLayer::SetGizmoDragging(bool isDragging) {
+        if (m_IsGizmoDragging && !isDragging)
+            m_BlockViewportPick = true;
+
+        m_IsGizmoDragging = isDragging;
+    }
+
     void EditorLayer::PickAtViewportUV(float u, float v, bool addToSelection) {
         if (!g_AppLayer)
             return;
