@@ -134,13 +134,13 @@ namespace Nova::App {
             entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
             registry.emplace<TransformComponent>(spotEntity,
                 glm::vec3(2.0f, 6.0f, 2.0f),
-                glm::vec3(glm::radians(-60.0f), glm::radians(-20.0f), 0.0f),
+                glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(1.0f));
             auto spot = std::make_shared<Light>();
             spot->m_Type = LightType::Spot;
             spot->m_Color = glm::vec3(1.0f, 1.0f, 1.0f);
             spot->m_Intensity = 8.0f;
-            spot->m_Direction = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
+            // Spot beam follows TransformComponent::m_Rotation (local +X axis).
             spot->m_Range = 20.0f;
             spot->m_InnerCone = 15.0f;
             spot->m_OuterCone = 30.0f;

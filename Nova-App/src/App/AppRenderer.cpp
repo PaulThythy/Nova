@@ -689,9 +689,12 @@ namespace Nova::App {
 
             const Light& light = *lc.m_Light;
             const glm::vec3 position = tc.m_Translation;
-            const glm::vec3 travelDir = glm::length(light.m_Direction) > 1e-6f
-                ? glm::normalize(light.m_Direction)
-                : glm::vec3(0.0f, -1.0f, 0.0f);
+            // Spot: beam from Transform rotation (Euler→quat). Directional: Light::m_Direction.
+            const glm::vec3 travelDir = (light.m_Type == LightType::Spot)
+                ? SpotTravelDirectionFromRotation(tc.m_Rotation)
+                : (glm::length(light.m_Direction) > 1e-6f
+                    ? glm::normalize(light.m_Direction)
+                    : glm::vec3(0.0f, -1.0f, 0.0f));
 
             Nova::Core::Renderer::RHI::LightGPU gpu{};
             gpu.m_Type = static_cast<int>(light.m_Type);
