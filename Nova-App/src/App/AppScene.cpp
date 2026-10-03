@@ -122,7 +122,7 @@ namespace Nova::App {
             dirLight->m_Type = LightType::Directional;
             dirLight->m_Color = glm::vec3(1.0f);
             dirLight->m_Intensity = 3.0f;
-            dirLight->m_Direction = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
+            // Direction follows TransformComponent::m_Rotation (local +X axis).
             dirLight->m_LightShadow = true;
             dirLight->m_ShadowBiasConstant = 0.5f;
             dirLight->m_ShadowBiasSlope = 1.0f;
@@ -188,7 +188,7 @@ namespace Nova::App {
             dirLight->m_Type = LightType::Directional;
             dirLight->m_Color = glm::vec3(1.0f);
             dirLight->m_Intensity = 3.0f;
-            dirLight->m_Direction = glm::normalize(glm::vec3(-0.4f, -1.0f, -0.25f));
+            // Direction follows TransformComponent::m_Rotation (local +X axis).
             dirLight->m_LightShadow = true;
             dirLight->m_ShadowBiasConstant = 0.5f;
             dirLight->m_ShadowBiasSlope = 1.0f;

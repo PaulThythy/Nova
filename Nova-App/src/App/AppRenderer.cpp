@@ -689,12 +689,12 @@ namespace Nova::App {
 
             const Light& light = *lc.m_Light;
             const glm::vec3 position = tc.m_Translation;
-            // Spot: beam from Transform rotation (Euler→quat). Directional: Light::m_Direction.
-            const glm::vec3 travelDir = (light.m_Type == LightType::Spot)
-                ? SpotTravelDirectionFromRotation(tc.m_Rotation)
-                : (glm::length(light.m_Direction) > 1e-6f
-                    ? glm::normalize(light.m_Direction)
-                    : glm::vec3(0.0f, -1.0f, 0.0f));
+            // Directional / Spot: beam from Transform rotation (Euler→quat, local +X).
+            const glm::vec3 travelDir =
+                (light.m_Type == LightType::Directional || light.m_Type == LightType::Spot)
+                    ? LightTravelDirectionFromRotation(tc.m_Rotation)
+                    : glm::vec3(0.0f);
+
 
             Nova::Core::Renderer::RHI::LightGPU gpu{};
             gpu.m_Type = static_cast<int>(light.m_Type);
@@ -761,10 +761,7 @@ namespace Nova::App {
                 continue;
 
             ctx.BeginDepthLayer(m_ShadowMaps, static_cast<uint32_t>(light.m_ShadowMapIndex), true);
-            const float dirLen2 = glm::dot(light.m_Direction, light.m_Direction);
-            const float angleFactor = dirLen2 > 1e-12f
-                ? std::max(std::abs(light.m_Direction.y) / std::sqrt(dirLen2), 0.35f)
-                : 1.0f;
+            const float angleFactor = ShadowAngleBiasFactor(light.m_Direction);
             const float typeScale = (light.m_Type == static_cast<int>(LightType::Spot)) ? 0.35f : 1.0f;
             ctx.SetDepthBias(
                 light.m_ShadowBiasConstant * angleFactor * typeScale,
