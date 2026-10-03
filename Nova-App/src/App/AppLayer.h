@@ -92,6 +92,7 @@ namespace Nova::App {
 
         void BeginOrbitFocus(const glm::vec3& center, const glm::vec3& extents);
         void ExitOrbitMode();
+        void SyncCameraControllerFromCamera();
 
     private:
         bool OnMouseButtonPressed(Nova::Core::Events::MouseButtonPressedEvent& e);

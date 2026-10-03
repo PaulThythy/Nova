@@ -151,6 +151,51 @@ namespace Nova::App::UI::Panels::ScenePanel {
         transform.m_Scale = scale;
     }
 
+    static bool DrawViewCube(const ImVec2& viewportMin, const ImVec2& viewportMax) {
+        if (!g_AppLayer)
+            return false;
+
+        auto* camera = g_AppLayer->GetCamera();
+        if (!camera)
+            return false;
+
+        constexpr float kCubeSize = 100.0f;
+        constexpr float kPad = 10.0f;
+        const ImVec2 cubePos(viewportMax.x - kCubeSize - kPad, viewportMin.y + kPad);
+        const ImVec2 cubeSize(kCubeSize, kCubeSize);
+        const ImVec2 viewportSize(viewportMax.x - viewportMin.x, viewportMax.y - viewportMin.y);
+
+        ImGuizmo::SetDrawlist();
+        ImGuizmo::SetRect(viewportMin.x, viewportMin.y, viewportSize.x, viewportSize.y);
+
+        glm::mat4 view = camera->GetViewMatrix();
+        const float distance = std::max(glm::length(camera->m_LookFrom - camera->m_LookAt), 0.2f);
+
+        ImGuizmo::ViewManipulate(
+            glm::value_ptr(view),
+            distance,
+            cubePos,
+            cubeSize,
+            0x10101010);
+
+        const bool usingViewCube =
+            ImGuizmo::IsUsingViewManipulate() || ImGuizmo::IsViewManipulateHovered();
+
+        if (ImGuizmo::IsUsingViewManipulate()) {
+            const glm::mat4 invView = glm::inverse(view);
+            const glm::vec3 eye = glm::vec3(invView[3]);
+            const glm::vec3 forward = -glm::normalize(glm::vec3(invView[2]));
+            const glm::vec3 up = glm::normalize(glm::vec3(invView[1]));
+
+            camera->m_LookFrom = eye;
+            camera->m_LookAt = eye + forward * distance;
+            camera->m_Up = up;
+            g_AppLayer->SyncCameraControllerFromCamera();
+        }
+
+        return usingViewCube;
+    }
+
     static bool DrawTransformGizmo(EditorLayer* editor, const ImVec2& viewportMin, const ImVec2& viewportSize) {
         if (!editor || !g_AppLayer)
             return false;
@@ -445,6 +490,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
                 const ImVec2 viewportSize(max.x - min.x, max.y - min.y);
                 const bool viewportHovered = ImGui::IsItemHovered();
                 const bool gizmoActive = DrawTransformGizmo(editor, min, viewportSize);
+                const bool viewCubeActive = DrawViewCube(min, max);
 
                 // Draw overlay before pick so IsAnyItemHovered/Active covers its controls.
                 DrawViewportSettingsOverlay();
@@ -464,7 +510,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
                         if (editor) {
                             const bool overlayBusy = ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive();
-                            const bool blockPick = gizmoActive || overlayBusy || editor->ShouldBlockViewportPick();
+                            const bool blockPick = gizmoActive || viewCubeActive || overlayBusy || editor->ShouldBlockViewportPick();
                             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !blockPick) {
                                 editor->FocusAtViewportUV(u, v);
                             } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {

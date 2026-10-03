@@ -291,6 +291,12 @@ namespace Nova::App {
         m_CameraController.ExitOrbitMode(*m_AppScene.GetCamera());
     }
 
+    void AppLayer::SyncCameraControllerFromCamera() {
+        if (!m_AppScene.GetCamera())
+            return;
+        m_CameraController.SyncFromCamera(*m_AppScene.GetCamera());
+    }
+
     void AppLayer::RequestViewportResize(float width, float height) {
         if (width <= 0.0f || height <= 0.0f)
             return;
