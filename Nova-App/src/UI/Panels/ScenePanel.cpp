@@ -328,6 +328,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
 
         static const char* kModeNames[] = {
             "Lit",
+            "Unlit",
             "Wireframe",
             "Normals",
             "Positions",

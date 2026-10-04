@@ -109,6 +109,7 @@ namespace Nova::App {
         auto gridFrag = acquireShader("Editor://Shaders/Grid.frag.slang");
         auto sceneVert = acquireShader("Engine://Shaders/Scene.vert.slang");
         auto sceneFrag = acquireShader("Engine://Shaders/Scene.frag.slang");
+        auto unlitFrag = acquireShader("Engine://Shaders/Unlit.frag.slang");
         auto shadowVert = acquireShader("Engine://Shaders/Shadow.vert.slang");
         auto normalsFrag = acquireShader("Engine://Shaders/NormalsDebug.frag.slang");
         auto positionsFrag = acquireShader("Engine://Shaders/PositionsDebug.frag.slang");
@@ -134,6 +135,12 @@ namespace Nova::App {
             .m_Name = "Scene",
             .m_Vertex = sceneVert,
             .m_Fragment = sceneFrag,
+            .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
+        });
+        m_UnlitShader = fg.RegisterShader({
+            .m_Name = "Unlit",
+            .m_Vertex = sceneVert,
+            .m_Fragment = unlitFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
         });
         m_WireframeShader = fg.RegisterShader({
@@ -399,6 +406,7 @@ namespace Nova::App {
 
     Nova::Core::Renderer::RHI::RHI_ShaderHandle AppRenderer::GetActiveSceneShader() const {
         switch (m_RenderDebugMode) {
+            case RenderDebugMode::Unlit:       return m_UnlitShader;
             case RenderDebugMode::Wireframe:   return m_WireframeShader;
             case RenderDebugMode::Normals:     return m_NormalsShader;
             case RenderDebugMode::Positions:   return m_PositionsShader;
@@ -432,6 +440,7 @@ namespace Nova::App {
         if (auto* graph = m_Renderer->GetRenderGraph()) {
             setFrameUniforms(graph->GetShader(m_GridShader));
             setFrameUniforms(graph->GetShader(m_SceneShader));
+            setFrameUniforms(graph->GetShader(m_UnlitShader));
             setFrameUniforms(graph->GetShader(m_WireframeShader));
             setFrameUniforms(graph->GetShader(m_ShadowShader));
             setFrameUniforms(graph->GetShader(m_NormalsShader));
