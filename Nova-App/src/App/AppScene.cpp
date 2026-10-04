@@ -126,7 +126,7 @@ namespace Nova::App {
             dirLight->m_LightShadow = true;
             dirLight->m_ShadowBiasConstant = 0.5f;
             dirLight->m_ShadowBiasSlope = 1.0f;
-            dirLight->m_ShadowNormalBias = 0.012f;
+            dirLight->m_ShadowNormalBias = -0.05f;
             registry.emplace<LightComponent>(dirLightEntity, dirLight);
         }
 
@@ -147,7 +147,7 @@ namespace Nova::App {
             spot->m_LightShadow = true;
             spot->m_ShadowBiasConstant = 0.2f;
             spot->m_ShadowBiasSlope = 0.4f;
-            spot->m_ShadowNormalBias = 0.003f;
+            spot->m_ShadowNormalBias = -0.50f;
             registry.emplace<LightComponent>(spotEntity, spot);
         }
     }
@@ -192,7 +192,7 @@ namespace Nova::App {
             dirLight->m_LightShadow = true;
             dirLight->m_ShadowBiasConstant = 0.5f;
             dirLight->m_ShadowBiasSlope = 1.0f;
-            dirLight->m_ShadowNormalBias = 0.012f;
+            dirLight->m_ShadowNormalBias = -0.05f;
             registry.emplace<LightComponent>(dirLightEntity, dirLight);
         }
 

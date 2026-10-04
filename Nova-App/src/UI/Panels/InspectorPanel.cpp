@@ -4,6 +4,7 @@
 
 #include "ECS/Components/NameComponent.h"
 #include "Editor/EditorLayer.h"
+#include "UI/Components/LightComponentUI.h"
 #include "UI/Components/TransformComponentUI.h"
 
 namespace Nova::App::UI::Panels::InspectorPanel {
@@ -41,6 +42,7 @@ namespace Nova::App::UI::Panels::InspectorPanel {
         ImGui::Separator();
 
         UI::Components::DrawTransformComponent(registry, entity);
+        UI::Components::DrawLightComponent(registry, entity);
 
         ImGui::End();
     }
