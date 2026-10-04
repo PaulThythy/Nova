@@ -116,7 +116,7 @@ namespace Nova::App {
             entt::entity dirLightEntity = m_Scene.CreateEntity("DirectionalLight");
             registry.emplace<TransformComponent>(dirLightEntity,
                 glm::vec3(0.0f, 8.0f, 0.0f),
-                glm::vec3(glm::radians(-45.0f), glm::radians(45.0f), 0.0f),
+                glm::vec3(0.0f, 0.0f, glm::radians(-119.0f)),
                 glm::vec3(1.0f));
             auto dirLight = std::make_shared<Light>();
             dirLight->m_Type = LightType::Directional;
@@ -133,8 +133,8 @@ namespace Nova::App {
         {
             entt::entity spotEntity = m_Scene.CreateEntity("SpotLight");
             registry.emplace<TransformComponent>(spotEntity,
-                glm::vec3(2.0f, 6.0f, 2.0f),
-                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(5.0f, 1.5f, 0.0f),
+                glm::vec3(glm::radians(180.0f), glm::radians(-25.0f), glm::radians(180.0f)),
                 glm::vec3(1.0f));
             auto spot = std::make_shared<Light>();
             spot->m_Type = LightType::Spot;
@@ -182,7 +182,7 @@ namespace Nova::App {
             entt::entity dirLightEntity = m_Scene.CreateEntity("DirectionalLight");
             registry.emplace<TransformComponent>(dirLightEntity,
                 glm::vec3(0.0f, 20.0f, 0.0f),
-                glm::vec3(glm::radians(-50.0f), glm::radians(35.0f), 0.0f),
+                glm::vec3(0.0f, 0.0f, glm::radians(-119.0f)),
                 glm::vec3(1.0f));
             auto dirLight = std::make_shared<Light>();
             dirLight->m_Type = LightType::Directional;
