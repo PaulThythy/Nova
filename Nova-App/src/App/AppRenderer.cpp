@@ -489,7 +489,6 @@ namespace Nova::App {
         auto& registry = m_Scene->GetRegistry();
         auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
         for (auto entity : viewMeshes) {
-            auto& tc = viewMeshes.get<TransformComponent>(entity);
             auto& mrc = viewMeshes.get<MeshRendererComponent>(entity);
 
             if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
@@ -499,7 +498,7 @@ namespace Nova::App {
             if (!cpuMesh)
                 continue;
 
-            sceneShader->SetParameter("m_Model", tc.GetTransform());
+            sceneShader->SetParameter("m_Model", m_Scene->GetWorldTransform(entity));
 
             sceneShader->SetParameter("m_Base", mrc.m_Material.m_Base);
             sceneShader->SetParameter("m_BaseColor", mrc.m_Material.m_BaseColor);
@@ -561,16 +560,15 @@ namespace Nova::App {
             return;
 
         for (entt::entity entity : selected) {
-            auto* tc = registry.try_get<TransformComponent>(entity);
             auto* mrc = registry.try_get<MeshRendererComponent>(entity);
-            if (!tc || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+            if (!registry.all_of<TransformComponent>(entity) || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
                 continue;
 
             auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
             if (!cpuMesh)
                 continue;
 
-            const glm::mat4 model = tc->GetTransform();
+            const glm::mat4 model = m_Scene->GetWorldTransform(entity);
 
             Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
             cmd.m_Mesh = cpuMesh;
@@ -654,13 +652,12 @@ namespace Nova::App {
         auto view = registry.view<TransformComponent, MeshComponent>();
 
         for (auto entity : view) {
-            auto& tc = view.get<TransformComponent>(entity);
             auto& mc = view.get<MeshComponent>(entity);
 
             if (!mc.m_AABBTree.IsBuilt())
                 continue;
 
-            const glm::mat4 entityTransform = tc.GetTransform();
+            const glm::mat4 entityTransform = m_Scene->GetWorldTransform(entity);
             const auto& nodes = mc.m_AABBTree.GetNodes();
 
             for (const auto& node : nodes) {
@@ -691,18 +688,20 @@ namespace Nova::App {
             if (m_GpuLights.size() >= Nova::Core::Renderer::RHI::MAX_LIGHTS)
                 break;
 
-            auto& tc = view.get<TransformComponent>(entity);
             auto& lc = view.get<LightComponent>(entity);
             if (!lc.m_Light)
                 continue;
 
             const Light& light = *lc.m_Light;
-            const glm::vec3 position = tc.m_Translation;
-            // Directional / Spot: beam from Transform rotation (Euler→quat, local +X).
-            const glm::vec3 travelDir =
-                (light.m_Type == LightType::Directional || light.m_Type == LightType::Spot)
-                    ? LightTravelDirectionFromRotation(tc.m_Rotation)
-                    : glm::vec3(0.0f);
+            const glm::mat4 world = m_Scene->GetWorldTransform(entity);
+            const glm::vec3 position = glm::vec3(world[3]);
+            // Directional / Spot: beam from world rotation (local +X).
+            glm::vec3 travelDir{ 0.0f };
+            if (light.m_Type == LightType::Directional || light.m_Type == LightType::Spot) {
+                travelDir = glm::mat3(world) * LightLocalBeamAxis();
+                const float len2 = glm::dot(travelDir, travelDir);
+                travelDir = len2 > 1e-12f ? (travelDir / std::sqrt(len2)) : LightLocalBeamAxis();
+            }
 
 
             Nova::Core::Renderer::RHI::LightGPU gpu{};
@@ -779,7 +778,6 @@ namespace Nova::App {
             shadowShader->SetParameter("m_LightIndex", static_cast<int>(lightIdx));
 
             for (auto entity : meshView) {
-                auto& tc = meshView.get<TransformComponent>(entity);
                 auto& mrc = meshView.get<MeshRendererComponent>(entity);
                 if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
                     continue;
@@ -787,7 +785,7 @@ namespace Nova::App {
                 if (!cpuMesh)
                     continue;
 
-                shadowShader->SetParameter("m_Model", tc.GetTransform());
+                shadowShader->SetParameter("m_Model", m_Scene->GetWorldTransform(entity));
                 ctx.BindShader(m_ShadowShader);
 
                 Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};

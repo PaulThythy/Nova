@@ -5,8 +5,11 @@
 #include <cstdio>
 #include <vector>
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -139,18 +142,6 @@ namespace Nova::App::UI::Panels::ScenePanel {
         outRotation = glm::normalize(glm::quat_cast(glm::mat3(column0, column1, column2)));
     }
 
-    static void WriteTransformFromQuatTRS(
-        TransformComponent& transform,
-        const glm::vec3& translation,
-        const glm::quat& rotation,
-        const glm::vec3& scale)
-    {
-        transform.m_Translation = translation;
-        // Component keeps Euler; convert only when writing back.
-        transform.m_Rotation = glm::eulerAngles(rotation);
-        transform.m_Scale = scale;
-    }
-
     static bool DrawViewCube(const ImVec2& viewportMin, const ImVec2& viewportMax) {
         if (!g_AppLayer)
             return false;
@@ -208,9 +199,9 @@ namespace Nova::App::UI::Panels::ScenePanel {
         if (selectedEntity == entt::null)
             return false;
 
-        auto& registry = g_AppLayer->GetScene().GetRegistry();
-        auto* transform = registry.try_get<TransformComponent>(selectedEntity);
-        if (!transform)
+        auto& scene = g_AppLayer->GetScene();
+        auto& registry = scene.GetRegistry();
+        if (!registry.all_of<TransformComponent>(selectedEntity))
             return false;
 
         struct DragStartPose {
@@ -229,7 +220,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGuizmo::SetRect(viewportMin.x, viewportMin.y, viewportSize.x, viewportSize.y);
 
         if (!s_DragActive)
-            s_DragMatrix = transform->GetTransform();
+            s_DragMatrix = scene.GetWorldTransform(selectedEntity);
 
         glm::mat4 view = camera->GetViewMatrix();
         glm::mat4 projection = camera->GetProjectionMatrix();
@@ -252,15 +243,14 @@ namespace Nova::App::UI::Panels::ScenePanel {
             s_DragActive = true;
             s_DragStarts.clear();
             for (entt::entity entity : editor->GetSelectedEntities()) {
-                auto* tc = registry.try_get<TransformComponent>(entity);
-                if (!tc)
+                if (!registry.all_of<TransformComponent>(entity))
                     continue;
-                s_DragStarts.push_back({
-                    entity,
-                    tc->m_Translation,
-                    glm::normalize(glm::quat(tc->m_Rotation)),
-                    tc->m_Scale
-                });
+
+                glm::vec3 translation{};
+                glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
+                glm::vec3 scale{ 1.0f };
+                DecomposeMatrixToTRS(scene.GetWorldTransform(entity), translation, rotation, scale);
+                s_DragStarts.push_back({ entity, translation, rotation, scale });
             }
         }
 
@@ -269,9 +259,9 @@ namespace Nova::App::UI::Panels::ScenePanel {
             glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
             glm::vec3 scale{ 1.0f };
             DecomposeMatrixToTRS(s_DragMatrix, translation, rotation, scale);
-            WriteTransformFromQuatTRS(*transform, translation, rotation, scale);
+            scene.SetWorldTransform(selectedEntity, s_DragMatrix);
 
-            // Propagate the same TRS delta from the primary entity to the rest of the selection.
+            // Propagate the same world-space TRS delta from the primary entity to the rest of the selection.
             if (s_DragActive && s_DragStarts.size() > 1) {
                 const DragStartPose* primaryStart = nullptr;
                 for (const DragStartPose& start : s_DragStarts) {
@@ -294,16 +284,15 @@ namespace Nova::App::UI::Panels::ScenePanel {
                         if (start.m_Entity == selectedEntity)
                             continue;
 
-                        auto* tc = registry.try_get<TransformComponent>(start.m_Entity);
-                        if (!tc)
+                        if (!registry.all_of<TransformComponent>(start.m_Entity))
                             continue;
 
                         const glm::quat otherRotation = glm::normalize(deltaRotation * start.m_Rotation);
-                        WriteTransformFromQuatTRS(
-                            *tc,
-                            start.m_Translation + deltaTranslation,
-                            otherRotation,
-                            start.m_Scale * scaleRatio);
+                        const glm::mat4 otherWorld =
+                            glm::translate(glm::mat4(1.0f), start.m_Translation + deltaTranslation)
+                            * glm::toMat4(otherRotation)
+                            * glm::scale(glm::mat4(1.0f), start.m_Scale * scaleRatio);
+                        scene.SetWorldTransform(start.m_Entity, otherWorld);
                     }
                 }
             }

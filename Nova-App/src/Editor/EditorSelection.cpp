@@ -53,9 +53,8 @@ namespace Nova::App::Editor {
 
     bool EditorSelection::ComputeEntityWorldAABB(Nova::Core::Scene::Scene& scene, entt::entity entity, AABB& outBounds) {
         auto& registry = scene.GetRegistry();
-        auto* tc = registry.try_get<TransformComponent>(entity);
         auto* mc = registry.try_get<MeshComponent>(entity);
-        if (!tc || !mc || !mc->m_AABBTree.IsBuilt())
+        if (!registry.all_of<TransformComponent>(entity) || !mc || !mc->m_AABBTree.IsBuilt())
             return false;
 
         const auto& nodes = mc->m_AABBTree.GetNodes();
@@ -63,7 +62,7 @@ namespace Nova::App::Editor {
             return false;
 
         const AABB& local = nodes.front().m_Bounds;
-        const glm::mat4 transform = tc->GetTransform();
+        const glm::mat4 transform = scene.GetWorldTransform(entity);
 
         const glm::vec3 corners[8] = {
             { local.m_Min.x, local.m_Min.y, local.m_Min.z },
