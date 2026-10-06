@@ -13,6 +13,8 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(NOVA_BUILD_TESTS "Build Nova unit/integration tests" OFF)
+
 # keep compile artifacts in Build/ ; Nova-App executable goes in Bin/
 set(NOVA_BIN_DIR "${PROJECT_SOURCE_DIR}/Bin")
 
@@ -26,6 +28,11 @@ set_target_properties(Nova-App PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${NOVA_BIN_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${NOVA_BIN_DIR}"
 )
+
+if(NOVA_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(Nova-Tests)
+endif()
 
 # Set Nova-App as the startup project
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Nova-App)
