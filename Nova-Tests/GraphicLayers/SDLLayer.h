@@ -1,14 +1,16 @@
-#ifndef EMPTYLAYER_H
-#define EMPTYLAYER_H
+#ifndef SDLLAYER_H
+#define SDLLAYER_H
+
+#include <SDL3/SDL.h>
 
 #include "Core/Layer.h"
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
 
-class EmptyLayer : public Nova::Core::Layer {
+class SDLLayer : public Nova::Core::Layer {
 public:
-    explicit EmptyLayer();
-    ~EmptyLayer() override = default;
+    explicit SDLLayer();
+    ~SDLLayer() override = default;
 
     void OnAttach() override;
     void OnDetach() override;
@@ -21,6 +23,8 @@ public:
 
 private:
     bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
+
+    SDL_Renderer* m_Renderer = nullptr;
 };
 
-#endif // EMPTYLAYER_H
+#endif // SDLLAYER_H

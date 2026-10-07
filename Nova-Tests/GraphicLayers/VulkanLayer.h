@@ -1,14 +1,17 @@
-#ifndef EMPTYLAYER_H
-#define EMPTYLAYER_H
+#ifndef VULKANLAYER_H
+#define VULKANLAYER_H
+
+#include <memory>
 
 #include "Core/Layer.h"
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
+#include "Renderer/RHI/RHI_Renderer.h"
 
-class EmptyLayer : public Nova::Core::Layer {
+class VulkanLayer : public Nova::Core::Layer {
 public:
-    explicit EmptyLayer();
-    ~EmptyLayer() override = default;
+    explicit VulkanLayer();
+    ~VulkanLayer() override = default;
 
     void OnAttach() override;
     void OnDetach() override;
@@ -21,6 +24,8 @@ public:
 
 private:
     bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
+
+    std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
 };
 
-#endif // EMPTYLAYER_H
+#endif // VULKANLAYER_H
