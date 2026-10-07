@@ -1,17 +1,17 @@
-#ifndef VULKANLAYER_H
-#define VULKANLAYER_H
+#ifndef RHILAYER_H
+#define RHILAYER_H
 
-#include <memory>
+#include <SDL3/SDL.h>
 
 #include "Core/Layer.h"
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
-#include "Renderer/Backends/Vulkan/VK_Renderer.h"
+#include "Renderer/RHI/RHI_Renderer.h"
 
-class VulkanLayer : public Nova::Core::Layer {
+class RHILayer : public Nova::Core::Layer {
 public:
-    explicit VulkanLayer();
-    ~VulkanLayer() override = default;
+    explicit RHILayer();
+    ~RHILayer() override = default;
 
     void OnAttach() override;
     void OnDetach() override;
@@ -25,7 +25,7 @@ public:
 private:
     bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
 
-    std::unique_ptr<Nova::Core::Renderer::Backends::Vulkan::VK_Renderer> m_Renderer;
+    std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
 };
 
-#endif // VULKANLAYER_H
+#endif // RHILAYER_H

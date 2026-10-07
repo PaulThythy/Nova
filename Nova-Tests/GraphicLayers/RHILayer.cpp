@@ -1,18 +1,18 @@
-#include "VulkanLayer.h"
+#include "RHILayer.h"
 
 #include "Core/Application.h"
 #include "Core/GraphicsAPI.h"
 #include "Core/Log.h"
 #include "Renderer/RHI/RHI_RenderGraphBuilder.h"
 
-#include "RHILayer.h"
+#include "EmptyLayer.h"
 
 #include "imgui.h"
 
-VulkanLayer::VulkanLayer() : Layer("VulkanLayer") {}
+RHILayer::RHILayer() : Layer("RHILayer") {}
 
-void VulkanLayer::OnAttach() {
-    NV_LOG_INFO("VulkanLayer attached");
+void RHILayer::OnAttach() {
+    NV_LOG_INFO("RHILayer attached");
 
     auto& app = Nova::Core::Application::Get();
     auto& window = app.GetWindow();
@@ -27,27 +27,24 @@ void VulkanLayer::OnAttach() {
 
     if (window.GetGraphicsAPI() != api) {
         if (!window.SetGraphicsAPI(api)) {
-            NV_LOG_ERROR("VulkanLayer: failed to set GraphicsAPI::Vulkan");
+            NV_LOG_ERROR("RHILayer: failed to set GraphicsAPI::Vulkan");
             return;
         }
     }
 
-    // Mark ImGui for Vulkan; InitPresentationResources completes it via SetVulkanInitInfo.
     imgui.SetImGuiBackend(api);
 
-    namespace VK = Nova::Core::Renderer::Backends::Vulkan;
     namespace RHI = Nova::Core::Renderer::RHI;
 
-    VK::VK_SwapchainDesc swapDesc{};
+    RHI::RHI_SwapchainDesc swapDesc{};
     swapDesc.m_FramesInFlight = 3;
     swapDesc.m_CreateSurface = true;
     swapDesc.m_EnableSwapchain = true;
-    swapDesc.m_PreferredPresentMode = VK::VK_PresentMode::Default;
+    swapDesc.m_PreferredPresentMode = RHI::RHI_PresentMode::Default;
 
-    m_Renderer = std::make_unique<VK::VK_Renderer>();
-    if (!m_Renderer->Create(swapDesc)) {
-        NV_LOG_ERROR("VulkanLayer: failed to create Vulkan renderer");
-        m_Renderer.reset();
+    m_Renderer = RHI::IRenderer::Create(api, swapDesc);
+    if (!m_Renderer) {
+        NV_LOG_ERROR("RHILayer: failed to create RHI renderer");
         return;
     }
 
@@ -77,11 +74,11 @@ void VulkanLayer::OnAttach() {
         [](RHI::IPassContext& /*ctx*/) {});
 
     m_Renderer->SetRenderGraph(rg.Build(api));
-    NV_LOG_INFO("VulkanLayer: Vulkan renderer + present graph ready");
+    NV_LOG_INFO("RHILayer: RHI renderer + present graph ready");
 }
 
-void VulkanLayer::OnDetach() {
-    NV_LOG_INFO("VulkanLayer detached");
+void RHILayer::OnDetach() {
+    NV_LOG_INFO("RHILayer detached");
 
     if (m_Renderer) {
         Nova::Core::Application::Get().GetImGuiLayer().DestroyImGuiBackend(Nova::Core::GraphicsAPI::Vulkan);
@@ -90,48 +87,48 @@ void VulkanLayer::OnDetach() {
     }
 }
 
-void VulkanLayer::OnUpdate(float /*dt*/) {
+void RHILayer::OnUpdate(float /*dt*/) {
     if (m_Renderer)
         m_Renderer->Update(0.0f);
 }
 
-void VulkanLayer::OnBegin() {
+void RHILayer::OnBegin() {
     if (m_Renderer)
         m_Renderer->BeginFrame();
 }
 
-void VulkanLayer::OnRender() {
+void RHILayer::OnRender() {
     if (m_Renderer)
         m_Renderer->RenderFrame();
 }
 
-void VulkanLayer::OnEnd() {
+void RHILayer::OnEnd() {
     if (m_Renderer)
         m_Renderer->EndFrame();
 }
 
-void VulkanLayer::OnImGuiRender() {
-    ImGui::Begin("VulkanLayer");
-    ImGui::Text("Graphics API: Vulkan");
-    ImGui::Text("VK_Renderer: %p", static_cast<void*>(m_Renderer.get()));
-    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Swapchain clear + ImGui via Vulkan");
+void RHILayer::OnImGuiRender() {
+    ImGui::Begin("RHILayer");
+    ImGui::Text("Graphics API: RHI");
+    ImGui::Text("RHI_Renderer: %p", static_cast<void*>(m_Renderer.get()));
+    ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "Swapchain clear + ImGui via RHI");
     ImGui::End();
 }
 
-void VulkanLayer::OnEvent(Nova::Core::Events::Event& e) {
+void RHILayer::OnEvent(Nova::Core::Events::Event& e) {
     Nova::Core::Events::EventDispatcher dispatcher(e);
     dispatcher.Dispatch<Nova::Core::Events::KeyPressedEvent>([this](Nova::Core::Events::KeyPressedEvent& ev) {
         return OnKeyPressed(ev);
     });
 }
 
-bool VulkanLayer::OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e) {
+bool RHILayer::OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e) {
     if (e.IsRepeat())
         return false;
 
     if (e.GetKeyCode() == SDLK_SPACE) {
-        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<RHILayer>(this);
-        NV_LOG_INFO("VulkanLayer: transition to RHILayer requested");
+        Nova::Core::Application::Get().GetLayerStack().QueueLayerTransition<EmptyLayer>(this);
+        NV_LOG_INFO("RHILayer: transition to EmptyLayer requested");
         return true;
     }
 
