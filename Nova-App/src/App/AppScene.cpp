@@ -62,7 +62,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f));
         {
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
             registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
             registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
@@ -76,7 +76,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f));
         {
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
             registry.emplace<MeshRendererComponent>(torusEntity, torusAsset, mat);
             registry.emplace<MeshComponent>(torusEntity, torusAsset);
@@ -90,7 +90,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f));
         {
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
             registry.emplace<MeshRendererComponent>(sphereEntity, sphereAsset, mat);
             registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
@@ -107,7 +107,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(10.0f, 10.0f, 10.0f));
         {
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
             registry.emplace<MeshComponent>(planeEntity, planeAsset);
         }
@@ -204,7 +204,7 @@ namespace Nova::App {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(100.0f, 1.0f, 100.0f));
         {
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.35f, 0.37f, 0.40f);
             registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
             registry.emplace<MeshComponent>(planeEntity, planeAsset);
@@ -251,7 +251,7 @@ namespace Nova::App {
                 glm::vec3(0.0f, yawDist(rng), 0.0f),
                 glm::vec3(scale));
 
-            Nova::Core::Renderer::RHI::Material mat{};
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(colorDist(rng), colorDist(rng), colorDist(rng));
             registry.emplace<MeshRendererComponent>(entity, assets[static_cast<size_t>(type)], mat);
             registry.emplace<MeshComponent>(entity, assets[static_cast<size_t>(type)]);
