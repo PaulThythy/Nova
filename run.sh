@@ -1,5 +1,7 @@
 #!/bin/bash
 
-cmake -S . -B Build -G "Ninja"
-cmake --build Build -- -j 6
-./Bin/Nova-App
+# Multi-config: one Build/ tree, binaries in Bin/<Config>/
+# Switch Debug/Release without wiping object files.
+cmake --preset ninja-multi
+cmake --build --preset ninja-multi-debug --parallel 6
+./Bin/Debug/Nova-App

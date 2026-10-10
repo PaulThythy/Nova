@@ -15,19 +15,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(NOVA_BUILD_TESTS "Build Nova unit/integration tests" OFF)
 
-# keep compile artifacts in Build/ ; Nova-App executable goes in Bin/
+# Compile artifacts: Build/ (or Build/<Config>/ with single-config presets)
+# Executables: Bin/<Config>/  e.g. Bin/Debug/Nova-App
 set(NOVA_BIN_DIR "${PROJECT_SOURCE_DIR}/Bin")
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/NovaCompileOptions.cmake")
 
 add_subdirectory(Nova-Core)
 add_subdirectory(Nova-App)
 
-set_target_properties(Nova-App PROPERTIES 
-    RUNTIME_OUTPUT_DIRECTORY "${NOVA_BIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${NOVA_BIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${NOVA_BIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${NOVA_BIN_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${NOVA_BIN_DIR}"
-)
+nova_configure_target(Nova-Core)
+nova_configure_target(Nova-App)
+nova_set_runtime_output(Nova-App)
 
 if(NOVA_BUILD_TESTS)
     enable_testing()
