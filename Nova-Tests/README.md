@@ -10,7 +10,7 @@ Prefer a **multi-config** generator so Debug and Release object files coexist in
 ### Recommended (Ninja Multi-Config)
 
 ```bash
-cmake --preset ninja-multi
+cmake --preset ninja-multi -DNOVA_BUILD_TESTS=ON
 cmake --build --preset ninja-multi-debug --target Nova-Tests-GraphicLayers
 ./Bin/Debug/Nova-Tests-GraphicLayers
 
@@ -37,7 +37,7 @@ cmake --build --preset ninja-release --target Nova-Tests-BuildTypes
 ### BuildTypes — compare configs / log stripping
 
 ```bash
-cmake --preset ninja-multi
+cmake --preset ninja-multi -DNOVA_BUILD_TESTS=ON
 cmake --build --preset ninja-multi-debug --target Nova-Tests-BuildTypes
 ./Bin/Debug/Nova-Tests-BuildTypes
 

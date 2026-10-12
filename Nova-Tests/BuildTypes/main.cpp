@@ -7,8 +7,6 @@
 #include "Core/Log.h"
 #include "Core/Platform.h"
 
-namespace {
-
 // Intentionally heavy CPU work (Mandelbrot escape-time) so Debug vs Release
 // timings differ clearly. Result is consumed so the compiler cannot DCE it.
 [[nodiscard]] double HeavyMandelbrot(int width, int height, int maxIterations)
@@ -70,8 +68,6 @@ void LogPlatformSpecific()
     NV_LOG_WARN("Platform gate: unknown platform (NOVA_UNKNOWN_PLATFORM)");
 #endif
 }
-
-} // namespace
 
 int main(int /*argc*/, char** /*argv*/)
 {
