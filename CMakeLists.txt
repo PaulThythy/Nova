@@ -2,6 +2,9 @@
 
 cmake_minimum_required(VERSION 3.22)
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;MinSizeRel" CACHE STRING "Build configurations" FORCE)
+set_property(CACHE CMAKE_CONFIGURATION_TYPES PROPERTY STRINGS "Debug;Release;RelWithDebInfo;MinSizeRel")
+
 project(Nova)
 
 set(CMAKE_CXX_STANDARD 23)
