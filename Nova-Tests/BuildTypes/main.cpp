@@ -41,10 +41,11 @@ void LogBuildTypeBanner()
     NV_LOG_DEBUG("DEBUG visible: developer diagnostics (Debug only)");
     NV_LOG_INFO("INFO visible: general info (Debug + RelWithDebInfo)");
     NV_LOG_WARN("WARN visible: warnings (Debug + RelWithDebInfo + Release)");
-    // ERROR always compiles in every configuration
-    NV_LOG_ERROR("ERROR visible: always enabled (all build types)");
+    // ERROR: all configs except Dist (Dist strips every level)
+    NV_LOG_ERROR("ERROR visible: enabled except Dist");
 
-    // WARN so identity remains visible in Release; MinSizeRel uses ERROR below.
+    // WARN so identity remains visible in Release; MinSizeRel uses ERROR;
+    // Dist is silent by design (all NV_LOG_* are no-ops).
     const std::string identity = std::string("Build=") + NOVA_BUILD_TYPE_NAME + " Platform=" + NOVA_PLATFORM_NAME;
 #if defined(NOVA_MINSIZEREL)
     NV_LOG_ERROR(identity);
@@ -87,8 +88,6 @@ int main(int /*argc*/, char** /*argv*/)
     const auto elapsedMs =
         std::chrono::duration<double, std::milli>(end - start).count();
 
-    // WARN survives Release; use it so the timing result is always visible
-    // except MinSizeRel (ERROR+ only). On MinSizeRel, fall back to ERROR.
     const std::string timing =
         "HeavyMandelbrot " + std::to_string(kWidth) + "x" + std::to_string(kHeight) +
         " @" + std::to_string(kMaxIterations) + " iters -> " +

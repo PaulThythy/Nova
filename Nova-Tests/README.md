@@ -46,9 +46,9 @@ cmake --build --preset ninja-multi-release --target Nova-Tests-BuildTypes
 ```
 
 Log visibility by build type:
-| Level | Debug | RelWithDebInfo | Release | MinSizeRel |
-|-------|-------|----------------|---------|------------|
-| TRACE / DEBUG | yes | no | no | no |
-| INFO | yes | yes | no | no |
-| WARN | yes | yes | yes | no |
-| ERROR / FATAL | yes | yes | yes | yes |
+| Level | Debug | RelWithDebInfo | Release | MinSizeRel | Dist |
+|-------|-------|----------------|---------|------------|------|
+| TRACE / DEBUG | yes | no | no | no | no |
+| INFO | yes | yes | no | no | no |
+| WARN | yes | yes | yes | no | no |
+| ERROR / FATAL | yes | yes | yes | yes | no |

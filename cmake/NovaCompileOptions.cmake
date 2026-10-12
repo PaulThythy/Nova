@@ -29,6 +29,7 @@ function(nova_apply_build_definitions target)
             $<$<CONFIG:Release>:NOVA_RELEASE>
             $<$<CONFIG:RelWithDebInfo>:NOVA_RELWITHDEBINFO>
             $<$<CONFIG:MinSizeRel>:NOVA_MINSIZEREL>
+            $<$<CONFIG:Dist>:NOVA_DIST>
     )
 endfunction()
 
@@ -42,6 +43,9 @@ function(nova_apply_optimization_options target)
                 $<$<CONFIG:Release>:/O2>
                 $<$<CONFIG:Release>:/Ob2>
                 $<$<CONFIG:Release>:/Ot>
+                $<$<CONFIG:Dist>:/O2>
+                $<$<CONFIG:Dist>:/Ob2>
+                $<$<CONFIG:Dist>:/Ot>
                 $<$<CONFIG:RelWithDebInfo>:/O2>
                 $<$<CONFIG:RelWithDebInfo>:/Ob2>
                 $<$<CONFIG:MinSizeRel>:/O1>
@@ -50,17 +54,20 @@ function(nova_apply_optimization_options target)
         target_link_options(${target}
             PRIVATE
                 $<$<CONFIG:Release>:/LTCG>
+                $<$<CONFIG:Dist>:/LTCG>
                 $<$<CONFIG:MinSizeRel>:/LTCG>
         )
         target_compile_options(${target}
             PRIVATE
                 $<$<CONFIG:Release>:/GL>
+                $<$<CONFIG:Dist>:/GL>
                 $<$<CONFIG:MinSizeRel>:/GL>
         )
     else()
         target_compile_options(${target}
             PRIVATE
                 $<$<CONFIG:Release>:-O3>
+                $<$<CONFIG:Dist>:-O3>
                 $<$<CONFIG:RelWithDebInfo>:-O2>
                 $<$<CONFIG:MinSizeRel>:-Os>
         )
@@ -68,11 +75,12 @@ function(nova_apply_optimization_options target)
 
     if(NOVA_IPO_SUPPORTED)
         set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+        set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_DIST TRUE)
         set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE)
     endif()
 endfunction()
 
-# Executables land in Bin/<Config>/ (Debug, Release, ...).
+# Executables land in Bin/<Config>/ (Debug, Release, Dist, ...).
 # Works for both multi-config (VS, Ninja Multi-Config) and single-config generators.
 function(nova_set_runtime_output target)
     set_target_properties(${target} PROPERTIES
@@ -81,6 +89,7 @@ function(nova_set_runtime_output target)
         RUNTIME_OUTPUT_DIRECTORY_RELEASE "${NOVA_BIN_DIR}/Release"
         RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${NOVA_BIN_DIR}/RelWithDebInfo"
         RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${NOVA_BIN_DIR}/MinSizeRel"
+        RUNTIME_OUTPUT_DIRECTORY_DIST "${NOVA_BIN_DIR}/Dist"
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/"
     )
 endfunction()
