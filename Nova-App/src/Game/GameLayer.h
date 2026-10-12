@@ -1,17 +1,19 @@
-#ifndef EDITORLAYER_H
-#define EDITORLAYER_H
+#ifndef GAMELAYER_H
+#define GAMELAYER_H
 
 #include "Core/Layer.h"
 #include "Events/Event.h"
 
 namespace Nova::App {
-
     class AppLayer;
+} // namespace Nova::App
 
-    class EditorLayer : public Nova::Core::Layer {
+namespace Nova::App::Game {
+
+    class GameLayer : public Nova::Core::Layer {
     public:
-        explicit EditorLayer(): Layer("EditorLayer") {}
-        ~EditorLayer() override = default;
+        explicit GameLayer(): Layer("GameLayer") {}
+        ~GameLayer() override = default;
 
         void OnAttach() override;
         void OnDetach() override;
@@ -23,6 +25,6 @@ namespace Nova::App {
         void OnEvent(Nova::Core::Events::Event& e) override;
     };
 
-} // namespace Nova::App
+} // namespace Nova::App::Game
 
-#endif // EDITORLAYER_H
+#endif // GAMELAYER_H

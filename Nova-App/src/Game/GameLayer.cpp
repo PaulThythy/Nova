@@ -1,9 +1,9 @@
-#include "App/GameLayer.h"
+#include "Game/GameLayer.h"
 
 #include "App/AppLayer.h"
 #include "Core/Assert.h"
 
-namespace Nova::App {
+namespace Nova::App::Game {
 
     void GameLayer::OnAttach() {
         if (g_AppLayer) {
@@ -31,4 +31,4 @@ namespace Nova::App {
 
     void GameLayer::OnEvent(Nova::Core::Events::Event&) {}
 
-} // namespace Nova::App
+} // namespace Nova::App::Game

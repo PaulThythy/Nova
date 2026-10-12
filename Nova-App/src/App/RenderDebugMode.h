@@ -5,6 +5,8 @@ namespace Nova::App {
 
     enum class RenderDebugMode : int {
         Lit = 0,
+        Unlit,
+        Wireframe,
         Normals,
         Positions,
         VertexColor,

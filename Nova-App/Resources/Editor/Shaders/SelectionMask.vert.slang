@@ -1,17 +1,35 @@
-// Minimal MVP block only — do not reflect nova.frame / lights / shadows.
-// Otherwise ApplyParameters would overwrite the shared frame UBO after Scene
-// and the GPU would light the scene with stale/zero lightCount.
+// Minimal scene.uniforms + model block. Binds the shared scene UBO (camera) uploaded by
+// PushSceneUniforms — ApplyParameters does not rewrite scene uniforms, so this pass
+// cannot clobber m_LightCount for later draws.
 
-struct MVP {
-    float4x4 model;
-    float4x4 view;
-    float4x4 proj;
-    float4x4 viewProj;
-    float4x4 invViewProj;
+struct CameraGPU {
+    float4x4 m_View;
+    float4x4 m_Proj;
+    float4x4 m_ViewProj;
+    float4x4 m_InvViewProj;
+    float3 m_Position;
+    float _pad;
+};
+
+struct SceneUniforms {
+    CameraGPU m_Camera;
+    int m_LightCount;
+    float _padAfterLightCount;
+};
+
+struct ModelUniforms {
+    float4x4 m_Model;
+    int m_LightIndex;
+    float3 _padLightIndex;
+};
+
+struct SceneParameterBlock {
+    ConstantBuffer<SceneUniforms> uniforms;
 };
 
 struct SelectionMaskEngine {
-    ConstantBuffer<MVP> mvp;
+    SceneParameterBlock scene;
+    ConstantBuffer<ModelUniforms> model;
 };
 
 ParameterBlock<SelectionMaskEngine> nova;
@@ -31,10 +49,10 @@ struct VSOut {
 
 [shader("vertex")]
 VSOut main(VSIn input) {
-    float4 world = mul(nova.mvp.model, float4(input.a_Position, 1.0));
-    float4 viewPos = mul(nova.mvp.view, world);
+    float4 world = mul(nova.model.m_Model, float4(input.a_Position, 1.0));
+    float4 viewPos = mul(nova.scene.uniforms.m_Camera.m_View, world);
 
     VSOut o;
-    o.sv_position = mul(nova.mvp.proj, viewPos);
+    o.sv_position = mul(nova.scene.uniforms.m_Camera.m_Proj, viewPos);
     return o;
 }

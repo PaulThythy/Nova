@@ -41,6 +41,20 @@ namespace Nova::App {
         AnglesFromForward(camera.m_LookAt - camera.m_LookFrom, m_Navigation.m_Yaw, m_Navigation.m_Pitch);
     }
 
+    void CameraController::SyncFromCamera(const Nova::Core::Math::Camera& camera) {
+        m_FocusAnimating = false;
+        m_IsRotating = false;
+        m_IsPanning = false;
+
+        if (m_Mode == CameraMode::Orbit) {
+            SyncOrbitFromCamera(camera);
+            return;
+        }
+
+        m_Navigation.m_Position = camera.m_LookFrom;
+        AnglesFromForward(camera.m_LookAt - camera.m_LookFrom, m_Navigation.m_Yaw, m_Navigation.m_Pitch);
+    }
+
     void CameraController::SyncOrbitFromCamera(const Nova::Core::Math::Camera& camera) {
         const glm::vec3 offset = camera.m_LookFrom - camera.m_LookAt;
         m_Orbit.m_Target = camera.m_LookAt;

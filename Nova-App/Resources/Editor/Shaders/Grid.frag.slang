@@ -17,10 +17,6 @@ float fogFade(float viewDist, float nearDist, float farDist) {
     return 1.0 - smoothstep(nearDist, farDist, viewDist);
 }
 
-float fogScaledFade(float viewDist, float nearDist, float farDist, float2 fogScale) {
-    return 1.0 - smoothstep(nearDist * fogScale.x, farDist * fogScale.y, viewDist);
-}
-
 [shader("fragment")]
 PSOut main(PSIn input)
 {
@@ -30,9 +26,9 @@ PSOut main(PSIn input)
 
     float2 ndc = input.v_UV * 2.0 - 1.0;
 
-    float4 nearH = mul(nova.mvp.invViewProj, float4(ndc, 0.0, 1.0));
+    float4 nearH = mul(nova.scene.uniforms.m_Camera.m_InvViewProj, float4(ndc, 0.0, 1.0));
 
-    float4 farH = mul(nova.mvp.invViewProj, float4(ndc, 1.0, 1.0));
+    float4 farH = mul(nova.scene.uniforms.m_Camera.m_InvViewProj, float4(ndc, 1.0, 1.0));
 
     float3 nearP = nearH.xyz / nearH.w;
     float3 farP = farH.xyz / farH.w;
@@ -59,7 +55,7 @@ PSOut main(PSIn input)
     // Compute depth
     //----------------------------------------------------------
 
-    float4 clip = mul(nova.mvp.viewProj, float4(pos, 1.0));
+    float4 clip = mul(nova.scene.uniforms.m_Camera.m_ViewProj, float4(pos, 1.0));
 
     float ndcDepth = clip.z / clip.w;
 
@@ -67,13 +63,9 @@ PSOut main(PSIn input)
     // Compute distance from camera for fog
     //----------------------------------------------------------
 
-    float3 viewPos = mul(nova.mvp.view, float4(pos, 1.0)).xyz;
+    float3 viewPos = mul(nova.scene.uniforms.m_Camera.m_View, float4(pos, 1.0)).xyz;
 
     float viewDist = length(viewPos);
-
-    float majorFog = fogFade(viewDist, 10.0, 120.0);
-
-    float minorFog = fogScaledFade(viewDist, 10.0, 120.0, float2(0.5, 0.85));
 
     //----------------------------------------------------------
     // World-space grid coordinates
@@ -83,6 +75,19 @@ PSOut main(PSIn input)
     //----------------------------------------------------------
 
     float2 gridCoord = pos.xz / GridSize;
+
+    // LOD from camera height only (constant for the whole frame) so minors/majors
+    // fade together when zooming out — no perspective "ring" across the plane.
+    // Minors only near the ground; wide smootherstep for a soft altitude fade.
+    float camHeight = abs(nova.scene.uniforms.m_Camera.m_Position.y);
+    float minorT = saturate((camHeight - 3.0) / (20.0 - 3.0));
+    float minorLod = 1.0 - (minorT * minorT * minorT * (minorT * (minorT * 6.0 - 15.0) + 10.0));
+    float majorLod = 1.0 - smoothstep(80.0, 125.0, camHeight);
+
+    float distFog = fogFade(viewDist, 10.0, 10000.0);
+    float axisFog  = distFog;
+    float majorFog = distFog * majorLod;
+    float minorFog = distFog * minorLod;
 
     //----------------------------------------------------------
     // Determine nearest line index
@@ -115,7 +120,7 @@ PSOut main(PSIn input)
             // i=1 -> Z-bounded line = X axis
             color = (i == 0) ? float3(0.2, 0.2, 1.0) : float3(1.0, 0.2, 0.2);
 
-            fog = majorFog;
+            fog = axisFog;
         }
         // Major grid lines
         else if ((abs(lineIndex[i]) % int(GridMinorsPerMajor)) == 0)

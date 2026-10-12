@@ -1,4 +1,4 @@
-#include "App/EditorSelection.h"
+#include "Editor/EditorSelection.h"
 
 #include <algorithm>
 #include <iostream>
@@ -9,7 +9,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "Scene/SceneQuery.h"
 
-namespace Nova::App {
+namespace Nova::App::Editor {
 
     using namespace Nova::Core::ECS::Components;
     using namespace Nova::Core::Math;
@@ -20,6 +20,12 @@ namespace Nova::App {
             m_Entities.push_back(entity);
     }
 
+    void EditorSelection::AddSelected(entt::entity entity) {
+        if (entity == entt::null || IsSelected(entity))
+            return;
+        m_Entities.push_back(entity);
+    }
+
     void EditorSelection::Clear() {
         m_Entities.clear();
         ClearFocus();
@@ -27,20 +33,18 @@ namespace Nova::App {
 
     void EditorSelection::ClearFocus() {
         m_FocusedEntity = entt::null;
-        m_FocusInfo.reset();
+        m_FocusInfo = {};
     }
 
     void EditorSelection::SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name, uint32_t triangleCount) {
         m_FocusedEntity = entity;
         SetSelected(entity);
 
-        FocusInfo info{};
-        info.m_Entity = entity;
-        info.m_Name = name;
-        info.m_AabbCenter = aabbCenter;
-        info.m_AabbExtents = aabbExtents;
-        info.m_TriangleCount = triangleCount;
-        m_FocusInfo = info;
+        m_FocusInfo.m_Entity = entity;
+        m_FocusInfo.m_Name = name;
+        m_FocusInfo.m_AabbCenter = aabbCenter;
+        m_FocusInfo.m_AabbExtents = aabbExtents;
+        m_FocusInfo.m_TriangleCount = triangleCount;
     }
 
     bool EditorSelection::IsSelected(entt::entity entity) const {
@@ -49,9 +53,8 @@ namespace Nova::App {
 
     bool EditorSelection::ComputeEntityWorldAABB(Nova::Core::Scene::Scene& scene, entt::entity entity, AABB& outBounds) {
         auto& registry = scene.GetRegistry();
-        auto* tc = registry.try_get<TransformComponent>(entity);
         auto* mc = registry.try_get<MeshComponent>(entity);
-        if (!tc || !mc || !mc->m_AABBTree.IsBuilt())
+        if (!registry.all_of<TransformComponent>(entity) || !mc || !mc->m_AABBTree.IsBuilt())
             return false;
 
         const auto& nodes = mc->m_AABBTree.GetNodes();
@@ -59,7 +62,7 @@ namespace Nova::App {
             return false;
 
         const AABB& local = nodes.front().m_Bounds;
-        const glm::mat4 transform = tc->GetTransform();
+        const glm::mat4 transform = scene.GetWorldTransform(entity);
 
         const glm::vec3 corners[8] = {
             { local.m_Min.x, local.m_Min.y, local.m_Min.z },
@@ -113,7 +116,7 @@ namespace Nova::App {
         if (Nova::Core::Scene::Raycast(scene, ray, hit)) {
             if (addToSelection) {
                 if (!IsSelected(hit.m_Entity))
-                    m_Entities.push_back(hit.m_Entity);
+                    AddSelected(hit.m_Entity);
             } else {
                 SetSelected(hit.m_Entity);
             }
@@ -123,4 +126,4 @@ namespace Nova::App {
         }
     }
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor

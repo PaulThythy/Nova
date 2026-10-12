@@ -1,12 +1,12 @@
-#ifndef EDITORRENDERER_H
-#define EDITORRENDERER_H
+#ifndef APPRENDERER_H
+#define APPRENDERER_H
 
 #include <memory>
 #include <vector>
 
 #include <glm/glm.hpp>
 
-#include "App/EditorSelection.h"
+#include "Editor/EditorSelection.h"
 #include "App/RenderDebugMode.h"
 #include "Core/GraphicsAPI.h"
 #include "Math/Camera.h"
@@ -17,7 +17,7 @@
 
 namespace Nova::App {
 
-    class EditorRenderer {
+    class AppRenderer {
     public:
         void Initialize(Nova::Core::GraphicsAPI api, uint32_t width, uint32_t height);
         void Shutdown();
@@ -29,11 +29,15 @@ namespace Nova::App {
         void EndFrame();
         void Resize(int width, int height);
 
-        /** Bind scene/camera/selection for the current frame (call before UploadLights / PushGlobals). */
-        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, EditorSelection& selection);
+        // TODO remove Bind Frame, UploadLights, PushFrameUniforms / PushSceneUniforms, and shadow maps bindings from App (I think it should be hidden)
+
+        /** Bind scene/camera/selection for the current frame (call before UploadLights / Push*Uniforms).
+         *  Selection is optional — omit (or pass nullptr) outside editor mode. */
+        void BindFrame(Nova::Core::Scene::Scene& scene, Nova::Core::Math::Camera& camera, Editor::EditorSelection* selection = nullptr);
 
         void UploadLights();
-        void PushGlobals(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
+        void PushFrameUniforms(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
+        void PushSceneUniforms();
         void RebindAfterResize();
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
@@ -63,7 +67,7 @@ namespace Nova::App {
         std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
         Nova::Core::Scene::Scene* m_Scene{ nullptr };
         Nova::Core::Math::Camera* m_Camera{ nullptr };
-        EditorSelection* m_Selection{ nullptr };
+        Editor::EditorSelection* m_Selection{ nullptr };
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneColor{};
         Nova::Core::Renderer::RHI::RHI_TextureHandle m_SceneDepth{};
@@ -74,6 +78,8 @@ namespace Nova::App {
 
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_GridShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SceneShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_UnlitShader{};
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle m_WireframeShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_ShadowShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_NormalsShader{};
         Nova::Core::Renderer::RHI::RHI_ShaderHandle m_PositionsShader{};
@@ -96,4 +102,4 @@ namespace Nova::App {
 
 } // namespace Nova::App
 
-#endif // EDITORRENDERER_H
+#endif // APPRENDERER_H

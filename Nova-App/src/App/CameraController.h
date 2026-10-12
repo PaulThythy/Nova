@@ -27,6 +27,9 @@ namespace Nova::App {
         /** Capture navigation state from the current camera (default mode on startup). */
         void SetNavigationFromCamera(const Nova::Core::Math::Camera& camera);
 
+        /** Sync controller angles/position from the live camera (after ViewManipulate, etc.). */
+        void SyncFromCamera(const Nova::Core::Math::Camera& camera);
+
         /** Orbit around AABB center; animates from the current view. */
         void BeginOrbitFocus(const glm::vec3& target, const glm::vec3& extents, Nova::Core::Math::Camera& camera);
 

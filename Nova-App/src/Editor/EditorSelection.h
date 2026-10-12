@@ -1,7 +1,7 @@
 #ifndef EDITORSELECTION_H
 #define EDITORSELECTION_H
 
-#include <optional>
+#include <string>
 #include <vector>
 
 #include <entt/entt.hpp>
@@ -12,7 +12,7 @@
 #include "Math/Camera.h"
 #include "Scene/Scene.h"
 
-namespace Nova::App {
+namespace Nova::App::Editor {
 
     struct FocusInfo {
         entt::entity m_Entity{ entt::null };
@@ -25,6 +25,7 @@ namespace Nova::App {
     class EditorSelection {
     public:
         void SetSelected(entt::entity entity);
+        void AddSelected(entt::entity entity);
         void Clear();
         bool IsSelected(entt::entity entity) const;
 
@@ -38,7 +39,7 @@ namespace Nova::App {
 
         entt::entity GetFocused() const { return m_FocusedEntity; }
         bool HasFocus() const { return m_FocusedEntity != entt::null; }
-        std::optional<FocusInfo> GetFocusInfo() const { return m_FocusInfo; }
+        const FocusInfo& GetFocusInfo() const { return m_FocusInfo; }
 
         void ClearFocus();
         void SetFocused(entt::entity entity, const glm::vec3& aabbCenter, const glm::vec3& aabbExtents, const std::string& name, uint32_t triangleCount = 0);
@@ -54,9 +55,9 @@ namespace Nova::App {
     private:
         std::vector<entt::entity> m_Entities;
         entt::entity m_FocusedEntity{ entt::null };
-        std::optional<FocusInfo> m_FocusInfo;
+        FocusInfo m_FocusInfo;
     };
 
-} // namespace Nova::App
+} // namespace Nova::App::Editor
 
 #endif // EDITORSELECTION_H
