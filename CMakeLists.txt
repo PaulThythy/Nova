@@ -44,6 +44,7 @@ add_subdirectory(Nova-App)
 nova_configure_target(Nova-Core)
 nova_configure_target(Nova-App)
 nova_set_runtime_output(Nova-App)
+nova_set_app_subsystem(Nova-App)
 
 if(NOVA_BUILD_TESTS)
     enable_testing()

@@ -94,6 +94,18 @@ function(nova_set_runtime_output target)
     )
 endfunction()
 
+# Dist (shipping): no console window on Windows (GUI / WinMain subsystem).
+# Other configs keep the console for logging / debugging.
+# Linux has no equivalent subsystem; Dist still uses main() (no terminal pops up
+# when launching from a desktop environment).
+function(nova_set_app_subsystem target)
+    if(WIN32)
+        set_target_properties(${target} PROPERTIES
+            WIN32_EXECUTABLE "$<CONFIG:Dist>"
+        )
+    endif()
+endfunction()
+
 function(nova_configure_target target)
     nova_apply_build_definitions(${target})
     nova_apply_optimization_options(${target})

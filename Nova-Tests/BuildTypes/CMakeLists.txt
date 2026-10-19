@@ -10,5 +10,6 @@ target_include_directories(Nova-Tests-BuildTypes PRIVATE ${CMAKE_CURRENT_SOURCE_
 
 nova_set_runtime_output(Nova-Tests-BuildTypes)
 nova_configure_target(Nova-Tests-BuildTypes)
+nova_set_app_subsystem(Nova-Tests-BuildTypes)
 
 add_test(NAME BuildTypes COMMAND Nova-Tests-BuildTypes)

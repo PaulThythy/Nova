@@ -13,5 +13,6 @@ target_include_directories(Nova-Tests-AssimpObjectLoading PRIVATE ${CMAKE_CURREN
 
 nova_set_runtime_output(Nova-Tests-AssimpObjectLoading)
 nova_configure_target(Nova-Tests-AssimpObjectLoading)
+nova_set_app_subsystem(Nova-Tests-AssimpObjectLoading)
 
 add_test(NAME AssimpObjectLoading COMMAND Nova-Tests-AssimpObjectLoading)

@@ -1,13 +1,13 @@
 #include "Core/Application.h"
 #include "Core/Window.h"
+#include "Core/EntryPoint.h"
 
 #include "App/AppLayer.h"
 #include "Editor/EditorLayer.h"
 
 #include "Core/Log.h"
 
-int main() {
-
+Nova::Core::Application* Nova::Core::CreateApplication(ApplicationCommandLineArgs /*args*/) {
     NV_LOG_INFO("Starting Nova Engine");
 
     Nova::Core::Window::WindowDesc windowDesc;
@@ -18,10 +18,9 @@ int main() {
     windowDesc.m_VSync = true;
 
     NV_LOG_INFO("Creating Nova Application");
-    Nova::Core::Application windowedApp(windowDesc);
-    windowedApp.GetWindow().SetGraphicsAPI(Nova::Core::GraphicsAPI::Vulkan);
-    windowedApp.GetLayerStack().PushOverlay<Nova::App::AppLayer>();
-    windowedApp.GetLayerStack().PushLayer<Nova::App::Editor::EditorLayer>();
-    windowedApp.Run();
-    NV_LOG_INFO("Deleting Nova Application");
+    auto* app = new Nova::Core::Application(windowDesc);
+    app->GetWindow().SetGraphicsAPI(Nova::Core::GraphicsAPI::Vulkan);
+    app->GetLayerStack().PushOverlay<Nova::App::AppLayer>();
+    app->GetLayerStack().PushLayer<Nova::App::Editor::EditorLayer>();
+    return app;
 }

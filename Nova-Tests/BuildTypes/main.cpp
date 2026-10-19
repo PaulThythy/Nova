@@ -70,7 +70,9 @@ void LogPlatformSpecific()
 #endif
 }
 
-int main(int /*argc*/, char** /*argv*/)
+// Console diagnostic harness (no Application / EntryPoint).
+// Dist on Windows still uses WinMain so no console window is allocated.
+static int RunBuildTypesTest(int /*argc*/, char** /*argv*/)
 {
     LogBuildTypeBanner();
     LogPlatformSpecific();
@@ -105,3 +107,24 @@ int main(int /*argc*/, char** /*argv*/)
 
     return (std::isfinite(checksum) && elapsedMs >= 0.0) ? 0 : 1;
 }
+
+#if defined(NOVA_WINDOWS) && defined(NOVA_DIST)
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+
+int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+{
+    return RunBuildTypesTest(__argc, __argv);
+}
+
+#else
+
+int main(int argc, char** argv)
+{
+    return RunBuildTypesTest(argc, argv);
+}
+
+#endif

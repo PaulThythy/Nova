@@ -13,5 +13,6 @@ target_include_directories(Nova-Tests-GraphicLayers PRIVATE ${CMAKE_CURRENT_SOUR
 
 nova_set_runtime_output(Nova-Tests-GraphicLayers)
 nova_configure_target(Nova-Tests-GraphicLayers)
+nova_set_app_subsystem(Nova-Tests-GraphicLayers)
 
 add_test(NAME GraphicLayers COMMAND Nova-Tests-GraphicLayers)

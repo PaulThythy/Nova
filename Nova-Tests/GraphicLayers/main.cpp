@@ -1,11 +1,10 @@
-#include <iostream>
-#include "Core/Log.h"
-#include "Core/Window.h"
 #include "Core/Application.h"
+#include "Core/Window.h"
+#include "Core/EntryPoint.h"
 
 #include "EmptyLayer.h"
 
-int main(int /*argc*/, char** /*argv*/)
+Nova::Core::Application* Nova::Core::CreateApplication(ApplicationCommandLineArgs /*args*/)
 {
     Nova::Core::Window::WindowDesc windowDesc;
     windowDesc.m_Title = "Nova Graphic Layers Test";
@@ -14,8 +13,7 @@ int main(int /*argc*/, char** /*argv*/)
     windowDesc.m_Resizable = true;
     windowDesc.m_VSync = true;
 
-    Nova::Core::Application windowedApp(windowDesc);
-    windowedApp.GetLayerStack().PushLayer<EmptyLayer>();
-    windowedApp.Run();
-    return 0;
+    auto* app = new Nova::Core::Application(windowDesc);
+    app->GetLayerStack().PushLayer<EmptyLayer>();
+    return app;
 }
