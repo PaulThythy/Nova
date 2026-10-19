@@ -111,7 +111,7 @@ namespace Nova::App::Editor {
         uint32_t triangleCount = 0;
         if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
             if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
-                triangleCount = static_cast<uint32_t>(cpuMesh->GetIndices().size() / 3);
+                triangleCount = cpuMesh->GetIndexCount() / 3;
         }
 
         const glm::vec3 center = worldAabb.GetCenter();

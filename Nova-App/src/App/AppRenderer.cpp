@@ -541,7 +541,7 @@ namespace Nova::App {
             cmd.m_Mesh = cpuMesh;
             cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
             cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-            cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+            cmd.m_IndexCount = cpuMesh->GetIndexCount();
             ctx.DrawIndexed(cmd);
         }
     }
@@ -574,7 +574,7 @@ namespace Nova::App {
             cmd.m_Mesh = cpuMesh;
             cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
             cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-            cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+            cmd.m_IndexCount = cpuMesh->GetIndexCount();
 
             if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
                 mask->SetParameter("m_Model", model);
@@ -670,7 +670,7 @@ namespace Nova::App {
                 cmd.m_Mesh = m_AABBWireframeMesh;
                 cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Lines;
                 cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-                cmd.m_IndexCount = static_cast<uint32_t>(m_AABBWireframeMesh->GetIndices().size());
+                cmd.m_IndexCount = m_AABBWireframeMesh->GetIndexCount();
                 ctx.DrawIndexed(cmd);
             }
         }
@@ -792,7 +792,7 @@ namespace Nova::App {
                 cmd.m_Mesh = cpuMesh;
                 cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
                 cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-                cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+                cmd.m_IndexCount = cpuMesh->GetIndexCount();
                 ctx.DrawIndexed(cmd);
             }
 

@@ -355,7 +355,7 @@ void AssimpLayer::DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, e
     cmd.m_Mesh = cpuMesh;
     cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
     cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-    cmd.m_IndexCount = static_cast<uint32_t>(cpuMesh->GetIndices().size());
+    cmd.m_IndexCount = cpuMesh->GetIndexCount();
     ctx.DrawIndexed(cmd);
 }
 
@@ -405,8 +405,8 @@ void AssimpLayer::DrawMeshInfoPanel(const SceneMesh& mesh) const {
     }
 
     if (auto cpuMesh = mesh.m_Asset->GetCPUMesh()) {
-        const size_t vertexCount = cpuMesh->GetVertices().size();
-        const size_t polygonCount = cpuMesh->GetIndices().size() / 3;
+        const size_t vertexCount = cpuMesh->GetVertexCount();
+        const size_t polygonCount = cpuMesh->GetIndexCount() / 3;
         ImGui::Text("Vertices:  %zu", vertexCount);
         ImGui::Text("Polygons:  %zu", polygonCount);
     } else {
