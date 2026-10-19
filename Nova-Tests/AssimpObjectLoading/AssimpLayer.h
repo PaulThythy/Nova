@@ -56,13 +56,13 @@ private:
 
     std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
     Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SimpleLitShader{};
-    Nova::Core::Renderer::RHI::RHI_TextureHandle m_ShadowMaps{};
 
     Nova::Core::Scene::Scene m_Scene{ "AssimpObjectLoading" };
     std::shared_ptr<Nova::Core::Math::Camera> m_Camera;
 
     std::vector<SceneMesh> m_Primitives;
     SceneMesh m_Suzanne;
+    SceneMesh m_Dragon;
 
     float m_ElapsedTime = 0.0f;
     float m_DeltaTime = 0.0f;

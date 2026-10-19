@@ -21,6 +21,8 @@
 
 constexpr const char* kSuzannePath =
     "Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/suzanne.obj";
+constexpr const char* kDragonPath =
+    "Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/dragon.obj";
 constexpr const char* kSimpleLitVertPath =
     "Nova-Tests/AssimpObjectLoading/Resources/Assets/Shaders/SimpleLit.vert.slang";
 constexpr const char* kSimpleLitFragPath =
@@ -118,16 +120,6 @@ void AssimpLayer::SetupRenderer(uint32_t width, uint32_t height) {
         RHI::RHI_TextureUsage::ColorAttachment,
     }, RHI::RHI_ResourceState::Present);
 
-    m_ShadowMaps = rg.CreateTexture({
-        RHI::SHADOW_MAP_RESOLUTION,
-        RHI::SHADOW_MAP_RESOLUTION,
-        RHI::RHI_TextureFormat::Depth32,
-        RHI::RHI_TextureUsage::DepthAttachment | RHI::RHI_TextureUsage::Sampled,
-        RHI::MAX_SHADOW_MAPS,
-        /*m_ResizeWithViewport*/ false,
-        /*m_ComparisonSampler*/ true,
-    });
-
     m_SimpleLitShader = rg.RegisterShader({
         .m_Name = "SimpleLit",
         .m_Vertex = litVert,
@@ -138,7 +130,6 @@ void AssimpLayer::SetupRenderer(uint32_t width, uint32_t height) {
     rg.AddPass("Scene",
         [&](RHI::RHI_PassBuilder& b) {
             b.Write(backbuffer);
-            b.Read(m_ShadowMaps);
         },
         [this](RHI::IPassContext& ctx) {
             RenderScene(ctx);
@@ -152,9 +143,6 @@ void AssimpLayer::SetupRenderer(uint32_t width, uint32_t height) {
         [](RHI::IPassContext& /*ctx*/) {});
 
     m_Renderer->SetRenderGraph(rg.Build(Nova::Core::GraphicsAPI::Vulkan));
-
-    if (auto* graph = m_Renderer->GetRenderGraph())
-        graph->BindEngineShadowMaps(m_ShadowMaps);
 
     NV_LOG_INFO("AssimpLayer: renderer ready (SimpleLit)");
 }
@@ -224,9 +212,7 @@ void AssimpLayer::SetupScene() {
     m_Suzanne.m_Name = "Suzanne";
     m_Suzanne.m_IsPrimitive = false;
     m_Suzanne.m_SpinSign = 1.0f;
-    m_Suzanne.m_Asset = AssetManager::Get()
-        .Acquire<MeshAsset>(kSuzannePath, MeshAssetDesc{ .m_AABBTreeDepth = 1 })
-        .GetAssetRef();
+    m_Suzanne.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kSuzannePath, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
     m_Suzanne.m_Loaded = m_Suzanne.m_Asset && m_Suzanne.m_Asset->Load();
 
     if (m_Suzanne.m_Loaded) {
@@ -243,6 +229,27 @@ void AssimpLayer::SetupScene() {
         registry.emplace<MeshComponent>(m_Suzanne.m_Entity, m_Suzanne.m_Asset);
     } else {
         NV_LOG_ERROR(("AssimpLayer: failed to load '" + std::string(kSuzannePath) + "'").c_str());
+    }
+
+    m_Dragon = {};
+    m_Dragon.m_Name = "Dragon";
+    m_Dragon.m_IsPrimitive = false;
+    m_Dragon.m_SpinSign = 1.0f;
+    m_Dragon.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kDragonPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+    m_Dragon.m_Loaded = m_Dragon.m_Asset && m_Dragon.m_Asset->Load();
+    if (m_Dragon.m_Loaded) {
+        m_Dragon.m_Entity = m_Scene.CreateEntity("Dragon");
+        registry.emplace<TransformComponent>(
+            m_Dragon.m_Entity,
+            glm::vec3(0.0f, 0.0f, 2.8f),
+            glm::vec3(0.0f),
+            glm::vec3(3.0f));
+        Nova::Core::Renderer::RHI::MaterialGPU mat{};
+        mat.m_BaseColor = glm::vec3(0.85f, 0.55f, 0.25f);
+        registry.emplace<MeshRendererComponent>(m_Dragon.m_Entity, m_Dragon.m_Asset, mat);
+        registry.emplace<MeshComponent>(m_Dragon.m_Entity, m_Dragon.m_Asset);
+    } else {
+        NV_LOG_ERROR(("AssimpLayer: failed to load '" + std::string(kDragonPath) + "'").c_str());
     }
 }
 
@@ -279,6 +286,7 @@ void AssimpLayer::OnUpdate(float dt) {
     for (const auto& primitive : m_Primitives)
         spin(primitive, 0.45f);
     spin(m_Suzanne, 0.6f);
+    spin(m_Dragon, 0.6f);
 }
 
 void AssimpLayer::PushFrameUniforms() {
@@ -355,6 +363,7 @@ void AssimpLayer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
     for (const auto& primitive : m_Primitives)
         DrawMeshEntity(ctx, primitive.m_Entity);
     DrawMeshEntity(ctx, m_Suzanne.m_Entity);
+    DrawMeshEntity(ctx, m_Dragon.m_Entity);
 }
 
 void AssimpLayer::OnBegin() {
@@ -420,7 +429,7 @@ void AssimpLayer::OnImGuiRender() {
 
     ImGui::TextUnformatted("External mesh");
     DrawMeshInfoPanel(m_Suzanne);
-
+    DrawMeshInfoPanel(m_Dragon);
     ImGui::End();
 }
 
@@ -450,10 +459,7 @@ bool AssimpLayer::OnWindowResized(Nova::Core::Events::WindowResizeEvent& e) {
     if (m_Camera)
         m_Camera->m_AspectRatio = m_ViewportSize.x / m_ViewportSize.y;
 
-    if (m_Renderer) {
+    if (m_Renderer)
         m_Renderer->Resize(static_cast<int>(w), static_cast<int>(h));
-        if (auto* graph = m_Renderer->GetRenderGraph())
-            graph->BindEngineShadowMaps(m_ShadowMaps);
-    }
     return false;
 }
