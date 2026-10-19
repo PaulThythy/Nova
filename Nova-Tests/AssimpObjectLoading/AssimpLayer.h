@@ -3,11 +3,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <glm/glm.hpp>
 
 #include "Asset/Assets/MeshAsset.h"
 #include "Core/Layer.h"
+#include "Core/UUID.h"
 #include "Events/ApplicationEvents.h"
 #include "Events/Event.h"
 #include "Events/InputEvents.h"
@@ -30,6 +33,16 @@ public:
     void OnEvent(Nova::Core::Events::Event& e) override;
 
 private:
+    struct SceneMesh {
+        std::string m_Name;
+        std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset> m_Asset;
+        entt::entity m_Entity{ entt::null };
+        bool m_Loaded = false;
+        bool m_IsPrimitive = false;
+        Nova::Core::UUID m_ExpectedAssetID = Nova::Core::kInvalidUUID;
+        float m_SpinSign = 1.0f;
+    };
+
     bool OnKeyPressed(Nova::Core::Events::KeyPressedEvent& e);
     bool OnWindowResized(Nova::Core::Events::WindowResizeEvent& e);
 
@@ -39,11 +52,7 @@ private:
     void PushSceneUniforms();
     void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
     void DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, entt::entity entity);
-
-    void DrawMeshInfoPanel(
-        const char* name,
-        const std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset>& asset,
-        bool loaded) const;
+    void DrawMeshInfoPanel(const SceneMesh& mesh) const;
 
     std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
     Nova::Core::Renderer::RHI::RHI_ShaderHandle m_SimpleLitShader{};
@@ -51,19 +60,14 @@ private:
 
     Nova::Core::Scene::Scene m_Scene{ "AssimpObjectLoading" };
     std::shared_ptr<Nova::Core::Math::Camera> m_Camera;
-    std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset> m_SuzanneAsset;
-    std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset> m_CubeAsset;
 
-    entt::entity m_SuzanneEntity{ entt::null };
-    entt::entity m_CubeEntity{ entt::null };
+    std::vector<SceneMesh> m_Primitives;
+    SceneMesh m_Suzanne;
 
     float m_ElapsedTime = 0.0f;
     float m_DeltaTime = 0.0f;
     uint32_t m_FrameIndex = 0;
     glm::vec2 m_ViewportSize{ 1280.0f, 720.0f };
-
-    bool m_SuzanneLoaded = false;
-    bool m_CubeLoaded = false;
 };
 
 #endif // ASSIMPLAYER_H

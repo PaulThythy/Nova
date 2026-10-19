@@ -1,5 +1,6 @@
 #include "AssimpLayer.h"
 
+#include <array>
 #include <filesystem>
 #include <string>
 
@@ -10,7 +11,6 @@
 #include "Core/Application.h"
 #include "Core/GraphicsAPI.h"
 #include "Core/Log.h"
-#include "Core/UUID.h"
 #include "ECS/Components/MeshComponent.h"
 #include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/TransformComponent.h"
@@ -25,6 +25,25 @@ constexpr const char* kSimpleLitVertPath =
     "Nova-Tests/AssimpObjectLoading/Resources/Assets/Shaders/SimpleLit.vert.slang";
 constexpr const char* kSimpleLitFragPath =
     "Nova-Tests/AssimpObjectLoading/Resources/Assets/Shaders/SimpleLit.frag.slang";
+
+struct PrimitiveSpawn {
+    const char* m_Name;
+    const char* m_AssetPath;
+    Nova::Core::UUID m_ExpectedAssetID;
+    glm::vec3 m_Color;
+    float m_HalfHeight; // local origin → bottom at scale 1
+    float m_SpinSign;
+};
+
+// One of each engine primitive (stable AssetIDs).
+constexpr std::array<PrimitiveSpawn, 6> kPrimitives{{
+    { "Plane",    "Engine://Primitives/Plane",    Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Plane,    { 0.55f, 0.55f, 0.58f }, 0.0f,  1.0f },
+    { "Cube",     "Engine://Primitives/Cube",     Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Cube,     { 0.35f, 0.55f, 0.95f }, 0.5f, -1.0f },
+    { "Sphere",   "Engine://Primitives/Sphere",   Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Sphere,   { 0.95f, 0.40f, 0.40f }, 0.5f,  1.0f },
+    { "Cylinder", "Engine://Primitives/Cylinder", Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Cylinder, { 0.40f, 0.85f, 0.55f }, 0.5f, -1.0f },
+    { "Capsule",  "Engine://Primitives/Capsule",  Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Capsule,  { 0.90f, 0.70f, 0.25f }, 1.0f,  1.0f },
+    { "Torus",    "Engine://Primitives/Torus",    Nova::Core::Asset::Assets::PrimitiveMeshAssetID::Torus,    { 0.75f, 0.40f, 0.90f }, 0.2f, -1.0f },
+}};
 
 AssimpLayer::AssimpLayer() : Layer("AssimpLayer") {}
 
@@ -146,8 +165,8 @@ void AssimpLayer::SetupScene() {
     using namespace Nova::Core::ECS::Components;
 
     m_Camera = std::make_shared<Nova::Core::Math::Camera>(
-        glm::vec3(3.5f, 2.0f, 4.0f),
-        glm::vec3(0.0f, 0.35f, 0.0f),
+        glm::vec3(0.0f, 3.5f, 9.0f),
+        glm::vec3(0.0f, 0.5f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
         45.0f,
         m_ViewportSize.x / m_ViewportSize.y,
@@ -157,44 +176,71 @@ void AssimpLayer::SetupScene() {
 
     auto& registry = m_Scene.GetRegistry();
 
-    // Engine primitive (stable AssetID = 1).
-    m_CubeAsset = AssetManager::Get()
-        .Acquire<MeshAsset>("Engine://Primitives/Cube")
-        .GetAssetRef();
-    m_CubeLoaded = m_CubeAsset && m_CubeAsset->Load();
-    if (m_CubeLoaded) {
-        m_CubeEntity = m_Scene.CreateEntity("Cube");
-        registry.emplace<TransformComponent>(
-            m_CubeEntity,
-            glm::vec3(-1.4f, 0.5f, 0.0f),
-            glm::vec3(0.0f),
-            glm::vec3(1.0f));
+    constexpr float kSpacing = 2.2f;
+    const float firstX = -0.5f * kSpacing * static_cast<float>(kPrimitives.size() - 1);
 
-        Nova::Core::Renderer::RHI::MaterialGPU mat{};
-        mat.m_BaseColor = glm::vec3(0.35f, 0.55f, 0.95f);
-        registry.emplace<MeshRendererComponent>(m_CubeEntity, m_CubeAsset, mat);
-        registry.emplace<MeshComponent>(m_CubeEntity, m_CubeAsset);
-    } else {
-        NV_LOG_ERROR("AssimpLayer: failed to load Cube primitive");
+    m_Primitives.clear();
+    m_Primitives.reserve(kPrimitives.size());
+
+    for (size_t i = 0; i < kPrimitives.size(); ++i) {
+        const auto& spawn = kPrimitives[i];
+
+        SceneMesh entry{};
+        entry.m_Name = spawn.m_Name;
+        entry.m_IsPrimitive = true;
+        entry.m_ExpectedAssetID = spawn.m_ExpectedAssetID;
+        entry.m_SpinSign = spawn.m_SpinSign;
+
+        entry.m_Asset = AssetManager::Get()
+            .Acquire<MeshAsset>(spawn.m_AssetPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 })
+            .GetAssetRef();
+        entry.m_Loaded = entry.m_Asset && entry.m_Asset->Load();
+
+        if (entry.m_Loaded) {
+            entry.m_Entity = m_Scene.CreateEntity(spawn.m_Name);
+            registry.emplace<TransformComponent>(
+                entry.m_Entity,
+                glm::vec3(firstX + kSpacing * static_cast<float>(i), spawn.m_HalfHeight, 0.0f),
+                glm::vec3(0.0f),
+                glm::vec3(1.0f));
+
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
+            mat.m_BaseColor = spawn.m_Color;
+            registry.emplace<MeshRendererComponent>(entry.m_Entity, entry.m_Asset, mat);
+            registry.emplace<MeshComponent>(entry.m_Entity, entry.m_Asset);
+
+            NV_LOG_INFO((std::string("AssimpLayer: ") + spawn.m_Name +
+                         " AssetID=" + std::to_string(entry.m_Asset->GetUUID()) +
+                         " (expected " + std::to_string(spawn.m_ExpectedAssetID) + ")").c_str());
+        } else {
+            NV_LOG_ERROR((std::string("AssimpLayer: failed to load primitive ") + spawn.m_Name).c_str());
+        }
+
+        m_Primitives.push_back(std::move(entry));
     }
 
-    // External mesh (random AssetID).
-    m_SuzanneAsset = AssetManager::Get()
+    // External mesh (random AssetID), placed behind the primitive row.
+    m_Suzanne = {};
+    m_Suzanne.m_Name = "Suzanne";
+    m_Suzanne.m_IsPrimitive = false;
+    m_Suzanne.m_SpinSign = 1.0f;
+    m_Suzanne.m_Asset = AssetManager::Get()
         .Acquire<MeshAsset>(kSuzannePath, MeshAssetDesc{ .m_AABBTreeDepth = 1 })
         .GetAssetRef();
-    m_SuzanneLoaded = m_SuzanneAsset && m_SuzanneAsset->Load();
-    if (m_SuzanneLoaded) {
-        m_SuzanneEntity = m_Scene.CreateEntity("Suzanne");
+    m_Suzanne.m_Loaded = m_Suzanne.m_Asset && m_Suzanne.m_Asset->Load();
+
+    if (m_Suzanne.m_Loaded) {
+        m_Suzanne.m_Entity = m_Scene.CreateEntity("Suzanne");
         registry.emplace<TransformComponent>(
-            m_SuzanneEntity,
-            glm::vec3(1.4f, 0.0f, 0.0f),
+            m_Suzanne.m_Entity,
+            glm::vec3(0.0f, 0.0f, -2.8f),
             glm::vec3(0.0f),
-            glm::vec3(1.0f));
+            glm::vec3(1.2f));
 
         Nova::Core::Renderer::RHI::MaterialGPU mat{};
         mat.m_BaseColor = glm::vec3(0.85f, 0.55f, 0.25f);
-        registry.emplace<MeshRendererComponent>(m_SuzanneEntity, m_SuzanneAsset, mat);
-        registry.emplace<MeshComponent>(m_SuzanneEntity, m_SuzanneAsset);
+        registry.emplace<MeshRendererComponent>(m_Suzanne.m_Entity, m_Suzanne.m_Asset, mat);
+        registry.emplace<MeshComponent>(m_Suzanne.m_Entity, m_Suzanne.m_Asset);
     } else {
         NV_LOG_ERROR(("AssimpLayer: failed to load '" + std::string(kSuzannePath) + "'").c_str());
     }
@@ -203,12 +249,10 @@ void AssimpLayer::SetupScene() {
 void AssimpLayer::OnDetach() {
     NV_LOG_INFO("AssimpLayer detached");
 
-    m_SuzanneAsset.reset();
-    m_CubeAsset.reset();
+    m_Primitives.clear();
+    m_Suzanne = {};
     m_Camera.reset();
     m_Scene.Clear();
-    m_SuzanneEntity = entt::null;
-    m_CubeEntity = entt::null;
 
     if (m_Renderer) {
         Nova::Core::Application::Get().GetImGuiLayer().DestroyImGuiBackend(Nova::Core::GraphicsAPI::Vulkan);
@@ -225,14 +269,16 @@ void AssimpLayer::OnUpdate(float dt) {
         m_Renderer->Update(dt);
 
     auto& registry = m_Scene.GetRegistry();
-    if (m_SuzanneEntity != entt::null) {
-        if (auto* transform = registry.try_get<Nova::Core::ECS::Components::TransformComponent>(m_SuzanneEntity))
-            transform->m_Rotation.y = m_ElapsedTime * 0.6f;
-    }
-    if (m_CubeEntity != entt::null) {
-        if (auto* transform = registry.try_get<Nova::Core::ECS::Components::TransformComponent>(m_CubeEntity))
-            transform->m_Rotation.y = -m_ElapsedTime * 0.45f;
-    }
+    auto spin = [&](const SceneMesh& mesh, float speed) {
+        if (mesh.m_Entity == entt::null)
+            return;
+        if (auto* transform = registry.try_get<Nova::Core::ECS::Components::TransformComponent>(mesh.m_Entity))
+            transform->m_Rotation.y = mesh.m_SpinSign * m_ElapsedTime * speed;
+    };
+
+    for (const auto& primitive : m_Primitives)
+        spin(primitive, 0.45f);
+    spin(m_Suzanne, 0.6f);
 }
 
 void AssimpLayer::PushFrameUniforms() {
@@ -306,8 +352,9 @@ void AssimpLayer::DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, e
 }
 
 void AssimpLayer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-    DrawMeshEntity(ctx, m_CubeEntity);
-    DrawMeshEntity(ctx, m_SuzanneEntity);
+    for (const auto& primitive : m_Primitives)
+        DrawMeshEntity(ctx, primitive.m_Entity);
+    DrawMeshEntity(ctx, m_Suzanne.m_Entity);
 }
 
 void AssimpLayer::OnBegin() {
@@ -329,26 +376,28 @@ void AssimpLayer::OnEnd() {
         m_Renderer->EndFrame();
 }
 
-void AssimpLayer::DrawMeshInfoPanel(
-    const char* name,
-    const std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset>& asset,
-    bool loaded) const
-{
-    ImGui::SeparatorText(name);
+void AssimpLayer::DrawMeshInfoPanel(const SceneMesh& mesh) const {
+    const std::string title = mesh.m_IsPrimitive
+        ? mesh.m_Name + " (engine primitive)"
+        : mesh.m_Name + " (external .obj)";
+    ImGui::SeparatorText(title.c_str());
 
     ImGui::TextColored(
-        loaded ? ImVec4(0.3f, 0.9f, 0.4f, 1.0f) : ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
-        loaded ? "Load: OK" : "Load: FAILED");
+        mesh.m_Loaded ? ImVec4(0.3f, 0.9f, 0.4f, 1.0f) : ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+        mesh.m_Loaded ? "Load: OK" : "Load: FAILED");
 
-    if (!asset)
+    if (!mesh.m_Asset)
         return;
 
-    ImGui::Text("AssetID: %u", asset->GetUUID());
+    if (mesh.m_IsPrimitive) {
+        ImGui::Text("AssetID: %u (expected %u)", mesh.m_Asset->GetUUID(), mesh.m_ExpectedAssetID);
+    } else {
+        ImGui::Text("AssetID: %u", mesh.m_Asset->GetUUID());
+    }
 
-    if (auto mesh = asset->GetCPUMesh()) {
-        const size_t vertexCount = mesh->GetVertices().size();
-        const size_t indexCount = mesh->GetIndices().size();
-        const size_t polygonCount = indexCount / 3;
+    if (auto cpuMesh = mesh.m_Asset->GetCPUMesh()) {
+        const size_t vertexCount = cpuMesh->GetVertices().size();
+        const size_t polygonCount = cpuMesh->GetIndices().size() / 3;
         ImGui::Text("Vertices:  %zu", vertexCount);
         ImGui::Text("Polygons:  %zu", polygonCount);
     } else {
@@ -363,9 +412,14 @@ void AssimpLayer::OnImGuiRender() {
     ImGui::Text("Engine reserved AssetIDs: [0, %u)", Nova::Core::kEngineReservedUUIDEnd);
     ImGui::Spacing();
 
-    DrawMeshInfoPanel("Cube (engine primitive)", m_CubeAsset, m_CubeLoaded);
-    ImGui::Spacing();
-    DrawMeshInfoPanel("Suzanne (external .obj)", m_SuzanneAsset, m_SuzanneLoaded);
+    ImGui::TextUnformatted("Engine primitives");
+    for (const auto& primitive : m_Primitives) {
+        DrawMeshInfoPanel(primitive);
+        ImGui::Spacing();
+    }
+
+    ImGui::TextUnformatted("External mesh");
+    DrawMeshInfoPanel(m_Suzanne);
 
     ImGui::End();
 }
