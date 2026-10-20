@@ -203,9 +203,10 @@ namespace Nova::App {
             .m_Vertex = selectionMaskVert,
             .m_Fragment = selectionMaskFrag,
             .m_VertexLayout = RG::RHI_VertexLayout::Mesh,
-            .m_DepthTest = false,
+            .m_DepthTest = true,
             .m_DepthWrite = false,
             .m_CullMode = RG::RHI_CullMode::Back,
+            .m_DepthCompare = RG::RHI_DepthCompare::LessOrEqual,
         });
         m_SelectionMaskOccludedShader = fg.RegisterShader({
             .m_Name = "SelectionMaskOccluded",
@@ -576,15 +577,17 @@ namespace Nova::App {
             cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
             cmd.m_IndexCount = cpuMesh->GetIndexCount();
 
-            if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
-                mask->SetParameter("m_Model", model);
-                ctx.BindShader(m_SelectionMaskShader);
-                ctx.DrawIndexed(cmd);
-            }
-
+            // Occluded first, then visible coverage: visible overwrites G→0 on the
+            // front surface so self-occlusion does not leave a yellow x-ray fill.
             if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
                 occluded->SetParameter("m_Model", model);
                 ctx.BindShader(m_SelectionMaskOccludedShader);
+                ctx.DrawIndexed(cmd);
+            }
+
+            if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
+                mask->SetParameter("m_Model", model);
+                ctx.BindShader(m_SelectionMaskShader);
                 ctx.DrawIndexed(cmd);
             }
         }
