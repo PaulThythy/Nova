@@ -54,6 +54,34 @@ namespace Nova::App {
         auto& registry = m_Scene.GetRegistry();
         registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
 
+        auto suzanneAsset = AssetManager::Get().Acquire<MeshAsset>("Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/suzanne.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        suzanneAsset->Load();
+        entt::entity suzanneEntity = m_Scene.CreateEntity("Suzanne");
+        registry.emplace<TransformComponent>(suzanneEntity,
+            glm::vec3(3.5f, 0.40f, -2.5f),
+            glm::vec3(glm::radians(-39.5f), 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f));
+        {
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
+            mat.m_BaseColor = glm::vec3(1.0f, 0.0f, 0.0f);
+            registry.emplace<MeshRendererComponent>(suzanneEntity, suzanneAsset, mat);
+            registry.emplace<MeshComponent>(suzanneEntity, suzanneAsset);
+        }
+
+        auto dragonAsset = AssetManager::Get().Acquire<MeshAsset>("Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/dragon.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        dragonAsset->Load();
+        entt::entity dragonEntity = m_Scene.CreateEntity("Dragon");
+        registry.emplace<TransformComponent>(dragonEntity,
+            glm::vec3(-3.7f, -0.6f, 0.4f),
+            glm::vec3(0.0f, glm::radians(80.0f), 0.0f),
+            glm::vec3(12.0f, 12.0f, 12.0f));
+        {
+            Nova::Core::Renderer::RHI::MaterialGPU mat{};
+            mat.m_BaseColor = glm::vec3(1.0f, 0.0f, 1.0f);
+            registry.emplace<MeshRendererComponent>(dragonEntity, dragonAsset, mat);
+            registry.emplace<MeshComponent>(dragonEntity, dragonAsset);
+        }
+
         auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         cubeAsset->Load();
         entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
