@@ -12,6 +12,7 @@
 #include "Events/InputEvents.h"
 #include "Events/ApplicationEvents.h"
 
+#include "Asset/AssetHandle.h"
 #include "Asset/Assets/TextureAsset.h"
 #include "App/AppScene.h"
 #include "App/CameraController.h"
@@ -122,8 +123,8 @@ namespace Nova::App {
         Editor::EditorLayer* m_EditorLayer{ nullptr };
         Game::GameLayer* m_GameLayer{ nullptr };
 
-        std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PlayIcon;
-        std::shared_ptr<Nova::Core::Asset::Assets::TextureAsset> m_PauseIcon;
+        Nova::Core::Asset::AssetHandle<Nova::Core::Asset::Assets::TextureAsset> m_PlayIcon;
+        Nova::Core::Asset::AssetHandle<Nova::Core::Asset::Assets::TextureAsset> m_PauseIcon;
     };
 
     extern AppLayer* g_AppLayer;

@@ -100,11 +100,13 @@ namespace Nova::App {
         m_SelectionBlurred = selectionBlurred;
 
         auto acquireShader = [](const std::filesystem::path& uri) {
-            auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
-            if (!asset || !asset->Compile()) {
+            auto handle = AssetManager::Get().Acquire<ShaderAsset>(uri);
+            if (!AssetManager::Get().Load(handle)) {
                 NV_LOG_WARN(("Failed to compile shader asset: " + uri.generic_string()).c_str());
+                if (auto asset = AssetManager::Get().GetAsset(handle); asset && !asset->GetLastLog().empty())
+                    NV_LOG_WARN(asset->GetLastLog().c_str());
             }
-            return asset;
+            return AssetManager::Get().GetAsset(handle);
         };
 
         auto gridVert = acquireShader("Editor://Shaders/Grid.vert.slang");
@@ -540,9 +542,10 @@ namespace Nova::App {
             // One instance + one draw per selected entity (keeps mesh pairing trivial).
             for (entt::entity entity : selected) {
                 auto* mrc = registry.try_get<MeshRendererComponent>(entity);
-                if (!registry.all_of<TransformComponent>(entity) || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+                auto meshAsset = mrc ? AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
+                if (!registry.all_of<TransformComponent>(entity) || !mrc || !meshAsset || !meshAsset->IsLoaded())
                     continue;
-                auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
+                auto cpuMesh = meshAsset->GetCPUMesh();
                 if (!cpuMesh)
                     continue;
 
@@ -551,7 +554,7 @@ namespace Nova::App {
                 instance.m_Model = m_Scene->GetWorldTransform(entity);
                 instance.m_MaterialIndex = 0;
                 m_SelectionBatches.push_back({
-                    mrc->m_MeshAsset->GetUUID(),
+                    mrc->m_Mesh.GetUUID(),
                     cpuMesh,
                     first,
                     1u,

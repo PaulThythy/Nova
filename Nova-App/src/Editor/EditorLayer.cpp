@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "App/AppLayer.h"
+#include "Asset/AssetManager.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
 #include "ECS/Components/MeshComponent.h"
@@ -109,8 +110,9 @@ namespace Nova::App::Editor {
             name = nc->m_Name;
 
         uint32_t triangleCount = 0;
-        if (mc->m_MeshAsset && mc->m_MeshAsset->IsLoaded()) {
-            if (auto cpuMesh = mc->m_MeshAsset->GetCPUMesh())
+        if (auto meshAsset = Nova::Core::Asset::AssetManager::Get().GetAsset(mc->m_Mesh);
+            meshAsset && meshAsset->IsLoaded()) {
+            if (auto cpuMesh = meshAsset->GetCPUMesh())
                 triangleCount = cpuMesh->GetIndexCount() / 3;
         }
 

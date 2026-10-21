@@ -114,21 +114,23 @@ namespace Nova::App {
     }
 
     void* AppLayer::GetPlayIconImGuiID() const {
-        if (!m_PlayIcon)
+        auto asset = AssetManager::Get().GetAsset(m_PlayIcon);
+        if (!asset)
             return nullptr;
         auto* renderer = m_AppRenderer.GetRenderer();
         if (!renderer)
             return nullptr;
-        return renderer->GetTextureImGuiID(m_PlayIcon->GetCPUTexture());
+        return renderer->GetTextureImGuiID(asset->GetCPUTexture());
     }
 
     void* AppLayer::GetPauseIconImGuiID() const {
-        if (!m_PauseIcon)
+        auto asset = AssetManager::Get().GetAsset(m_PauseIcon);
+        if (!asset)
             return nullptr;
         auto* renderer = m_AppRenderer.GetRenderer();
         if (!renderer)
             return nullptr;
-        return renderer->GetTextureImGuiID(m_PauseIcon->GetCPUTexture());
+        return renderer->GetTextureImGuiID(asset->GetCPUTexture());
     }
 
     void AppLayer::OnAttach() {
@@ -150,18 +152,19 @@ namespace Nova::App {
             static_cast<uint32_t>(initialH));
 
         {
-            auto acquireTexture = [this](const std::filesystem::path& uri) -> std::shared_ptr<TextureAsset> {
-                auto asset = AssetManager::Get().Acquire<TextureAsset>(uri).GetAssetRef();
-                if (!asset || !asset->Load()) {
+            auto acquireTexture = [this](const std::filesystem::path& uri) -> AssetHandle<TextureAsset> {
+                auto handle = AssetManager::Get().Acquire<TextureAsset>(uri);
+                if (!AssetManager::Get().Load(handle)) {
                     NV_LOG_WARN(("Failed to load texture asset: " + uri.generic_string()).c_str());
-                    return nullptr;
+                    return {};
                 }
+                auto asset = AssetManager::Get().GetAsset(handle);
                 auto* renderer = m_AppRenderer.GetRenderer();
-                if (!renderer || !renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
+                if (!asset || !renderer || !renderer->GetOrUploadTexture(asset->GetCPUTexture())) {
                     NV_LOG_WARN(("Failed to upload texture asset: " + uri.generic_string()).c_str());
-                    return nullptr;
+                    return {};
                 }
-                return asset;
+                return handle;
             };
             m_PlayIcon = acquireTexture("Editor://Icons/play-6-48.png");
             m_PauseIcon = acquireTexture("Editor://Icons/pause-48.png");
@@ -172,8 +175,8 @@ namespace Nova::App {
     }
 
     void AppLayer::OnDetach() {
-        m_PlayIcon.reset();
-        m_PauseIcon.reset();
+        m_PlayIcon = {};
+        m_PauseIcon = {};
         m_AppRenderer.Shutdown();
         m_AppScene.Clear();
 
