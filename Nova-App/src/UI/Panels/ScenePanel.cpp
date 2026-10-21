@@ -20,6 +20,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "Editor/EditorLayer.h"
 #include "Events/ApplicationEvents.h"
+#include "Math/Transform.h"
 
 namespace Nova::App::UI::Panels::ScenePanel {
 
@@ -113,33 +114,6 @@ namespace Nova::App::UI::Panels::ScenePanel {
         ImGui::PopStyleVar();
 
         ImGui::EndChild();
-    }
-
-    static void DecomposeMatrixToTRS(
-        const glm::mat4& matrix,
-        glm::vec3& outTranslation,
-        glm::quat& outRotation,
-        glm::vec3& outScale)
-    {
-        outTranslation = glm::vec3(matrix[3]);
-
-        glm::vec3 column0 = glm::vec3(matrix[0]);
-        glm::vec3 column1 = glm::vec3(matrix[1]);
-        glm::vec3 column2 = glm::vec3(matrix[2]);
-
-        outScale = glm::vec3(
-            glm::length(column0),
-            glm::length(column1),
-            glm::length(column2));
-
-        if (glm::determinant(glm::mat3(matrix)) < 0.0f)
-            outScale.x = -outScale.x;
-
-        if (std::abs(outScale.x) > 1e-8f) column0 /= outScale.x;
-        if (std::abs(outScale.y) > 1e-8f) column1 /= outScale.y;
-        if (std::abs(outScale.z) > 1e-8f) column2 /= outScale.z;
-
-        outRotation = glm::normalize(glm::quat_cast(glm::mat3(column0, column1, column2)));
     }
 
     static bool DrawViewCube(const ImVec2& viewportMin, const ImVec2& viewportMax) {
@@ -249,7 +223,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
                 glm::vec3 translation{};
                 glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
                 glm::vec3 scale{ 1.0f };
-                DecomposeMatrixToTRS(scene.GetWorldTransform(entity), translation, rotation, scale);
+                Nova::Core::Math::DecomposeMatrixToTRS(scene.GetWorldTransform(entity), translation, rotation, scale);
                 s_DragStarts.push_back({ entity, translation, rotation, scale });
             }
         }
@@ -258,7 +232,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
             glm::vec3 translation{};
             glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
             glm::vec3 scale{ 1.0f };
-            DecomposeMatrixToTRS(s_DragMatrix, translation, rotation, scale);
+            Nova::Core::Math::DecomposeMatrixToTRS(s_DragMatrix, translation, rotation, scale);
             scene.SetWorldTransform(selectedEntity, s_DragMatrix);
 
             // Propagate the same world-space TRS delta from the primary entity to the rest of the selection.
