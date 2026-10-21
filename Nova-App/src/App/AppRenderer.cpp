@@ -12,7 +12,6 @@
 #include "Core/Log.h"
 #include "ECS/Components/LightComponent.h"
 #include "ECS/Components/MeshComponent.h"
-#include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Math/AABB.h"
 #include "Math/Light.h"
@@ -541,9 +540,9 @@ namespace Nova::App {
 
             // One instance + one draw per selected entity (keeps mesh pairing trivial).
             for (entt::entity entity : selected) {
-                auto* mrc = registry.try_get<MeshRendererComponent>(entity);
-                auto meshAsset = mrc ? AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
-                if (!registry.all_of<TransformComponent>(entity) || !mrc || !meshAsset || !meshAsset->IsLoaded())
+                auto* mc = registry.try_get<MeshComponent>(entity);
+                auto meshAsset = mc ? AssetManager::Get().GetAsset(mc->m_Mesh) : nullptr;
+                if (!registry.all_of<TransformComponent>(entity) || !mc || !meshAsset || !meshAsset->IsLoaded())
                     continue;
                 auto cpuMesh = meshAsset->GetCPUMesh();
                 if (!cpuMesh)
@@ -554,7 +553,7 @@ namespace Nova::App {
                 instance.m_Model = m_Scene->GetWorldTransform(entity);
                 instance.m_MaterialIndex = 0;
                 m_SelectionBatches.push_back({
-                    mrc->m_Mesh.GetUUID(),
+                    mc->m_Mesh.GetUUID(),
                     cpuMesh,
                     first,
                     1u,

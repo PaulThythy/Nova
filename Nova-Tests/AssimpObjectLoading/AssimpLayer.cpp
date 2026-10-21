@@ -194,7 +194,7 @@ void AssimpLayer::SetupScene() {
 
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = spawn.m_Color;
-            registry.emplace<MeshRendererComponent>(entry.m_Entity, entry.m_Asset, mat);
+            registry.emplace<MeshRendererComponent>(entry.m_Entity, mat);
             registry.emplace<MeshComponent>(entry.m_Entity, entry.m_Asset);
 
             NV_LOG_INFO((std::string("AssimpLayer: ") + spawn.m_Name +
@@ -225,7 +225,7 @@ void AssimpLayer::SetupScene() {
 
         Nova::Core::Renderer::RHI::MaterialGPU mat{};
         mat.m_BaseColor = glm::vec3(0.85f, 0.55f, 0.25f);
-        registry.emplace<MeshRendererComponent>(m_Suzanne.m_Entity, m_Suzanne.m_Asset, mat);
+        registry.emplace<MeshRendererComponent>(m_Suzanne.m_Entity, mat);
         registry.emplace<MeshComponent>(m_Suzanne.m_Entity, m_Suzanne.m_Asset);
     } else {
         NV_LOG_ERROR(("AssimpLayer: failed to load '" + std::string(kSuzannePath) + "'").c_str());
@@ -246,7 +246,7 @@ void AssimpLayer::SetupScene() {
             glm::vec3(3.0f));
         Nova::Core::Renderer::RHI::MaterialGPU mat{};
         mat.m_BaseColor = glm::vec3(0.85f, 0.55f, 0.25f);
-        registry.emplace<MeshRendererComponent>(m_Dragon.m_Entity, m_Dragon.m_Asset, mat);
+        registry.emplace<MeshRendererComponent>(m_Dragon.m_Entity, mat);
         registry.emplace<MeshComponent>(m_Dragon.m_Entity, m_Dragon.m_Asset);
     } else {
         NV_LOG_ERROR(("AssimpLayer: failed to load '" + std::string(kDragonPath) + "'").c_str());
@@ -346,8 +346,9 @@ void AssimpLayer::PrepareGpuInstances() {
             return;
         auto& registry = m_Scene.GetRegistry();
         auto* mrc = registry.try_get<Nova::Core::ECS::Components::MeshRendererComponent>(entity);
-        auto meshAsset = mrc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
-        if (!mrc || !meshAsset || !meshAsset->IsLoaded() || !meshAsset->GetCPUMesh())
+        auto* mc = registry.try_get<Nova::Core::ECS::Components::MeshComponent>(entity);
+        auto meshAsset = mc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mc->m_Mesh) : nullptr;
+        if (!mrc || !mc || !meshAsset || !meshAsset->IsLoaded() || !meshAsset->GetCPUMesh())
             return;
 
         const uint32_t materialIndex = static_cast<uint32_t>(m_Materials.size());
@@ -391,9 +392,9 @@ void AssimpLayer::DrawMeshEntity(
         return;
 
     auto& registry = m_Scene.GetRegistry();
-    auto* mrc = registry.try_get<Nova::Core::ECS::Components::MeshRendererComponent>(entity);
-    auto meshAsset = mrc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
-    if (!mrc || !meshAsset || !meshAsset->IsLoaded())
+    auto* mc = registry.try_get<Nova::Core::ECS::Components::MeshComponent>(entity);
+    auto meshAsset = mc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mc->m_Mesh) : nullptr;
+    if (!mc || !meshAsset || !meshAsset->IsLoaded())
         return;
 
     auto cpuMesh = meshAsset->GetCPUMesh();
