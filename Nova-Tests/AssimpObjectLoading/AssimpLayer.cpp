@@ -101,13 +101,13 @@ void AssimpLayer::SetupRenderer(uint32_t width, uint32_t height) {
     }
 
     auto acquireShader = [](const std::filesystem::path& uri) {
-        auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
-        if (!asset || !asset->Compile()) {
+        auto handle = AssetManager::Get().Acquire<ShaderAsset>(uri);
+        if (!AssetManager::Get().Load(handle)) {
             NV_LOG_WARN(("Failed to compile shader: " + uri.generic_string()).c_str());
-            if (asset && !asset->GetLastLog().empty())
+            if (auto asset = AssetManager::Get().GetAsset(handle); asset && !asset->GetLastLog().empty())
                 NV_LOG_WARN(asset->GetLastLog().c_str());
         }
-        return asset;
+        return AssetManager::Get().GetAsset(handle);
     };
 
     auto litVert = acquireShader(kSimpleLitVertPath);
@@ -181,9 +181,8 @@ void AssimpLayer::SetupScene() {
         entry.m_SpinSign = spawn.m_SpinSign;
 
         entry.m_Asset = AssetManager::Get()
-            .Acquire<MeshAsset>(spawn.m_AssetPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 })
-            .GetAssetRef();
-        entry.m_Loaded = entry.m_Asset && entry.m_Asset->Load();
+            .Acquire<MeshAsset>(spawn.m_AssetPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        entry.m_Loaded = AssetManager::Get().Load(entry.m_Asset);
 
         if (entry.m_Loaded) {
             entry.m_Entity = m_Scene.CreateEntity(spawn.m_Name);
@@ -199,7 +198,7 @@ void AssimpLayer::SetupScene() {
             registry.emplace<MeshComponent>(entry.m_Entity, entry.m_Asset);
 
             NV_LOG_INFO((std::string("AssimpLayer: ") + spawn.m_Name +
-                         " AssetID=" + std::to_string(entry.m_Asset->GetUUID()) +
+                         " AssetID=" + std::to_string(entry.m_Asset.GetUUID()) +
                          " (expected " + std::to_string(spawn.m_ExpectedAssetID) + ")").c_str());
         } else {
             NV_LOG_ERROR((std::string("AssimpLayer: failed to load primitive ") + spawn.m_Name).c_str());
@@ -213,8 +212,8 @@ void AssimpLayer::SetupScene() {
     m_Suzanne.m_Name = "Suzanne";
     m_Suzanne.m_IsPrimitive = false;
     m_Suzanne.m_SpinSign = 1.0f;
-    m_Suzanne.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kSuzannePath, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-    m_Suzanne.m_Loaded = m_Suzanne.m_Asset && m_Suzanne.m_Asset->Load();
+    m_Suzanne.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kSuzannePath, MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+    m_Suzanne.m_Loaded = AssetManager::Get().Load(m_Suzanne.m_Asset);
 
     if (m_Suzanne.m_Loaded) {
         m_Suzanne.m_Entity = m_Scene.CreateEntity("Suzanne");
@@ -236,8 +235,8 @@ void AssimpLayer::SetupScene() {
     m_Dragon.m_Name = "Dragon";
     m_Dragon.m_IsPrimitive = false;
     m_Dragon.m_SpinSign = 1.0f;
-    m_Dragon.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kDragonPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-    m_Dragon.m_Loaded = m_Dragon.m_Asset && m_Dragon.m_Asset->Load();
+    m_Dragon.m_Asset = AssetManager::Get().Acquire<MeshAsset>(kDragonPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+    m_Dragon.m_Loaded = AssetManager::Get().Load(m_Dragon.m_Asset);
     if (m_Dragon.m_Loaded) {
         m_Dragon.m_Entity = m_Scene.CreateEntity("Dragon");
         registry.emplace<TransformComponent>(
@@ -347,7 +346,8 @@ void AssimpLayer::PrepareGpuInstances() {
             return;
         auto& registry = m_Scene.GetRegistry();
         auto* mrc = registry.try_get<Nova::Core::ECS::Components::MeshRendererComponent>(entity);
-        if (!mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded() || !mrc->m_MeshAsset->GetCPUMesh())
+        auto meshAsset = mrc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
+        if (!mrc || !meshAsset || !meshAsset->IsLoaded() || !meshAsset->GetCPUMesh())
             return;
 
         const uint32_t materialIndex = static_cast<uint32_t>(m_Materials.size());
@@ -392,10 +392,11 @@ void AssimpLayer::DrawMeshEntity(
 
     auto& registry = m_Scene.GetRegistry();
     auto* mrc = registry.try_get<Nova::Core::ECS::Components::MeshRendererComponent>(entity);
-    if (!mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
+    auto meshAsset = mrc ? Nova::Core::Asset::AssetManager::Get().GetAsset(mrc->m_Mesh) : nullptr;
+    if (!mrc || !meshAsset || !meshAsset->IsLoaded())
         return;
 
-    auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
+    auto cpuMesh = meshAsset->GetCPUMesh();
     if (!cpuMesh)
         return;
 
@@ -451,16 +452,21 @@ void AssimpLayer::DrawMeshInfoPanel(const SceneMesh& mesh) const {
         return;
 
     if (mesh.m_IsPrimitive) {
-        ImGui::Text("AssetID: %u (expected %u)", mesh.m_Asset->GetUUID(), mesh.m_ExpectedAssetID);
+        ImGui::Text("AssetID: %u (expected %u)", mesh.m_Asset.GetUUID(), mesh.m_ExpectedAssetID);
     } else {
-        ImGui::Text("AssetID: %u", mesh.m_Asset->GetUUID());
+        ImGui::Text("AssetID: %u", mesh.m_Asset.GetUUID());
     }
 
-    if (auto cpuMesh = mesh.m_Asset->GetCPUMesh()) {
-        const size_t vertexCount = cpuMesh->GetVertexCount();
-        const size_t polygonCount = cpuMesh->GetIndexCount() / 3;
-        ImGui::Text("Vertices:  %zu", vertexCount);
-        ImGui::Text("Polygons:  %zu", polygonCount);
+    auto asset = Nova::Core::Asset::AssetManager::Get().GetAsset(mesh.m_Asset);
+    if (asset) {
+        if (auto cpuMesh = asset->GetCPUMesh()) {
+            const size_t vertexCount = cpuMesh->GetVertexCount();
+            const size_t polygonCount = cpuMesh->GetIndexCount() / 3;
+            ImGui::Text("Vertices:  %zu", vertexCount);
+            ImGui::Text("Polygons:  %zu", polygonCount);
+        } else {
+            ImGui::TextDisabled("Vertices / polygons: n/a");
+        }
     } else {
         ImGui::TextDisabled("Vertices / polygons: n/a");
     }

@@ -449,10 +449,10 @@ bool GPUInstancingLayer::CreateRenderer() {
     }
 
     auto acquireShader = [](const std::filesystem::path& uri) {
-        auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
-        if (!asset || !asset->Compile())
+        auto handle = AssetManager::Get().Acquire<ShaderAsset>(uri);
+        if (!AssetManager::Get().Load(handle))
             NV_LOG_WARN(("Failed to compile shader: " + uri.generic_string()).c_str());
-        return asset;
+        return AssetManager::Get().GetAsset(handle);
     };
 
     auto instancedVert = acquireShader("Engine://Shaders/SceneInstanced.vert.slang");
@@ -562,14 +562,19 @@ bool GPUInstancingLayer::LoadMeshes() {
     static_assert(std::size(kSlots) == kMeshSlotCount);
 
     for (size_t i = 0; i < m_MeshSlots.size(); ++i) {
-        auto asset = AssetManager::Get().Acquire<MeshAsset>(kSlots[i].m_Path, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        if (!asset || !asset->Load() || !asset->GetCPUMesh()) {
+        auto handle = AssetManager::Get().Acquire<MeshAsset>(kSlots[i].m_Path, MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        if (!AssetManager::Get().Load(handle)) {
+            NV_LOG_ERROR(("GPUInstancingLayer: failed to load " + std::string(kSlots[i].m_Path)).c_str());
+            return false;
+        }
+        auto asset = AssetManager::Get().GetAsset(handle);
+        if (!asset || !asset->GetCPUMesh()) {
             NV_LOG_ERROR(("GPUInstancingLayer: failed to load " + std::string(kSlots[i].m_Path)).c_str());
             return false;
         }
         m_MeshSlots[i].m_Name = kSlots[i].m_Name;
         m_MeshSlots[i].m_Mesh = asset->GetCPUMesh();
-        m_MeshSlots[i].m_ID = asset->GetUUID();
+        m_MeshSlots[i].m_ID = handle.GetUUID();
         m_MeshSlots[i].m_LocalBounds = ComputeMeshBounds(*m_MeshSlots[i].m_Mesh);
         m_MeshSlots[i].m_Enabled = kSlots[i].m_EnabledByDefault;
         m_MeshSlots[i].m_TriangleCount = m_MeshSlots[i].m_Mesh->GetIndexCount() / 3u;

@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 
+#include "Asset/AssetHandle.h"
 #include "Asset/Assets/MeshAsset.h"
 #include "Core/Layer.h"
 #include "Core/UUID.h"
@@ -36,7 +37,7 @@ public:
 private:
     struct SceneMesh {
         std::string m_Name;
-        std::shared_ptr<Nova::Core::Asset::Assets::MeshAsset> m_Asset;
+        Nova::Core::Asset::AssetHandle<Nova::Core::Asset::Assets::MeshAsset> m_Asset;
         entt::entity m_Entity{ entt::null };
         bool m_Loaded = false;
         bool m_IsPrimitive = false;
