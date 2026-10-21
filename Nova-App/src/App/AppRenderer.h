@@ -14,6 +14,7 @@
 #include "Renderer/RHI/RHI_RenderGraph.h"
 #include "Renderer/RHI/RHI_ShaderUniforms.h"
 #include "Scene/Scene.h"
+#include "Scene/SceneQuery.h"
 
 namespace Nova::App {
 
@@ -38,6 +39,8 @@ namespace Nova::App {
         void UploadLights();
         void PushFrameUniforms(float elapsedTime, float deltaTime, uint32_t& frameIndex, const glm::vec2& viewportSize);
         void PushSceneUniforms();
+        /** Build + upload nova.instances / nova.materials for scene, AABB, and selection draws. */
+        void PrepareGpuInstances();
         void RebindAfterResize();
 
         Nova::Core::Renderer::RHI::RHI_TextureHandle GetSceneColor() const { return m_SceneColor; }
@@ -63,6 +66,12 @@ namespace Nova::App {
         void BindSelectionOutlineTextures();
         void RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx);
         void RenderShadowPass(Nova::Core::Renderer::RHI::IPassContext& ctx);
+        void DrawInstanceBatches(Nova::Core::Renderer::RHI::IPassContext& ctx,
+                                 Nova::Core::Renderer::RHI::RHI_ShaderHandle shader,
+                                 const std::vector<Nova::Core::Scene::SceneInstanceBatch>& batches,
+                                 Nova::Core::Renderer::RHI::RHI_PrimitiveTopology topology);
+        void UploadSceneUniformsWithLightIndex(int lightIndex);
+        const Nova::Core::Renderer::RHI::RHI_EngineParameterBlock* GetEngine() const;
 
         std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
         Nova::Core::Scene::Scene* m_Scene{ nullptr };
@@ -98,6 +107,14 @@ namespace Nova::App {
 
         std::shared_ptr<Nova::Core::Renderer::RHI::RHI_Mesh> m_AABBWireframeMesh;
         std::vector<Nova::Core::Renderer::RHI::LightGPU> m_GpuLights;
+
+        Nova::Core::Scene::SceneRenderBatches m_SceneBatches;
+        std::vector<Nova::Core::Scene::SceneInstanceBatch> m_AABBBatches;
+        std::vector<Nova::Core::Renderer::RHI::InstanceGPU> m_AABBInstances;
+        std::vector<Nova::Core::Scene::SceneInstanceBatch> m_SelectionBatches;
+        std::vector<Nova::Core::Renderer::RHI::InstanceGPU> m_SelectionInstances;
+        uint32_t m_AABBFirstInstance = 0;
+        uint32_t m_SelectionFirstInstance = 0;
     };
 
 } // namespace Nova::App

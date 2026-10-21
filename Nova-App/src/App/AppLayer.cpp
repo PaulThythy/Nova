@@ -201,6 +201,7 @@ namespace Nova::App {
         m_AppRenderer.UploadLights();
         m_AppRenderer.PushFrameUniforms(m_ElapsedTime, m_DeltaTime, m_FrameIndex, m_ViewportSize);
         m_AppRenderer.PushSceneUniforms();
+        m_AppRenderer.PrepareGpuInstances();
     }
 
     void AppLayer::OnRender() {

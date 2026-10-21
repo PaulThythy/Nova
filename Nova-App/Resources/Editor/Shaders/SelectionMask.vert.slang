@@ -1,6 +1,5 @@
-// Minimal scene.uniforms + model block. Binds the shared scene UBO (camera) uploaded by
-// PushSceneUniforms — ApplyParameters does not rewrite scene uniforms, so this pass
-// cannot clobber m_LightCount for later draws.
+// Selection mask: camera from shared scene UBO + world matrix from nova.instances.
+// Uses a minimal ParameterBlock so ApplyParameters does not require the full NovaEngine.
 
 struct CameraGPU {
     float4x4 m_View;
@@ -14,13 +13,15 @@ struct CameraGPU {
 struct SceneUniforms {
     CameraGPU m_Camera;
     int m_LightCount;
-    float _padAfterLightCount;
+    int m_LightIndex;
 };
 
-struct ModelUniforms {
+struct InstanceGPU {
     float4x4 m_Model;
-    int m_LightIndex;
-    float3 _padLightIndex;
+    uint m_MaterialIndex;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
 };
 
 struct SceneParameterBlock {
@@ -29,7 +30,7 @@ struct SceneParameterBlock {
 
 struct SelectionMaskEngine {
     SceneParameterBlock scene;
-    ConstantBuffer<ModelUniforms> model;
+    StructuredBuffer<InstanceGPU> instances;
 };
 
 ParameterBlock<SelectionMaskEngine> nova;
@@ -48,8 +49,9 @@ struct VSOut {
 };
 
 [shader("vertex")]
-VSOut main(VSIn input) {
-    float4 world = mul(nova.model.m_Model, float4(input.a_Position, 1.0));
+VSOut main(VSIn input, uint instanceIndex : SV_VulkanInstanceID) {
+    InstanceGPU instance = nova.instances[instanceIndex];
+    float4 world = mul(instance.m_Model, float4(input.a_Position, 1.0));
     float4 viewPos = mul(nova.scene.uniforms.m_Camera.m_View, world);
 
     VSOut o;
