@@ -20,13 +20,13 @@
 #include "Renderer/RHI/RHI_Shaders.h"
 
 constexpr const char* kSuzannePath =
-    "Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/suzanne.obj";
+    "Tests://Meshes/suzanne.obj";
 constexpr const char* kDragonPath =
-    "Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/dragon.obj";
+    "Tests://Meshes/dragon.obj";
 constexpr const char* kSimpleLitVertPath =
-    "Nova-Tests/AssimpObjectLoading/Resources/Assets/Shaders/SimpleLit.vert.slang";
+    "Nova-Tests/AssimpObjectLoading/Resources/Shaders/SimpleLit.vert.slang";
 constexpr const char* kSimpleLitFragPath =
-    "Nova-Tests/AssimpObjectLoading/Resources/Assets/Shaders/SimpleLit.frag.slang";
+    "Nova-Tests/AssimpObjectLoading/Resources/Shaders/SimpleLit.frag.slang";
 
 struct PrimitiveSpawn {
     const char* m_Name;

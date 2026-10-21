@@ -54,7 +54,7 @@ namespace Nova::App {
         auto& registry = m_Scene.GetRegistry();
         registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
 
-        auto suzanneAsset = AssetManager::Get().Acquire<MeshAsset>("Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/suzanne.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto suzanneAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/suzanne.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         suzanneAsset->Load();
         entt::entity suzanneEntity = m_Scene.CreateEntity("Suzanne");
         registry.emplace<TransformComponent>(suzanneEntity,
@@ -68,7 +68,7 @@ namespace Nova::App {
             registry.emplace<MeshComponent>(suzanneEntity, suzanneAsset);
         }
 
-        auto dragonAsset = AssetManager::Get().Acquire<MeshAsset>("Nova-Tests/AssimpObjectLoading/Resources/Assets/Meshes/dragon.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
+        auto dragonAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/dragon.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
         dragonAsset->Load();
         entt::entity dragonEntity = m_Scene.CreateEntity("Dragon");
         registry.emplace<TransformComponent>(dragonEntity,
