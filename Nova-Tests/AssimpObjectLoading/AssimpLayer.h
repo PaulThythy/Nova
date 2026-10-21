@@ -16,6 +16,7 @@
 #include "Events/InputEvents.h"
 #include "Math/Camera.h"
 #include "Renderer/RHI/RHI_Renderer.h"
+#include "Renderer/RHI/RHI_ShaderUniforms.h"
 #include "Scene/Scene.h"
 
 class AssimpLayer : public Nova::Core::Layer {
@@ -50,8 +51,9 @@ private:
     void SetupScene();
     void PushFrameUniforms();
     void PushSceneUniforms();
+    void PrepareGpuInstances();
     void RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx);
-    void DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, entt::entity entity);
+    void DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, entt::entity entity, uint32_t firstInstance);
     void DrawMeshInfoPanel(const SceneMesh& mesh) const;
 
     std::unique_ptr<Nova::Core::Renderer::RHI::IRenderer> m_Renderer;
@@ -63,6 +65,10 @@ private:
     std::vector<SceneMesh> m_Primitives;
     SceneMesh m_Suzanne;
     SceneMesh m_Dragon;
+
+    std::vector<Nova::Core::Renderer::RHI::InstanceGPU> m_Instances;
+    std::vector<Nova::Core::Renderer::RHI::MaterialGPU> m_Materials;
+    std::vector<entt::entity> m_DrawEntities;
 
     float m_ElapsedTime = 0.0f;
     float m_DeltaTime = 0.0f;

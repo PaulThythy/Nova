@@ -2,6 +2,7 @@
 
 #include <array>
 #include <filesystem>
+#include <span>
 #include <string>
 
 #include "imgui.h"
@@ -328,7 +329,64 @@ void AssimpLayer::PushSceneUniforms() {
     m_Renderer->UpdateGpuBuffer(engine->m_Scene.m_Uniforms, &scene, sizeof(scene), 0);
 }
 
-void AssimpLayer::DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, entt::entity entity) {
+void AssimpLayer::PrepareGpuInstances() {
+    if (!m_Renderer)
+        return;
+
+    auto* graph = m_Renderer->GetRenderGraph();
+    const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
+    if (!engine || !engine->m_Instances.IsValid() || !engine->m_Materials.IsValid())
+        return;
+
+    m_Instances.clear();
+    m_Materials.clear();
+    m_DrawEntities.clear();
+
+    auto appendEntity = [&](entt::entity entity) {
+        if (entity == entt::null)
+            return;
+        auto& registry = m_Scene.GetRegistry();
+        auto* mrc = registry.try_get<Nova::Core::ECS::Components::MeshRendererComponent>(entity);
+        if (!mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded() || !mrc->m_MeshAsset->GetCPUMesh())
+            return;
+
+        const uint32_t materialIndex = static_cast<uint32_t>(m_Materials.size());
+        m_Materials.push_back(mrc->m_Material);
+
+        Nova::Core::Renderer::RHI::InstanceGPU instance{};
+        instance.m_Model = m_Scene.GetWorldTransform(entity);
+        instance.m_MaterialIndex = materialIndex;
+        m_Instances.push_back(instance);
+        m_DrawEntities.push_back(entity);
+    };
+
+    for (const auto& primitive : m_Primitives)
+        appendEntity(primitive.m_Entity);
+    appendEntity(m_Suzanne.m_Entity);
+    appendEntity(m_Dragon.m_Entity);
+
+    Nova::Core::Renderer::RHI::EnsureGpuBufferCapacity(
+        *m_Renderer, engine->m_Instances, std::max(static_cast<uint32_t>(m_Instances.size()), 1u));
+    Nova::Core::Renderer::RHI::EnsureGpuBufferCapacity(
+        *m_Renderer, engine->m_Materials, std::max(static_cast<uint32_t>(m_Materials.size()), 1u));
+
+    if (!m_Instances.empty()) {
+        Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::InstanceGPU>(
+            *m_Renderer, engine->m_Instances,
+            std::span<const Nova::Core::Renderer::RHI::InstanceGPU>(m_Instances), 0);
+    }
+    if (!m_Materials.empty()) {
+        Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::MaterialGPU>(
+            *m_Renderer, engine->m_Materials,
+            std::span<const Nova::Core::Renderer::RHI::MaterialGPU>(m_Materials), 0);
+    }
+}
+
+void AssimpLayer::DrawMeshEntity(
+    Nova::Core::Renderer::RHI::IPassContext& ctx,
+    entt::entity entity,
+    uint32_t firstInstance)
+{
     if (entity == entt::null)
         return;
 
@@ -337,33 +395,26 @@ void AssimpLayer::DrawMeshEntity(Nova::Core::Renderer::RHI::IPassContext& ctx, e
     if (!mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
         return;
 
-    auto* shader = ctx.GetShader(m_SimpleLitShader);
-    if (!shader)
-        return;
-
     auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
     if (!cpuMesh)
         return;
 
-    shader->SetParameter("m_Model", m_Scene.GetWorldTransform(entity));
-    shader->SetParameter("m_Base", mrc->m_Material.m_Base);
-    shader->SetParameter("m_BaseColor", mrc->m_Material.m_BaseColor);
-
     ctx.BindShader(m_SimpleLitShader);
 
+    // One draw per object, reading that object's InstanceGPU via firstInstance.
     Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
     cmd.m_Mesh = cpuMesh;
     cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
     cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
     cmd.m_IndexCount = cpuMesh->GetIndexCount();
+    cmd.m_InstanceCount = 1;
+    cmd.m_FirstInstance = firstInstance;
     ctx.DrawIndexed(cmd);
 }
 
 void AssimpLayer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-    for (const auto& primitive : m_Primitives)
-        DrawMeshEntity(ctx, primitive.m_Entity);
-    DrawMeshEntity(ctx, m_Suzanne.m_Entity);
-    DrawMeshEntity(ctx, m_Dragon.m_Entity);
+    for (uint32_t i = 0; i < static_cast<uint32_t>(m_DrawEntities.size()); ++i)
+        DrawMeshEntity(ctx, m_DrawEntities[i], i);
 }
 
 void AssimpLayer::OnBegin() {
@@ -373,6 +424,7 @@ void AssimpLayer::OnBegin() {
     m_Renderer->BeginFrame();
     PushFrameUniforms();
     PushSceneUniforms();
+    PrepareGpuInstances();
 }
 
 void AssimpLayer::OnRender() {

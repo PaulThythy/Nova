@@ -14,11 +14,13 @@ struct VSOut {
     float3 v_Normal;
     float3 v_Pos;
     float4 v_Color;
+    nointerpolation uint v_MaterialIndex;
 };
 
 [shader("vertex")]
-VSOut main(VSIn input) {
-    float4x4 model = nova.model.m_Model;
+VSOut main(VSIn input, uint instanceIndex : SV_VulkanInstanceID) {
+    InstanceGPU instance = nova.instances[instanceIndex];
+    float4x4 model = instance.m_Model;
 
     float3x3 m3 = (float3x3)model;
     float3x3 invT = transpose3x3(inverse3x3(m3));
@@ -31,5 +33,6 @@ VSOut main(VSIn input) {
     o.v_Pos = world.xyz;
     float4 viewPos = mul(nova.scene.uniforms.m_Camera.m_View, world);
     o.sv_position = mul(nova.scene.uniforms.m_Camera.m_Proj, viewPos);
+    o.v_MaterialIndex = instance.m_MaterialIndex;
     return o;
 }
