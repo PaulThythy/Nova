@@ -629,8 +629,9 @@ namespace Nova::App {
         if (!m_Selection || m_Selection->Empty() || m_SelectionBatches.empty())
             return;
 
-        // Occluded first, then visible coverage: visible overwrites G→0 on the
-        // front surface so self-occlusion does not leave a yellow x-ray fill.
+        // Occluded (R+G) then visible (R, G→0): both write R so the blur halo
+        // uses a full silhouette; visible clears G on the front surface so
+        // self-occlusion does not leave a yellow x-ray fill.
         DrawInstanceBatches(
             ctx,
             m_SelectionMaskOccludedShader,

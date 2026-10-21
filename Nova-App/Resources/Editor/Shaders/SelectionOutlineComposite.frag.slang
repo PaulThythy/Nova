@@ -23,11 +23,12 @@ float4 main(PSIn input) : SV_Target0 {
     float occluded = maskSample.g;
     float blurred = outline.selectionBlurred.Sample(outline.selectionBlurredSampler, input.v_UV).r;
 
-    // Soft outer glow only (keep the blurred look, no hard edge).
-    // X-ray only where the selection is not already the visible surface (avoids
-    // self-occlusion fill on concave meshes like Suzanne / Stanford dragon).
+    // Soft outer glow from the full silhouette (R is filled by both visible and
+    // occluded mask passes, so contact holes from objects on a selected plane
+    // do not create false halo edges). G is cleared on the front surface by the
+    // visible pass, so x-ray stays behind occluders only.
     float halo = max(blurred - coverage, 0.0) * kHaloStrength;
-    float intensity = saturate(halo + occluded * (1.0 - coverage) * kOccludedStrength);
+    float intensity = saturate(halo + occluded * kOccludedStrength);
     if (intensity < 0.004)
         discard;
 
