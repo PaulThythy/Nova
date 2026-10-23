@@ -33,6 +33,7 @@ namespace Nova::App::UI::Panels::ScenePanel {
         switch (operation) {
             case GizmoOperation::Rotate: return ImGuizmo::ROTATE;
             case GizmoOperation::Scale: return ImGuizmo::SCALE;
+            case GizmoOperation::Universal: return ImGuizmo::UNIVERSAL;
             case GizmoOperation::Translate:
             default: return ImGuizmo::TRANSLATE;
         }
@@ -331,6 +332,8 @@ namespace Nova::App::UI::Panels::ScenePanel {
             DrawGizmoModeButton(editor, "R", GizmoOperation::Rotate);
             ImGui::SameLine();
             DrawGizmoModeButton(editor, "S", GizmoOperation::Scale);
+            ImGui::SameLine();
+            DrawGizmoModeButton(editor, "U", GizmoOperation::Universal);
 
             ImGui::SameLine();
             const bool scaleForcesLocal = editor->GetGizmoOperation() == GizmoOperation::Scale;
