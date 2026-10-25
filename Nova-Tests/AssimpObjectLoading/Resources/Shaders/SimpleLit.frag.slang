@@ -5,12 +5,14 @@ struct PSIn {
     float3 v_Normal;
     float3 v_Pos;
     float4 v_Color;
+    nointerpolation uint v_MaterialIndex;
 };
 
 [shader("fragment")]
 float4 main(PSIn input) : SV_Target0 {
+    MaterialGPU material = nova.materials[input.v_MaterialIndex];
     float3 N = normalize(input.v_Normal);
-    float3 base = nova.material.m_Base * nova.material.m_BaseColor;
+    float3 base = material.m_Base * material.m_BaseColor;
 
     // Hardcoded directional light (world space).
     const float3 lightDir = normalize(float3(0.45, 0.85, 0.35));

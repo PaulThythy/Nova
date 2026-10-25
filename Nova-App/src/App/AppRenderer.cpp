@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <span>
 
 #include "Asset/AssetManager.h"
 #include "Asset/Assets/MeshAsset.h"
@@ -11,10 +12,10 @@
 #include "Core/Log.h"
 #include "ECS/Components/LightComponent.h"
 #include "ECS/Components/MeshComponent.h"
-#include "ECS/Components/MeshRendererComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Math/AABB.h"
 #include "Math/Light.h"
+#include "Scene/SceneQuery.h"
 
 namespace Nova::App {
 
@@ -98,11 +99,13 @@ namespace Nova::App {
         m_SelectionBlurred = selectionBlurred;
 
         auto acquireShader = [](const std::filesystem::path& uri) {
-            auto asset = AssetManager::Get().Acquire<ShaderAsset>(uri).GetAssetRef();
-            if (!asset || !asset->Compile()) {
+            auto handle = AssetManager::Get().Acquire<ShaderAsset>(uri);
+            if (!AssetManager::Get().Load(handle)) {
                 NV_LOG_WARN(("Failed to compile shader asset: " + uri.generic_string()).c_str());
+                if (auto asset = AssetManager::Get().GetAsset(handle); asset && !asset->GetLastLog().empty())
+                    NV_LOG_WARN(asset->GetLastLog().c_str());
             }
-            return asset;
+            return AssetManager::Get().GetAsset(handle);
         };
 
         auto gridVert = acquireShader("Editor://Shaders/Grid.vert.slang");
@@ -454,12 +457,18 @@ namespace Nova::App {
         }
     }
 
-    void AppRenderer::PushSceneUniforms() {
+    const Nova::Core::Renderer::RHI::RHI_EngineParameterBlock* AppRenderer::GetEngine() const {
+        if (!m_Renderer)
+            return nullptr;
+        auto* graph = m_Renderer->GetRenderGraph();
+        return graph ? graph->GetEngineParameterBlock() : nullptr;
+    }
+
+    void AppRenderer::UploadSceneUniformsWithLightIndex(int lightIndex) {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         NV_ASSERT_MSG(m_Camera, "Camera is not bound for this frame.");
 
-        auto* graph = m_Renderer->GetRenderGraph();
-        const auto* engine = graph ? graph->GetEngineParameterBlock() : nullptr;
+        const auto* engine = GetEngine();
         if (!engine || !engine->m_Scene.m_Uniforms.IsValid())
             return;
 
@@ -470,6 +479,7 @@ namespace Nova::App {
         scene.m_Camera.m_InvViewProj = glm::inverse(scene.m_Camera.m_ViewProj);
         scene.m_Camera.m_Position = m_Camera->m_LookFrom;
         scene.m_LightCount = static_cast<int>(m_GpuLights.size());
+        scene.m_LightIndex = lightIndex;
 
         m_Renderer->UpdateGpuBuffer(
             engine->m_Scene.m_Uniforms,
@@ -478,119 +488,162 @@ namespace Nova::App {
             0);
     }
 
+    void AppRenderer::PushSceneUniforms() {
+        UploadSceneUniformsWithLightIndex(0);
+    }
+
+    void AppRenderer::PrepareGpuInstances() {
+        NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
+        NV_ASSERT_MSG(m_Scene, "Scene is not bound for this frame.");
+
+        const auto* engine = GetEngine();
+        if (!engine || !engine->m_Instances.IsValid() || !engine->m_Materials.IsValid())
+            return;
+
+        m_SceneBatches = Nova::Core::Scene::BuildRenderBatches(*m_Scene, 0);
+
+        m_AABBInstances.clear();
+        m_AABBBatches.clear();
+        m_AABBFirstInstance = static_cast<uint32_t>(m_SceneBatches.m_Instances.size());
+        if (m_ShowAABB && m_AABBWireframeMesh) {
+            auto& registry = m_Scene->GetRegistry();
+            auto view = registry.view<TransformComponent, MeshComponent>();
+            for (auto entity : view) {
+                auto& mc = view.get<MeshComponent>(entity);
+                if (!mc.m_AABBTree.IsBuilt())
+                    continue;
+
+                const glm::mat4 entityTransform = m_Scene->GetWorldTransform(entity);
+                for (const auto& node : mc.m_AABBTree.GetNodes()) {
+                    Nova::Core::Renderer::RHI::InstanceGPU& instance = m_AABBInstances.emplace_back();
+                    instance.m_Model = entityTransform * Nova::Core::Math::AABBToModelMatrix(node.m_Bounds);
+                    instance.m_MaterialIndex = 0;
+                }
+            }
+            if (!m_AABBInstances.empty()) {
+                m_AABBBatches.push_back({
+                    Nova::Core::kInvalidUUID,
+                    m_AABBWireframeMesh,
+                    m_AABBFirstInstance,
+                    static_cast<uint32_t>(m_AABBInstances.size()),
+                });
+            }
+        }
+
+        m_SelectionInstances.clear();
+        m_SelectionBatches.clear();
+        m_SelectionFirstInstance = m_AABBFirstInstance + static_cast<uint32_t>(m_AABBInstances.size());
+        if (m_Selection && !m_Selection->Empty()) {
+            auto& registry = m_Scene->GetRegistry();
+            auto& selected = m_Selection->GetEntities();
+            std::erase_if(selected, [&](entt::entity entity) { return !registry.valid(entity); });
+
+            // One instance + one draw per selected entity (keeps mesh pairing trivial).
+            for (entt::entity entity : selected) {
+                auto* mc = registry.try_get<MeshComponent>(entity);
+                auto meshAsset = mc ? AssetManager::Get().GetAsset(mc->m_Mesh) : nullptr;
+                if (!registry.all_of<TransformComponent>(entity) || !mc || !meshAsset || !meshAsset->IsLoaded())
+                    continue;
+                auto cpuMesh = meshAsset->GetCPUMesh();
+                if (!cpuMesh)
+                    continue;
+
+                const uint32_t first = m_SelectionFirstInstance + static_cast<uint32_t>(m_SelectionInstances.size());
+                Nova::Core::Renderer::RHI::InstanceGPU& instance = m_SelectionInstances.emplace_back();
+                instance.m_Model = m_Scene->GetWorldTransform(entity);
+                instance.m_MaterialIndex = 0;
+                m_SelectionBatches.push_back({
+                    mc->m_Mesh.GetUUID(),
+                    cpuMesh,
+                    first,
+                    1u,
+                });
+            }
+        }
+
+        const uint32_t totalInstances = static_cast<uint32_t>(
+            m_SceneBatches.m_Instances.size() + m_AABBInstances.size() + m_SelectionInstances.size());
+        Nova::Core::Renderer::RHI::EnsureGpuBufferCapacity(
+            *m_Renderer, engine->m_Instances, std::max(totalInstances, 1u));
+        Nova::Core::Renderer::RHI::EnsureGpuBufferCapacity(
+            *m_Renderer, engine->m_Materials, std::max(static_cast<uint32_t>(m_SceneBatches.m_Materials.size()), 1u));
+
+        if (!m_SceneBatches.m_Instances.empty()) {
+            Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::InstanceGPU>(
+                *m_Renderer, engine->m_Instances,
+                std::span<const Nova::Core::Renderer::RHI::InstanceGPU>(m_SceneBatches.m_Instances), 0);
+        }
+        if (!m_AABBInstances.empty()) {
+            Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::InstanceGPU>(
+                *m_Renderer, engine->m_Instances,
+                std::span<const Nova::Core::Renderer::RHI::InstanceGPU>(m_AABBInstances), m_AABBFirstInstance);
+        }
+        if (!m_SelectionInstances.empty()) {
+            Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::InstanceGPU>(
+                *m_Renderer, engine->m_Instances,
+                std::span<const Nova::Core::Renderer::RHI::InstanceGPU>(m_SelectionInstances), m_SelectionFirstInstance);
+        }
+        if (!m_SceneBatches.m_Materials.empty()) {
+            Nova::Core::Renderer::RHI::UpdateStructuredBufferRange<Nova::Core::Renderer::RHI::MaterialGPU>(
+                *m_Renderer, engine->m_Materials,
+                std::span<const Nova::Core::Renderer::RHI::MaterialGPU>(m_SceneBatches.m_Materials), 0);
+        }
+    }
+
+    void AppRenderer::DrawInstanceBatches(
+        Nova::Core::Renderer::RHI::IPassContext& ctx,
+        Nova::Core::Renderer::RHI::RHI_ShaderHandle shader,
+        const std::vector<Nova::Core::Scene::SceneInstanceBatch>& batches,
+        Nova::Core::Renderer::RHI::RHI_PrimitiveTopology topology)
+    {
+        if (!shader.IsValid() || batches.empty())
+            return;
+
+        ctx.BindShader(shader);
+        for (const auto& batch : batches) {
+            if (!batch.m_Mesh || batch.m_InstanceCount == 0)
+                continue;
+
+            Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
+            cmd.m_Mesh = batch.m_Mesh;
+            cmd.m_Topology = topology;
+            cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
+            cmd.m_IndexCount = batch.m_Mesh->GetIndexCount();
+            cmd.m_InstanceCount = batch.m_InstanceCount;
+            cmd.m_FirstInstance = batch.m_FirstInstance;
+            ctx.DrawIndexed(cmd);
+        }
+    }
+
     void AppRenderer::RenderScene(Nova::Core::Renderer::RHI::IPassContext& ctx) {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
         NV_ASSERT_MSG(m_Camera, "Camera is not bound for this frame.");
         NV_ASSERT_MSG(m_Scene, "Scene is not bound for this frame.");
 
-        const auto shaderHandle = GetActiveSceneShader();
-        auto* sceneShader = ctx.GetShader(shaderHandle);
-        if (!sceneShader) return;
-
-        auto& registry = m_Scene->GetRegistry();
-        auto viewMeshes = registry.view<TransformComponent, MeshRendererComponent>();
-        for (auto entity : viewMeshes) {
-            auto& mrc = viewMeshes.get<MeshRendererComponent>(entity);
-
-            if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
-                continue;
-
-            auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
-            if (!cpuMesh)
-                continue;
-
-            sceneShader->SetParameter("m_Model", m_Scene->GetWorldTransform(entity));
-
-            sceneShader->SetParameter("m_Base", mrc.m_Material.m_Base);
-            sceneShader->SetParameter("m_BaseColor", mrc.m_Material.m_BaseColor);
-            sceneShader->SetParameter("m_DiffuseRoughness", mrc.m_Material.m_DiffuseRoughness);
-            sceneShader->SetParameter("m_Metalness", mrc.m_Material.m_Metalness);
-            sceneShader->SetParameter("m_MetalColor", mrc.m_Material.m_MetalColor);
-            sceneShader->SetParameter("m_Specular", mrc.m_Material.m_Specular);
-            sceneShader->SetParameter("m_SpecularColor", mrc.m_Material.m_SpecularColor);
-            sceneShader->SetParameter("m_SpecularRoughness", mrc.m_Material.m_SpecularRoughness);
-            sceneShader->SetParameter("m_SpecularIOR", mrc.m_Material.m_SpecularIOR);
-            sceneShader->SetParameter("m_SpecularAnisotropy", mrc.m_Material.m_SpecularAnisotropy);
-            sceneShader->SetParameter("m_SpecularRotation", mrc.m_Material.m_SpecularRotation);
-            sceneShader->SetParameter("m_Transmission", mrc.m_Material.m_Transmission);
-            sceneShader->SetParameter("m_TransmissionColor", mrc.m_Material.m_TransmissionColor);
-            sceneShader->SetParameter("m_Subsurface", mrc.m_Material.m_Subsurface);
-            sceneShader->SetParameter("m_SubsurfaceColor", mrc.m_Material.m_SubsurfaceColor);
-            sceneShader->SetParameter("m_SubsurfaceRadius", mrc.m_Material.m_SubsurfaceRadius);
-            sceneShader->SetParameter("m_SubsurfaceScale", mrc.m_Material.m_SubsurfaceScale);
-            sceneShader->SetParameter("m_SubsurfaceAnisotropy", mrc.m_Material.m_SubsurfaceAnisotropy);
-            sceneShader->SetParameter("m_Sheen", mrc.m_Material.m_Sheen);
-            sceneShader->SetParameter("m_SheenColor", mrc.m_Material.m_SheenColor);
-            sceneShader->SetParameter("m_SheenRoughness", mrc.m_Material.m_SheenRoughness);
-            sceneShader->SetParameter("m_Coat", mrc.m_Material.m_Coat);
-            sceneShader->SetParameter("m_CoatColor", mrc.m_Material.m_CoatColor);
-            sceneShader->SetParameter("m_CoatRoughness", mrc.m_Material.m_CoatRoughness);
-            sceneShader->SetParameter("m_CoatAnisotropy", mrc.m_Material.m_CoatAnisotropy);
-            sceneShader->SetParameter("m_CoatRotation", mrc.m_Material.m_CoatRotation);
-            sceneShader->SetParameter("m_CoatIOR", mrc.m_Material.m_CoatIOR);
-            sceneShader->SetParameter("m_CoatAffectColor", mrc.m_Material.m_CoatAffectColor);
-            sceneShader->SetParameter("m_CoatAffectRoughness", mrc.m_Material.m_CoatAffectRoughness);
-            sceneShader->SetParameter("m_Emission", mrc.m_Material.m_Emission);
-            sceneShader->SetParameter("m_EmissionColor", mrc.m_Material.m_EmissionColor);
-            sceneShader->SetParameter("m_Opacity", mrc.m_Material.m_Opacity);
-            sceneShader->SetParameter("m_ThinWalled", mrc.m_Material.m_ThinWalled);
-            sceneShader->SetParameter("m_IsOpaque", static_cast<int>(mrc.m_Material.m_IsOpaque));
-
-            ctx.BindShader(shaderHandle);
-
-            Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-            cmd.m_Mesh = cpuMesh;
-            cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-            cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-            cmd.m_IndexCount = cpuMesh->GetIndexCount();
-            ctx.DrawIndexed(cmd);
-        }
+        DrawInstanceBatches(
+            ctx,
+            GetActiveSceneShader(),
+            m_SceneBatches.m_Batches,
+            Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles);
     }
 
     void AppRenderer::RenderSelectionMask(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-        if (!m_Selection || !m_Scene || m_Selection->Empty())
+        if (!m_Selection || m_Selection->Empty() || m_SelectionBatches.empty())
             return;
 
-        auto& registry = m_Scene->GetRegistry();
-        auto& selected = m_Selection->GetEntities();
-
-        std::erase_if(selected, [&](entt::entity entity) {
-            return !registry.valid(entity);
-        });
-        if (selected.empty())
-            return;
-
-        for (entt::entity entity : selected) {
-            auto* mrc = registry.try_get<MeshRendererComponent>(entity);
-            if (!registry.all_of<TransformComponent>(entity) || !mrc || !mrc->m_MeshAsset || !mrc->m_MeshAsset->IsLoaded())
-                continue;
-
-            auto cpuMesh = mrc->m_MeshAsset->GetCPUMesh();
-            if (!cpuMesh)
-                continue;
-
-            const glm::mat4 model = m_Scene->GetWorldTransform(entity);
-
-            Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-            cmd.m_Mesh = cpuMesh;
-            cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-            cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-            cmd.m_IndexCount = cpuMesh->GetIndexCount();
-
-            // Occluded first, then visible coverage: visible overwrites G→0 on the
-            // front surface so self-occlusion does not leave a yellow x-ray fill.
-            if (auto* occluded = ctx.GetShader(m_SelectionMaskOccludedShader)) {
-                occluded->SetParameter("m_Model", model);
-                ctx.BindShader(m_SelectionMaskOccludedShader);
-                ctx.DrawIndexed(cmd);
-            }
-
-            if (auto* mask = ctx.GetShader(m_SelectionMaskShader)) {
-                mask->SetParameter("m_Model", model);
-                ctx.BindShader(m_SelectionMaskShader);
-                ctx.DrawIndexed(cmd);
-            }
-        }
+        // Occluded (R+G) then visible (R, G→0): both write R so the blur halo
+        // uses a full silhouette; visible clears G on the front surface so
+        // self-occlusion does not leave a yellow x-ray fill.
+        DrawInstanceBatches(
+            ctx,
+            m_SelectionMaskOccludedShader,
+            m_SelectionBatches,
+            Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles);
+        DrawInstanceBatches(
+            ctx,
+            m_SelectionMaskShader,
+            m_SelectionBatches,
+            Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles);
     }
 
     void AppRenderer::RenderSelectionBlur(
@@ -644,39 +697,14 @@ namespace Nova::App {
     }
 
     void AppRenderer::RenderAABBs(Nova::Core::Renderer::RHI::IPassContext& ctx) {
-        if (!m_AABBWireframeMesh || !m_Scene || !m_Camera)
+        if (!m_AABBWireframeMesh || m_AABBBatches.empty())
             return;
 
-        auto* aabbShader = ctx.GetShader(m_AABBShader);
-        if (!aabbShader)
-            return;
-
-        auto& registry = m_Scene->GetRegistry();
-        auto view = registry.view<TransformComponent, MeshComponent>();
-
-        for (auto entity : view) {
-            auto& mc = view.get<MeshComponent>(entity);
-
-            if (!mc.m_AABBTree.IsBuilt())
-                continue;
-
-            const glm::mat4 entityTransform = m_Scene->GetWorldTransform(entity);
-            const auto& nodes = mc.m_AABBTree.GetNodes();
-
-            for (const auto& node : nodes) {
-                const glm::mat4 model = entityTransform * Nova::Core::Math::AABBToModelMatrix(node.m_Bounds);
-                aabbShader->SetParameter("m_Model", model);
-
-                ctx.BindShader(m_AABBShader);
-
-                Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-                cmd.m_Mesh = m_AABBWireframeMesh;
-                cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Lines;
-                cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-                cmd.m_IndexCount = m_AABBWireframeMesh->GetIndexCount();
-                ctx.DrawIndexed(cmd);
-            }
-        }
+        DrawInstanceBatches(
+            ctx,
+            m_AABBShader,
+            m_AABBBatches,
+            Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Lines);
     }
 
     void AppRenderer::UploadLights() {
@@ -759,12 +787,8 @@ namespace Nova::App {
             ctx.EndDepthLayer();
         }
 
-        auto* shadowShader = ctx.GetShader(m_ShadowShader);
-        if (!shadowShader)
+        if (!ctx.GetShader(m_ShadowShader) || m_SceneBatches.m_Batches.empty())
             return;
-
-        auto& registry = m_Scene->GetRegistry();
-        auto meshView = registry.view<TransformComponent, MeshRendererComponent>();
 
         for (size_t lightIdx = 0; lightIdx < m_GpuLights.size(); ++lightIdx) {
             const auto& light = m_GpuLights[lightIdx];
@@ -778,29 +802,18 @@ namespace Nova::App {
                 light.m_ShadowBiasConstant * angleFactor * typeScale,
                 light.m_ShadowBiasSlope * angleFactor * typeScale);
 
-            shadowShader->SetParameter("m_LightIndex", static_cast<int>(lightIdx));
-
-            for (auto entity : meshView) {
-                auto& mrc = meshView.get<MeshRendererComponent>(entity);
-                if (!mrc.m_MeshAsset || !mrc.m_MeshAsset->IsLoaded())
-                    continue;
-                auto cpuMesh = mrc.m_MeshAsset->GetCPUMesh();
-                if (!cpuMesh)
-                    continue;
-
-                shadowShader->SetParameter("m_Model", m_Scene->GetWorldTransform(entity));
-                ctx.BindShader(m_ShadowShader);
-
-                Nova::Core::Renderer::RHI::RHI_DrawIndexedCommand cmd{};
-                cmd.m_Mesh = cpuMesh;
-                cmd.m_Topology = Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles;
-                cmd.m_IndexType = Nova::Core::Renderer::RHI::RHI_IndexType::UInt32;
-                cmd.m_IndexCount = cpuMesh->GetIndexCount();
-                ctx.DrawIndexed(cmd);
-            }
+            UploadSceneUniformsWithLightIndex(static_cast<int>(lightIdx));
+            DrawInstanceBatches(
+                ctx,
+                m_ShadowShader,
+                m_SceneBatches.m_Batches,
+                Nova::Core::Renderer::RHI::RHI_PrimitiveTopology::Triangles);
 
             ctx.EndDepthLayer();
         }
+
+        // Restore scene light index after shadow recording.
+        UploadSceneUniformsWithLightIndex(0);
     }
 
 } // namespace Nova::App

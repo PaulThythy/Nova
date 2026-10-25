@@ -1,4 +1,4 @@
-// Separable Gaussian blur (horizontal). Blurs R (selection coverage) for the glow halo.
+// Separable Gaussian blur (horizontal). Blurs R (full selection silhouette) for the glow halo.
 // No nova ParameterBlock — must not touch engine frame/lights UBOs after Scene.
 
 struct PSIn {

@@ -21,6 +21,7 @@ namespace Nova::App::Editor {
         Translate = 0,
         Rotate,
         Scale,
+        Universal,
     };
 
     enum class GizmoSpace {

@@ -4,3 +4,4 @@
 add_subdirectory(GraphicLayers)
 add_subdirectory(BuildTypes)
 add_subdirectory(AssimpObjectLoading)
+add_subdirectory(GPUInstancing)

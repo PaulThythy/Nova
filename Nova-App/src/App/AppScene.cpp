@@ -54,8 +54,8 @@ namespace Nova::App {
         auto& registry = m_Scene.GetRegistry();
         registry.emplace<CameraComponent>(cameraEntity, m_Camera, true);
 
-        auto suzanneAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/suzanne.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        suzanneAsset->Load();
+        auto suzanneAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/suzanne.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(suzanneAsset);
         entt::entity suzanneEntity = m_Scene.CreateEntity("Suzanne");
         registry.emplace<TransformComponent>(suzanneEntity,
             glm::vec3(3.5f, 0.40f, -2.5f),
@@ -64,12 +64,12 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.0f, 0.0f);
-            registry.emplace<MeshRendererComponent>(suzanneEntity, suzanneAsset, mat);
+            registry.emplace<MeshRendererComponent>(suzanneEntity, mat);
             registry.emplace<MeshComponent>(suzanneEntity, suzanneAsset);
         }
 
-        auto dragonAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/dragon.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        dragonAsset->Load();
+        auto dragonAsset = AssetManager::Get().Acquire<MeshAsset>("Tests://Meshes/dragon.obj", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(dragonAsset);
         entt::entity dragonEntity = m_Scene.CreateEntity("Dragon");
         registry.emplace<TransformComponent>(dragonEntity,
             glm::vec3(-3.7f, -0.6f, 0.4f),
@@ -78,12 +78,12 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.0f, 1.0f);
-            registry.emplace<MeshRendererComponent>(dragonEntity, dragonAsset, mat);
+            registry.emplace<MeshRendererComponent>(dragonEntity, mat);
             registry.emplace<MeshComponent>(dragonEntity, dragonAsset);
         }
 
-        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        cubeAsset->Load();
+        auto cubeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Cube", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(cubeAsset);
         entt::entity cubeEntity = m_Scene.CreateEntity("Cube");
         registry.emplace<TransformComponent>(cubeEntity,
             glm::vec3(0.0f, 0.5f, 0.0f),
@@ -92,12 +92,12 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 1.0f, 0.0f);
-            registry.emplace<MeshRendererComponent>(cubeEntity, cubeAsset, mat);
+            registry.emplace<MeshRendererComponent>(cubeEntity, mat);
             registry.emplace<MeshComponent>(cubeEntity, cubeAsset);
         }
 
-        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        torusAsset->Load();
+        auto torusAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Torus", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(torusAsset);
         entt::entity torusEntity = m_Scene.CreateEntity("Torus");
         registry.emplace<TransformComponent>(torusEntity,
             glm::vec3(2.0f, 0.25f, 1.0f),
@@ -106,12 +106,12 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(1.0f, 0.5f, 0.0f);
-            registry.emplace<MeshRendererComponent>(torusEntity, torusAsset, mat);
+            registry.emplace<MeshRendererComponent>(torusEntity, mat);
             registry.emplace<MeshComponent>(torusEntity, torusAsset);
         }
 
-        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        sphereAsset->Load();
+        auto sphereAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Sphere", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(sphereAsset);
         entt::entity sphereEntity = m_Scene.CreateEntity("Sphere");
         registry.emplace<TransformComponent>(sphereEntity,
             glm::vec3(0.0f, 0.5f, -1.5f),
@@ -120,15 +120,15 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.0f, 0.0f, 1.0f);
-            registry.emplace<MeshRendererComponent>(sphereEntity, sphereAsset, mat);
+            registry.emplace<MeshRendererComponent>(sphereEntity, mat);
             registry.emplace<MeshComponent>(sphereEntity, sphereAsset);
         }
 
         m_Scene.ParentEntity(torusEntity, cubeEntity);
         m_Scene.ParentEntity(cubeEntity, sphereEntity);
 
-        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        planeAsset->Load();
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(planeAsset);
         entt::entity planeEntity = m_Scene.CreateEntity("Plane");
         registry.emplace<TransformComponent>(planeEntity,
             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -136,7 +136,7 @@ namespace Nova::App {
             glm::vec3(10.0f, 10.0f, 10.0f));
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
-            registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
+            registry.emplace<MeshRendererComponent>(planeEntity, mat);
             registry.emplace<MeshComponent>(planeEntity, planeAsset);
         }
 
@@ -224,8 +224,8 @@ namespace Nova::App {
             registry.emplace<LightComponent>(dirLightEntity, dirLight);
         }
 
-        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-        planeAsset->Load();
+        auto planeAsset = AssetManager::Get().Acquire<MeshAsset>("Engine://Primitives/Plane", MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+        AssetManager::Get().Load(planeAsset);
         entt::entity planeEntity = m_Scene.CreateEntity("Ground");
         registry.emplace<TransformComponent>(planeEntity,
             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -234,7 +234,7 @@ namespace Nova::App {
         {
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(0.35f, 0.37f, 0.40f);
-            registry.emplace<MeshRendererComponent>(planeEntity, planeAsset, mat);
+            registry.emplace<MeshRendererComponent>(planeEntity, mat);
             registry.emplace<MeshComponent>(planeEntity, planeAsset);
         }
 
@@ -254,10 +254,10 @@ namespace Nova::App {
             { "Engine://Primitives/Capsule",  "Capsule",  1.0f },
         }};
 
-        std::array<std::shared_ptr<MeshAsset>, kPrimitives.size()> assets{};
+        std::array<AssetHandle<MeshAsset>, kPrimitives.size()> assets{};
         for (size_t i = 0; i < kPrimitives.size(); ++i) {
-            assets[i] = AssetManager::Get().Acquire<MeshAsset>(kPrimitives[i].m_AssetPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 }).GetAssetRef();
-            assets[i]->Load();
+            assets[i] = AssetManager::Get().Acquire<MeshAsset>(kPrimitives[i].m_AssetPath, MeshAssetDesc{ .m_AABBTreeDepth = 1 });
+            AssetManager::Get().Load(assets[i]);
         }
 
         std::mt19937 rng(42u);
@@ -281,7 +281,7 @@ namespace Nova::App {
 
             Nova::Core::Renderer::RHI::MaterialGPU mat{};
             mat.m_BaseColor = glm::vec3(colorDist(rng), colorDist(rng), colorDist(rng));
-            registry.emplace<MeshRendererComponent>(entity, assets[static_cast<size_t>(type)], mat);
+            registry.emplace<MeshRendererComponent>(entity, mat);
             registry.emplace<MeshComponent>(entity, assets[static_cast<size_t>(type)]);
         }
     }
