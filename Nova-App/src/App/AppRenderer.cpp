@@ -430,15 +430,19 @@ namespace Nova::App {
     {
         NV_ASSERT_MSG(m_Renderer, "Renderer is not initialized.");
 
-        auto setFrameUniforms = [elapsedTime, deltaTime, &frameIndex, viewportSize](
+        const int frame = static_cast<int>(frameIndex++);
+        const float frameRate = deltaTime > 0.0f ? 1.0f / deltaTime : 0.0f;
+        const glm::vec3 resolution(viewportSize.x, viewportSize.y, 1.0f);
+
+        auto setFrameUniforms = [elapsedTime, deltaTime, frame, frameRate, resolution](
             Nova::Core::Renderer::RHI::IShaders* shader)
         {
             if (!shader) return;
             shader->SetParameter("m_Time", elapsedTime);
             shader->SetParameter("m_TimeDelta", deltaTime);
-            shader->SetParameter("m_FrameRate", deltaTime > 0.0f ? 1.0f / deltaTime : 0.0f);
-            shader->SetParameter("m_Frame", static_cast<int>(frameIndex++));
-            shader->SetParameter("m_Resolution", glm::vec3(viewportSize.x, viewportSize.y, 1.0f));
+            shader->SetParameter("m_FrameRate", frameRate);
+            shader->SetParameter("m_Frame", frame);
+            shader->SetParameter("m_Resolution", resolution);
         };
 
         if (auto* graph = m_Renderer->GetRenderGraph()) {
